@@ -8,6 +8,8 @@
 #include <pthread.h> // We assume we have a pthread library (even on windows)
 #include <sched.h>
 
+#include <conio.h> // for getch
+
 #ifdef WIN32
 	#define WIN32_LEAN_AND_MEAN
 	#include "winsock2.h"
@@ -16,38 +18,17 @@
 
 	#define SHUT_RDWR SD_BOTH
 
-	#ifndef __cpu_set_t_defined
-		#define __cpu_set_t_defined
-		/* Size definition for CPU sets.  */
-		#define __CPU_SETSIZE	1024
-		#define __NCPUBITS	(8 * sizeof (__cpu_mask))
-
-		/* Type for array elements in 'cpu_set'.  */
-		typedef unsigned long int __cpu_mask;
-
-		/* Basic access functions.  */
-		#define __CPUELT(cpu)	((cpu) / __NCPUBITS)
-		#define __CPUMASK(cpu)	((__cpu_mask) 1 << ((cpu) % __NCPUBITS))
-
-		/* Data structure to describe CPU mask.  */
+	#ifndef cpu_set_t
+		// Define some dummy structs, currently they do nothing
 		typedef struct {
-			__cpu_mask __bits[__CPU_SETSIZE / __NCPUBITS];
+			unsigned long int __cpu_mask;
 		} cpu_set_t;
 
 		/* Access functions for CPU masks.  */
-		#define __CPU_ZERO(cpusetp) \
-		do {									      \
-			unsigned int __i;							      \
-			cpu_set *__arr = (cpusetp);						      \
-			for (__i = 0; __i < sizeof (cpu_set) / sizeof (__cpu_mask); ++__i)	      \
-			__arr->__bits[__i] = 0;						      \
-		} while (0)
-		#define __CPU_SET(cpu, cpusetp) \
-		((cpusetp)->__bits[__CPUELT (cpu)] |= __CPUMASK (cpu))
-		#define __CPU_CLR(cpu, cpusetp) \
-		((cpusetp)->__bits[__CPUELT (cpu)] &= ~__CPUMASK (cpu))
-		#define __CPU_ISSET(cpu, cpusetp) \
-		(((cpusetp)->__bits[__CPUELT (cpu)] & __CPUMASK (cpu)) != 0)
+		#define CPU_ZERO(cpusetp)
+		#define CPU_SET(cpu, cpusetp)
+		#define CPU_CLR(cpu, cpusetp)
+		#define CPU_ISSET(cpu, cpusetp)
 
 	#endif
 
@@ -78,6 +59,17 @@ int message_size = 65535;
 
 // How long (in seconds) this should run for
 int duration = 10;
+
+struct server_request {
+	unsigned short port;
+};
+
+// Struct to pass to a client thread
+struct client_request {
+	struct sockaddr_in addr;
+	//int addr_len;
+	unsigned int n;
+};
 
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end ) {
@@ -133,13 +125,15 @@ cleanup:
 /**
 	Creates a server, and handles each incoming client
 */
-void server_thread(unsigned short port) {
+void *server_thread(void *data) {
+	const struct server_request *req = data;
+
 	SOCKET s = INVALID_SOCKET; // The listen server socket
 
 	SOCKET client [ FD_SETSIZE - 1 ]; // We can only have 1 server socket, and (FD_SETSIZE - 1) clients
 	SOCKET *c = client;
 	int clients = 0; // The number of clients
-
+	
 	int i;
 
 	long long bytes_recv [ FD_SETSIZE - 1 ];
@@ -162,7 +156,7 @@ void server_thread(unsigned short port) {
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons( port );
+	addr.sin_port = htons( req->port );
 
 	if ( bind( s, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
 		fprintf(stderr, "%s: %d bind() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -288,17 +282,21 @@ cleanup:
 			closesocket( s );
 		}
 	}
+
+	return NULL;
 }
 
 /**
 	Creates n client connects to address
 */
-void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
+void* client_thread(void *data) {
+	const struct client_request *req = data;
+
 	SOCKET client [ FD_SETSIZE ];
 	SOCKET *c = client;
 	SOCKET s;
 	int clients = 0; // The number of clients
-	
+	int i;
 	unsigned char *buffer = NULL;
 
 	// Blank client before we start
@@ -306,7 +304,8 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 		*c = INVALID_SOCKET;
 
 	// Connect all the clients
-	while ( n > 0 ) {
+	i = req->n;
+	while ( i > 0 ) {
 		//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 		s = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if ( s == INVALID_SOCKET ) {
@@ -314,7 +313,7 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 			goto cleanup;
 		}
 
-		if ( connect( s, addr, addr_len ) == SOCKET_ERROR ) {
+		if ( connect( s, (const struct sockaddr *)&req->addr, sizeof(req->addr) ) == SOCKET_ERROR ) {
 			fprintf(stderr, "%s: %d connect() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
@@ -322,7 +321,7 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 		client [ clients ] = s;
 		clients++;
 
-		n--;
+		i--;
 	}
 
 	buffer = malloc( message_size );
@@ -333,7 +332,6 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 		fd_set readFD;
 		fd_set writeFD;
 		int ret;
-		int i;
 
 		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
 
@@ -418,6 +416,8 @@ cleanup:
 			closesocket( s );
 		}
 	}
+
+	return NULL;
 }
 
 #ifdef WIN32
@@ -439,19 +439,32 @@ void cleanup_winsock() {
 #endif
 
 int main (int argc, const char *argv[]) {
-
-	struct sockaddr_in server_addr;
+	struct server_request sreq;
+	struct client_request creq;
+	pthread_t thread[100];
+	cpu_set_t cpus;
+	int ret;
 
 #ifdef WIN32
 	setup_winsock();
 #endif
 
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
-	server_addr.sin_port = htons( 1234 );
+	CPU_ZERO ( &cpus );
+	CPU_SET ( 0, &cpus );
 
-//	server_thread ( 1234 );
-	client_thread( (struct sockaddr *)&server_addr, sizeof(server_addr), 1 );
+	sreq.port = 1234;
+	ret = pthread_create_on(&thread[0], NULL, server_thread, &sreq, sizeof(cpus), &cpus);
+
+	creq.addr.sin_family = AF_INET;
+	creq.addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+	creq.addr.sin_port = htons( 1234 );
+	creq.n = 1;
+
+	ret = pthread_create_on(&thread[1], NULL, client_thread, &creq, sizeof(cpus), &cpus);
+
+	_getch();
+
+	bRunning = FALSE;
 
 #ifdef WIN32
 	cleanup_winsock();
