@@ -5,6 +5,9 @@
 #include <assert.h>
 #include <malloc.h>
 
+#include <pthread.h> // We assume we have a pthread library (even on windows)
+#include <sched.h>
+
 #ifdef WIN32
 	#define WIN32_LEAN_AND_MEAN
 	#include "winsock2.h"
@@ -12,6 +15,11 @@
 	#define ECONNRESET WSAECONNRESET
 
 #else
+
+	#include <sys/time.h>
+	#include <sys/types.h>
+	#include <unistd.h>
+
 	#define ERRNO errno
 	#define closesocket(s) close(s)
 
@@ -47,6 +55,34 @@ void move_down ( SOCKET *arr, SOCKET *arr_end ) {
 		assert ( *arr != INVALID_SOCKET );
 	}
 }
+
+/**
+	Create a thread on a specific core(s)
+*/
+int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
+
+	pthread_attr_t thread_attr;
+	int ret;
+
+	if (attr == NULL) {
+		pthread_attr_init ( &thread_attr );
+		attr = &thread_attr;
+	}
+
+	// Set the CPU
+	//int ret = pthread_attr_setaffinity_np( attr, cpusetsize, cpuset );
+	//if (ret)
+	//	goto cleanup;
+
+	ret = pthread_create(thread, attr, start_routine, arg);
+
+cleanup:
+	if ( attr = &thread_attr )
+		pthread_attr_destroy ( &thread_attr );
+
+	return ret;
+}
+
 
 /**
 	Creates a server, and handles each incoming client
@@ -101,24 +137,22 @@ void server_thread(unsigned short port) {
 
 	while ( bRunning ) {
 		fd_set readFD;
-		fd_set errorFD;
 		int ret;
 
-		FD_ZERO( &readFD ); FD_ZERO( &errorFD );
+		FD_ZERO( &readFD );
 
 		// Add the listen socket (only if we have room for more clients)
 		if ( clients < sizeof(client) / sizeof(*client) )
-			FD_SET(s, &readFD); FD_SET(s, &errorFD);
+			FD_SET(s, &readFD);
 
 		// Add all the client sockets
 		for (c = client ; c < &client [ clients] ; c++) {
 			assert ( *c != INVALID_SOCKET );
 
 			FD_SET( *c, &readFD);
-			FD_SET( *c, &errorFD);
 		}
 
-		ret = select(0, &readFD, NULL, &errorFD, NULL);
+		ret = select(0, &readFD, NULL, NULL, NULL);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -144,16 +178,11 @@ void server_thread(unsigned short port) {
 
 			ret--;
 		}
-		if ( FD_ISSET(s, &errorFD) ) {
-			fprintf(stderr, "%s: %d error with server socket %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
 
 		// Figure out which sockets have fired
 		i = 0;
 		while ( ret > 0 ) {
 			SOCKET s = client [ i ];
-			int socketRemoved = FALSE;
 
 			assert ( i < sizeof( client ) / sizeof( *client) );
 			assert ( s  != INVALID_SOCKET );
@@ -161,6 +190,8 @@ void server_thread(unsigned short port) {
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
 				int len = recv( s, buffer, message_size, 0);
+
+				ret--;
 
 				if ( len == SOCKET_ERROR ) {
 					if ( ERRNO != ECONNRESET ) {
@@ -175,7 +206,7 @@ void server_thread(unsigned short port) {
 					closesocket( s );
 					move_down ( &client[ i ], &client[ clients ] );
 					clients--;
-					socketRemoved = TRUE;
+					continue;
 
 				} else {
 					// We could dirty the buffer
@@ -184,31 +215,11 @@ void server_thread(unsigned short port) {
 					bytes_recv [ i ] += len;
 				}
 
-				ret--;
-			}
-			// Check for errors
-			if ( FD_ISSET( s, &errorFD) ) {
 				
-				// Apparently this will never be called
-
-				/*
-				// Invalid this client (if it hasn't already been removed)
-				if ( !socketRemoved ) {
-					closesocket( s );
-					move_down ( &client[ i ], &client[ clients ] );
-					clients--;
-					socketRemoved = TRUE;
-				}
-
-				ret--;
-				*/
-				assert ( 0 );
-				ret--;
 			}
 
 			// Move the socket on (if needed)
-			if (!socketRemoved)
-				i++;
+			i++;
 		}
 	}
 
@@ -229,11 +240,8 @@ cleanup:
 		if ( s != INVALID_SOCKET ) {
 			shutdown ( s, SD_BOTH );
 			closesocket( s );
-			clients--;
 		}
 	}
-	
-	assert ( clients == 0 );
 }
 
 /**
@@ -278,11 +286,10 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 	while ( bRunning ) {
 		fd_set readFD;
 		fd_set writeFD;
-		fd_set errorFD;
 		int ret;
 		int i;
 
-		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD ); FD_ZERO ( &errorFD );
+		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
 
 		// Loop all client sockets
 		for (c = client ; c < &client [ clients ] ; c++) {
@@ -292,10 +299,9 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 			// Add them to FD sets
 			FD_SET( s, &readFD);
 			FD_SET( s, &writeFD);
-			FD_SET( s, &errorFD);
 		}
 
-		ret = select(0, &readFD, &writeFD, &errorFD, NULL);
+		ret = select(0, &readFD, &writeFD, NULL, NULL);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -305,14 +311,15 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 		i = 0;
 		while ( ret > 0 ) {
 			SOCKET s = client [ i ];
-			int socketRemoved = FALSE;
 
 			assert ( i < sizeof( client ) / sizeof( *client) );
-			assert ( s  != INVALID_SOCKET );
+			assert ( s != INVALID_SOCKET );
 
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
 				int len = recv( s, buffer, message_size, 0);
+
+				ret--;
 
 				if ( len == SOCKET_ERROR ) {
 					if ( ERRNO != ECONNRESET ) {
@@ -327,43 +334,27 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 					closesocket( s );
 					move_down ( &client[ i ], &client[ clients ] );
 					clients--;
-					socketRemoved = TRUE;
 
+					// Quickly check if this client was in the write set
+					if ( FD_ISSET( s, &writeFD) )
+						ret--;
+
+					continue;
 				}
-
-				ret--;
 			}
-			
+
 			// Check if we are ready to write
 			if ( FD_ISSET( s, &writeFD) ) {
+				ret--;
+
 				if ( send( s, buffer, message_size, 0 ) == SOCKET_ERROR ) {
 					fprintf(stderr, "%s: %d send() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
 				}
-
-				ret--;
-			}
-
-			// Check for errors
-			if ( FD_ISSET( s, &errorFD) ) {
-				
-				/*
-				// Invalid this client (if it hasn't already been removed)
-				if ( !socketRemoved ) {
-					closesocket( s );
-					move_down ( &client[ i ], &client[ clients ] );
-					clients--;
-					socketRemoved = TRUE;
-				}
-				*/
-				assert ( 0 );
-
-				ret--;
 			}
 
 			// Move the socket on (if needed)
-			if (!socketRemoved)
-				i++;
+			i++;
 		}
 
 	}
@@ -379,11 +370,8 @@ cleanup:
 		if ( s != INVALID_SOCKET ) {
 			shutdown ( s, SD_BOTH );
 			closesocket( s );
-			clients--;
 		}
 	}
-	
-	assert ( clients == 0 );
 }
 
 int main (int argc, const char *argv[]) {
