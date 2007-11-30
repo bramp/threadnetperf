@@ -22,14 +22,11 @@
 	#include <sys/time.h>
 	#include <sys/types.h>
 	#include <sys/socket.h>
+	#include <netinet/in.h>
 	#include <unistd.h>
 
 	#define ERRNO errno
 	#define closesocket(s) close(s)
-
-	#ifndef IPPROTO_TCP
-	#define IPPROTO_TCP 6
-	#endif
 
 	#ifndef SOCKET
 		#define SOCKET int
