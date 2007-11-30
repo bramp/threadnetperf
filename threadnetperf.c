@@ -379,16 +379,30 @@ cleanup:
 	}
 }
 
-int main (int argc, const char *argv[]) {
-
 #ifdef WIN32
+/**
+	Function to setup the winsock libs
+*/
+void setup_winsock() {
 	WSADATA wsaData;
-	struct sockaddr_in server_addr;
-
+	
 	if ( WSAStartup(MAKEWORD(2,2), &wsaData) ) {
 		fprintf(stderr, "%s: %d WSAStartup() error\n", __FILE__, __LINE__ );
 		return;
 	}
+}
+
+void cleanup_winsock() {
+	WSACleanup();
+}
+#endif
+
+int main (int argc, const char *argv[]) {
+
+	struct sockaddr_in server_addr;
+
+#ifdef WIN32
+	setup_winsock();
 #endif
 
 	server_addr.sin_family = AF_INET;
@@ -399,6 +413,6 @@ int main (int argc, const char *argv[]) {
 	client_thread( (struct sockaddr *)&server_addr, sizeof(server_addr), 1 );
 
 #ifdef WIN32
-	WSACleanup();
+	cleanup_winsock();
 #endif
 }
