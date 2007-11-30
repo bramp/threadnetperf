@@ -123,7 +123,7 @@ void server_thread(unsigned short port) {
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = ADDR_ANY;
+	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons( port );
 
 	if ( bind( s, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
@@ -288,7 +288,7 @@ void client_thread(const struct sockaddr *addr, int addr_len, unsigned int n) {
 	}
 
 	buffer = malloc( message_size );
-	memset( buffer, 'AAAA', 0 );
+	memset( buffer, 0x41414141, message_size );
 
 	// Now start the main loop
 	while ( bRunning ) {
