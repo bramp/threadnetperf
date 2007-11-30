@@ -14,8 +14,11 @@
 	#define ERRNO (WSAGetLastError())
 	#define ECONNRESET WSAECONNRESET
 
+	#define SHUT_RDWR SD_BOTH
+
 #else
 
+	#include <errno.h>
 	#include <sys/time.h>
 	#include <sys/types.h>
 	#include <sys/socket.h>
@@ -24,10 +27,14 @@
 	#define ERRNO errno
 	#define closesocket(s) close(s)
 
+	#ifndef IPPROTO_TCP
+	#define IPPROTO_TCP 6
+	#endif
+
 	#ifndef SOCKET
-	#define SOCKET int
-	#define INVALID_SOCKET (-1)
-	#define SOCKET_ERROR (-1)
+		#define SOCKET int
+		#define INVALID_SOCKET (-1)
+		#define SOCKET_ERROR (-1)
 	#endif
 #endif
 
@@ -108,7 +115,7 @@ void server_thread(unsigned short port) {
 		*c = INVALID_SOCKET;
 
 	//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	s = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	s = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if ( s == INVALID_SOCKET ) {
 		fprintf(stderr, "%s: %d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
@@ -231,7 +238,7 @@ cleanup:
 
 	// Shutdown server socket
 	if ( s != INVALID_SOCKET ) {
-		shutdown ( s, SD_BOTH );
+		shutdown ( s, SHUT_RDWR );
 		closesocket( s );
 	}
 
@@ -239,7 +246,7 @@ cleanup:
 	for (c = client ; c < &client [ clients ] ; c++) {
 		s = *c;
 		if ( s != INVALID_SOCKET ) {
-			shutdown ( s, SD_BOTH );
+			shutdown ( s, SHUT_RDWR );
 			closesocket( s );
 		}
 	}
@@ -369,13 +376,15 @@ cleanup:
 	for (c = client ; c < &client [ clients ] ; c++) {
 		s = *c;
 		if ( s != INVALID_SOCKET ) {
-			shutdown ( s, SD_BOTH );
+			shutdown ( s, SHUT_RDWR );
 			closesocket( s );
 		}
 	}
 }
 
 int main (int argc, const char *argv[]) {
+
+#ifdef WIN32
 	WSADATA wsaData;
 	struct sockaddr_in server_addr;
 
@@ -383,6 +392,7 @@ int main (int argc, const char *argv[]) {
 		fprintf(stderr, "%s: %d WSAStartup() error\n", __FILE__, __LINE__ );
 		return;
 	}
+#endif
 
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
@@ -391,5 +401,7 @@ int main (int argc, const char *argv[]) {
 //	server_thread ( 1234 );
 	client_thread( (struct sockaddr *)&server_addr, sizeof(server_addr), 1 );
 
+#ifdef WIN32
 	WSACleanup();
+#endif
 }
