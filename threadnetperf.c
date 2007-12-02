@@ -8,9 +8,7 @@
 #include <pthread.h> // We assume we have a pthread library (even on windows)
 #include <sched.h>
 
-#include <conio.h> // for getch
-
-#include < time.h >
+#include <time.h>
 
 #ifdef WIN32
 	#define WIN32_LEAN_AND_MEAN
@@ -482,30 +480,11 @@ void cleanup_winsock() {
 }
 #endif
 
-int main (int argc, const char *argv[]) {
-	struct server_request sreq;
-	struct client_request creq;
-	pthread_t thread[100];
-	cpu_set_t cpus;
-	int ret;
+/**
+	Wait until duration has passed
+*/
+void pause(unsigned int duration) {
 	long long start_time; // The time we started
-
-#ifdef WIN32
-	setup_winsock();
-#endif
-
-	CPU_ZERO ( &cpus );
-	CPU_SET ( 0, &cpus );
-
-	sreq.port = 1234;
-	ret = pthread_create_on(&thread[0], NULL, server_thread, &sreq, sizeof(cpus), &cpus);
-
-	creq.addr.sin_family = AF_INET;
-	creq.addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
-	creq.addr.sin_port = htons( 1234 );
-	creq.n = 1;
-
-	ret = pthread_create_on(&thread[1], NULL, client_thread, &creq, sizeof(cpus), &cpus);
 
 	// Make sure duration is in microseconds
 	duration = duration * 1000000;
@@ -523,9 +502,63 @@ int main (int argc, const char *argv[]) {
 
 		Sleep( 100 );
 	}
+}
+
+int main (int argc, const char *argv[]) {
+	struct server_request sreq;
+	struct client_request creq;
+	pthread_t *thread; // Array to handle thread handles
+	unsigned int threads; // Total number of threads
+	unsigned int i;
+	cpu_set_t cpus;
+	int ret;
+	
+
+#ifdef WIN32
+	setup_winsock();
+#endif
+
+	threads = 2;
+	thread = malloc( threads * sizeof(*thread) );
+	memset (thread, 0, threads * sizeof(*thread));
+
+	// Create all the threads
+	CPU_ZERO ( &cpus );
+	CPU_SET ( 0, &cpus );
+
+	// Create all the server threads
+	sreq.port = 1234;
+	ret = pthread_create_on( &thread[0], NULL, server_thread, &sreq, sizeof(cpus), &cpus);
+	if ( ret ) {
+		fprintf(stderr, "%s: %d pthread_create_on() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
+	// Create all the client threads
+	creq.addr.sin_family = AF_INET;
+	creq.addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+	creq.addr.sin_port = htons( 1234 );
+	creq.n = 1;
+
+	ret = pthread_create_on( &thread[1], NULL, client_thread, &creq, sizeof(cpus), &cpus);
+	if ( ret ) {
+		fprintf(stderr, "%s: %d pthread_create_on() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
+	// Now wait unti the test is completed
+	pause( duration );
 
 	// Block waiting until all threads die
-	_getch();
+	for (i = 0; i < threads; i++) {
+		assert ( thread [i] != NULL );
+		pthread_join( thread[i], NULL );
+	}
+
+
+cleanup:
+
+	free ( thread );
 
 #ifdef WIN32
 	cleanup_winsock();
