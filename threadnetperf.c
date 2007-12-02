@@ -10,6 +10,8 @@
 
 #include <conio.h> // for getch
 
+#include < time.h >
+
 #ifdef WIN32
 	#define WIN32_LEAN_AND_MEAN
 	#include "winsock2.h"
@@ -70,6 +72,31 @@ struct client_request {
 	//int addr_len;
 	unsigned int n;
 };
+
+// Returns the number of microseconds since a epoch
+long long get_microseconds() {
+	long long microseconds = 0;
+
+#ifdef WIN32
+	FILETIME ft;
+
+	GetSystemTimeAsFileTime(&ft);
+
+	microseconds |= ft.dwHighDateTime;
+	microseconds <<= 32;
+	microseconds |= ft.dwLowDateTime;
+
+	microseconds /= 10;	//convert into microseconds
+#else
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL); 
+	microseconds = tv.tv_sec * 1000000 + tv.tv_usec;
+
+#endif
+
+	return microseconds;
+}
 
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end ) {
@@ -135,12 +162,14 @@ void *server_thread(void *data) {
 	int clients = 0; // The number of clients
 	
 	int i;
-
 	long long bytes_recv [ FD_SETSIZE - 1 ];
+	long long total_bytes_recv;
 
 	unsigned char *buffer = NULL; // Buffer to read data into, will be malloced later
-
 	struct sockaddr_in addr; // Address to listen on
+
+	long long start_time; // The time we started
+	long long end_time; // The time we ended
 
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
@@ -175,8 +204,12 @@ void *server_thread(void *data) {
 		goto cleanup;
 	}
 
+	// Start timing
+	start_time = get_microseconds();
+
 	while ( bRunning ) {
 		fd_set readFD;
+		struct timeval waittime = {0, 100}; // 100 microseconds
 		int ret;
 
 		FD_ZERO( &readFD );
@@ -192,7 +225,7 @@ void *server_thread(void *data) {
 			FD_SET( *c, &readFD);
 		}
 
-		ret = select(0, &readFD, NULL, NULL, NULL);
+		ret = select(0, &readFD, NULL, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -254,14 +287,25 @@ void *server_thread(void *data) {
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
 				}
-
-				
 			}
 
 			// Move the socket on (if needed)
 			i++;
 		}
 	}
+
+	// We have finished, work out some stats
+	end_time = get_microseconds();
+
+	// Add up all the client bytes
+	total_bytes_recv = 0;
+	for (i = 0 ; i < clients ; i++) {
+		assert ( client[i] != INVALID_SOCKET );
+
+		total_bytes_recv += bytes_recv [ i ];
+	}
+
+	printf( "Received %d Mbytes/s\n", (total_bytes_recv / (end_time-start_time)));
 
 cleanup:
 	// Cleanup
@@ -444,6 +488,7 @@ int main (int argc, const char *argv[]) {
 	pthread_t thread[100];
 	cpu_set_t cpus;
 	int ret;
+	long long start_time; // The time we started
 
 #ifdef WIN32
 	setup_winsock();
@@ -462,9 +507,25 @@ int main (int argc, const char *argv[]) {
 
 	ret = pthread_create_on(&thread[1], NULL, client_thread, &creq, sizeof(cpus), &cpus);
 
-	_getch();
+	// Make sure duration is in microseconds
+	duration = duration * 1000000;
 
-	bRunning = FALSE;
+	// This main thread controls when the test ends
+	start_time = get_microseconds();
+
+	while ( bRunning ) {
+		long long now = get_microseconds();
+
+		if ( now - start_time > duration ) {
+			bRunning = 0;
+			break;
+		}
+
+		Sleep( 100 );
+	}
+
+	// Block waiting until all threads die
+	_getch();
 
 #ifdef WIN32
 	cleanup_winsock();
