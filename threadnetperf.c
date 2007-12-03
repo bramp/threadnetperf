@@ -104,7 +104,8 @@ void move_down ( SOCKET *arr, SOCKET *arr_end ) {
 
 	// Move any other clients down
 	while ( (arr + 1) < arr_end ) {
-		*arr = *arr++;
+		*arr = *(arr + 1);
+		arr++;
 
 		// Check we didn't just copy a INVALID_SOCKET
 		assert ( *arr != INVALID_SOCKET );
@@ -138,7 +139,7 @@ int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_ro
 	ret = pthread_create(thread, attr, start_routine, arg);
 
 cleanup:
-	if ( attr = &thread_attr )
+	if ( attr == &thread_attr )
 		pthread_attr_destroy ( &thread_attr );
 
 	return ret;
@@ -161,7 +162,7 @@ void *server_thread(void *data) {
 	long long bytes_recv [ FD_SETSIZE - 1 ];
 	long long total_bytes_recv;
 
-	unsigned char *buffer = NULL; // Buffer to read data into, will be malloced later
+	char *buffer = NULL; // Buffer to read data into, will be malloced later
 	struct sockaddr_in addr; // Address to listen on
 
 	long long start_time; // The time we started
@@ -337,7 +338,7 @@ void* client_thread(void *data) {
 	SOCKET s;
 	int clients = 0; // The number of clients
 	int i;
-	unsigned char *buffer = NULL;
+	char *buffer = NULL;
 
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
@@ -481,7 +482,10 @@ void cleanup_winsock() {
 
 #ifdef WIN32
 int usleep(unsigned int useconds) {
-	struct timespec waittime = {0, useconds * 1000 }; 
+	struct timespec waittime;
+	
+	waittime.tv_sec = 0;
+	waittime.tv_nsec = useconds * 1000; 
 
 	if ( useconds > 1000000 )
 		return EINVAL;
