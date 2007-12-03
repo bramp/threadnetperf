@@ -551,7 +551,7 @@ int main (int argc, const char *argv[]) {
 
 	// Block waiting until all threads die
 	for (i = 0; i < threads; i++) {
-		assert ( thread [i] != NULL );
+		assert ( thread [i] != 0 );
 		pthread_join( thread[i], NULL );
 	}
 
