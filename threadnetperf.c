@@ -481,7 +481,7 @@ void cleanup_winsock() {
 }
 #endif
 
-#ifndef usleep
+#ifdef WIN32
 int usleep(unsigned int useconds) {
 	struct timespec waittime = {0, useconds * 1000 }; 
 
