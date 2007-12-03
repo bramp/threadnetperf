@@ -63,6 +63,9 @@ int message_size = 65535;
 // How long (in seconds) this should run for
 int duration = 10;
 
+// Should we diable Nagle's Algorithm
+int disable_nagles = 1;
+
 struct server_request {
 	unsigned short port;
 
@@ -153,6 +156,16 @@ cleanup:
 	return ret;
 }
 
+int enable_nagle(SOCKET s) {
+	int one = 0;
+	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
+}
+
+int disable_nagle(SOCKET s) {
+	int one = 1;
+	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
+}
+
 
 /**
 	Creates a server, and handles each incoming client
@@ -188,6 +201,13 @@ void *server_thread(void *data) {
 	if ( s == INVALID_SOCKET ) {
 		fprintf(stderr, "%s: %d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
+	}
+
+	if ( disable_nagles ) {
+		if ( disable_nagle( s ) == SOCKET_ERROR ) {
+			fprintf(stderr, "%s: %d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+		}
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -256,6 +276,13 @@ void *server_thread(void *data) {
 			if ( c == INVALID_SOCKET ) {
 				fprintf(stderr, "%s: %d accept() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
+			}
+
+			if ( disable_nagles ) {
+				if ( disable_nagle( s ) == SOCKET_ERROR ) {
+					fprintf(stderr, "%s: %d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+					goto cleanup;
+				}
 			}
 
 			assert ( client[ clients ] == INVALID_SOCKET );
@@ -329,8 +356,13 @@ void *server_thread(void *data) {
 		req->bytes_received += bytes_recv [ i ];
 	}
 
+	{
+	double thruput = (double)req->bytes_received / (double)req->duration;
+	double duration = (double)req->duration / (double)1000000;
 
-	printf( "Received %lld Mbytes for %lld seconds @ %ldd\n", req->bytes_received, req->duration, req->bytes_received / req->duration );
+	printf( "Received %llu bytes for %.2g us @ %.2g Mbytes/second\n", 
+		(req->bytes_received), duration, thruput );
+	}
 
 cleanup:
 	// Cleanup
@@ -384,6 +416,13 @@ void* client_thread(void *data) {
 		if ( s == INVALID_SOCKET ) {
 			fprintf(stderr, "%s: %d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
+		}
+
+		if ( disable_nagles ) {
+			if ( disable_nagle( s ) == SOCKET_ERROR ) {
+				fprintf(stderr, "%s: %d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+				goto cleanup;
+			}
 		}
 
 		if ( connect( s, (const struct sockaddr *)&req->addr, sizeof(req->addr) ) == SOCKET_ERROR ) {
@@ -571,7 +610,11 @@ int main (int argc, const char *argv[]) {
 	
 
 #ifdef WIN32
+	// Load the float point libs
+	double _double = 1.0;
+
 	setup_winsock();
+
 #endif
 
 	threads = 2;
