@@ -306,7 +306,7 @@ void *server_thread(void *data) {
 		total_bytes_recv += bytes_recv [ i ];
 	}
 
-	printf( "Received %ld Mbytes/s\n", (total_bytes_recv / (end_time-start_time)));
+	printf( "Received %lld Mbytes/s\n", (total_bytes_recv / (end_time-start_time)));
 
 cleanup:
 	// Cleanup
