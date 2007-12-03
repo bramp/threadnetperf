@@ -13,7 +13,10 @@
 
 #ifdef WIN32
 	#define WIN32_LEAN_AND_MEAN
+
 	#include "winsock2.h"
+	#include "Ws2tcpip.h"
+
 	#define ERRNO (WSAGetLastError())
 	#define ECONNRESET WSAECONNRESET
 
@@ -231,7 +234,7 @@ void *server_thread(void *data) {
 		// Did the listen socket fire?
 		if ( FD_ISSET(s, &readFD) ) {
 			struct sockaddr_storage addr;
-			int addr_len = sizeof(addr);
+			socklen_t addr_len = sizeof(addr);
 
 			// Accept a new client socket
 			SOCKET c = accept( s, (struct sockaddr *)&addr, &addr_len );
