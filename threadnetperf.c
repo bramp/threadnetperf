@@ -237,8 +237,6 @@ void *server_thread(void *data) {
 				nfds = s;
 		}
 
-
-
 		ret = select((int)(nfds + 1), &readFD, NULL, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -614,10 +612,10 @@ cleanup:
 	bRunning = 0;
 
 	// Block waiting until all threads die
-//	for (i = 0; i < threads; i++) {
-//		assert ( thread [i] != 0 );
-//		pthread_join( thread[i], NULL );
-//	}
+	for (i = 0; i < threads; i++) {
+		assert ( thread [i] != 0 );
+		pthread_join( thread[i], NULL );
+	}
 
 	free ( thread );
 
