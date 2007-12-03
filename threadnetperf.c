@@ -250,14 +250,14 @@ void *server_thread(void *data) {
 				goto cleanup;
 			}
 
-			#ifdef _DEBUG
-			printf("New client %s\n", inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr) );
-			#endif
-
 			assert ( client[ clients ] == INVALID_SOCKET );
 			client[ clients ] = c;
 			bytes_recv [ clients ] = 0;
 			clients++;
+
+			#ifdef _DEBUG
+			printf("New client %s (%d)\n", inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), clients );
+			#endif
 
 			ret--;
 		}
@@ -285,6 +285,11 @@ void *server_thread(void *data) {
 				
 				// The socket has closed
 				if ( len <= 0 ) {
+
+					#ifdef _DEBUG
+					printf("Remove client (%d/%d)\n", i, clients );
+					#endif
+
 					// Invalid this client
 					closesocket( s );
 					move_down ( &client[ i ], &client[ clients ] );
@@ -595,10 +600,10 @@ cleanup:
 	bRunning = 0;
 
 	// Block waiting until all threads die
-	for (i = 0; i < threads; i++) {
-		assert ( thread [i] != 0 );
-		pthread_join( thread[i], NULL );
-	}
+//	for (i = 0; i < threads; i++) {
+//		assert ( thread [i] != 0 );
+//		pthread_join( thread[i], NULL );
+//	}
 
 	free ( thread );
 
