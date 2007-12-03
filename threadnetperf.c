@@ -532,7 +532,10 @@ void pause_for_duration(unsigned int duration) {
 			break;
 		}
 
+#ifdef _DEBUG
 		printf(".");
+		fflush(stdout);
+#endif
 
 		usleep( 100000 );
 	}
@@ -584,7 +587,7 @@ int main (int argc, const char *argv[]) {
 	pause_for_duration( duration );
 
 #ifdef _DEBUG
-	printf("Finished\n" );
+	printf("\nFinished\n" );
 #endif
 
 cleanup:
