@@ -41,6 +41,7 @@
 	#include <sys/socket.h>
 	#include <netinet/in.h>
 	#include <unistd.h>
+	#include <arpa/inet.h> // For inet_addr
 
 	#define ERRNO errno
 	#define closesocket(s) close(s)
@@ -305,7 +306,7 @@ void *server_thread(void *data) {
 		total_bytes_recv += bytes_recv [ i ];
 	}
 
-	printf( "Received %d Mbytes/s\n", (total_bytes_recv / (end_time-start_time)));
+	printf( "Received %ld Mbytes/s\n", (total_bytes_recv / (end_time-start_time)));
 
 cleanup:
 	// Cleanup
