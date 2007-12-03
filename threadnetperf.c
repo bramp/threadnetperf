@@ -5,10 +5,6 @@
 #include <assert.h>
 #include <malloc.h>
 
-#define _GNU_SOURCE 
-#include <pthread.h> // We assume we have a pthread library (even on windows)
-#include <sched.h>
-
 #include <time.h>
 
 #ifdef WIN32
@@ -52,6 +48,11 @@
 		#define SOCKET_ERROR (-1)
 	#endif
 #endif
+
+#define _GNU_SOURCE 
+#include <pthread.h> // We assume we have a pthread library (even on windows)
+#include <sched.h>
+
 
 // Flag to indidcate if we are still running
 int bRunning = 1;
