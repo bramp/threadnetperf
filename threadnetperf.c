@@ -197,6 +197,8 @@ void *server_thread(void *data) {
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
 		*c = INVALID_SOCKET;
 
+	memset( bytes_recv, 0, sizeof(bytes_recv) );
+
 	//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	s = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if ( s == INVALID_SOCKET ) {
@@ -349,9 +351,7 @@ void *server_thread(void *data) {
 	// Add up all the client bytes
 	req->duration = end_time - start_time;
 	req->bytes_received = 0;
-	for (i = 0 ; i < clients ; i++) {
-		assert ( client[i] != INVALID_SOCKET );
-
+	for (i = 0 ; i <  sizeof(bytes_recv) / sizeof(*bytes_recv); i++) {
 		req->bytes_received += bytes_recv [ i ];
 	}
 
