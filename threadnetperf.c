@@ -483,7 +483,7 @@ void cleanup_winsock() {
 /**
 	Wait until duration has passed
 */
-void pause(unsigned int duration) {
+void pause_for_duration(unsigned int duration) {
 	long long start_time; // The time we started
 
 	// Make sure duration is in microseconds
@@ -547,7 +547,7 @@ int main (int argc, const char *argv[]) {
 	}
 
 	// Now wait unti the test is completed
-	pause( duration );
+	pause_for_duration( duration );
 
 	// Block waiting until all threads die
 	for (i = 0; i < threads; i++) {
