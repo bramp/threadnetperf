@@ -19,19 +19,16 @@
 
 	#define SHUT_RDWR SD_BOTH
 
-	#ifndef cpu_set_t
-		// Define some dummy structs, currently they do nothing
-		typedef struct {
-			unsigned long int __cpu_mask;
-		} cpu_set_t;
+	// Define some dummy structs, currently they do nothing
+	typedef struct {
+		unsigned long int __cpu_mask;
+	} cpu_set_t;
 
-		/* Access functions for CPU masks.  */
-		#define CPU_ZERO(cpusetp)
-		#define CPU_SET(cpu, cpusetp)
-		#define CPU_CLR(cpu, cpusetp)
-		#define CPU_ISSET(cpu, cpusetp)
-
-	#endif
+	/* Access functions for CPU masks.  */
+	#define CPU_ZERO(cpusetp)
+	#define CPU_SET(cpu, cpusetp)
+	#define CPU_CLR(cpu, cpusetp)
+	#define CPU_ISSET(cpu, cpusetp)
 
 #else
 
