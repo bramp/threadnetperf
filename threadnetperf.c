@@ -359,7 +359,7 @@ void *server_thread(void *data) {
 	double thruput = (double)req->bytes_received / (double)req->duration;
 	double duration = (double)req->duration / (double)1000000;
 
-	printf( "Received %llu bytes for %.2g us @ %.2g Mbytes/second\n", 
+	printf( "Received %llu bytes for %.2fs @ %.2f Mbytes/second\n", 
 		(req->bytes_received), duration, thruput );
 	}
 
