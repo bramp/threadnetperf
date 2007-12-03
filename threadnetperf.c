@@ -374,6 +374,7 @@ void* client_thread(void *data) {
 		fd_set readFD;
 		fd_set writeFD;
 		int ret;
+		struct timeval waittime = {0, 100}; // 100 microseconds
 
 		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
 
@@ -387,7 +388,7 @@ void* client_thread(void *data) {
 			FD_SET( s, &writeFD);
 		}
 
-		ret = select(0, &readFD, &writeFD, NULL, NULL);
+		ret = select(0, &readFD, &writeFD, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -485,6 +486,7 @@ void cleanup_winsock() {
 */
 void pause_for_duration(unsigned int duration) {
 	long long start_time; // The time we started
+	struct timespec waittime = {0, 100000000 }; // 1/10 second
 
 	// Make sure duration is in microseconds
 	duration = duration * 1000000;
@@ -500,7 +502,7 @@ void pause_for_duration(unsigned int duration) {
 			break;
 		}
 
-		Sleep( 100 );
+		pthread_delay_np ( &waittime );
 	}
 }
 
