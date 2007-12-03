@@ -55,7 +55,7 @@
 
 
 // Flag to indidcate if we are still running
-int bRunning = 1;
+volatile int bRunning = 1;
 
 // The message size
 int message_size = 65535;
