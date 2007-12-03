@@ -37,6 +37,7 @@
 	#include <sys/types.h>
 	#include <sys/socket.h>
 	#include <netinet/in.h>
+	#include <netinet/tcp.h> // TCP_NODELAY, TCP_MAXSEG
 	#include <unistd.h>
 	#include <arpa/inet.h> // For inet_addr
 
