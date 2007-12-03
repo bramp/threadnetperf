@@ -432,6 +432,8 @@ void* client_thread(void *data) {
 		while ( ret > 0 ) {
 			SOCKET s = client [ i ];
 
+			printf("fire %d\n", ret);
+
 			assert ( i < sizeof( client ) / sizeof( *client) );
 			assert ( s != INVALID_SOCKET );
 
