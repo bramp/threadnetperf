@@ -173,6 +173,10 @@ void *server_thread(void *data) {
 	long long start_time; // The time we started
 	long long end_time; // The time we ended
 
+#ifdef _DEBUG
+	printf("Started server thread %d\n", req->port );
+#endif
+
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
 		*c = INVALID_SOCKET;
@@ -245,6 +249,10 @@ void *server_thread(void *data) {
 				fprintf(stderr, "%s: %d accept() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
+
+			#ifdef _DEBUG
+			printf("New client %s\n", inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr) );
+			#endif
 
 			assert ( client[ clients ] == INVALID_SOCKET );
 			client[ clients ] = c;
@@ -344,6 +352,10 @@ void* client_thread(void *data) {
 	int clients = 0; // The number of clients
 	int i;
 	char *buffer = NULL;
+
+#ifdef _DEBUG
+	printf("Started client thread %s %d\n",inet_ntoa(req->addr.sin_addr), req->n );
+#endif
 
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
@@ -568,6 +580,10 @@ int main (int argc, const char *argv[]) {
 
 	// Now wait unti the test is completed
 	pause_for_duration( duration );
+
+#ifdef _DEBUG
+	printf("Finished\n" );
+#endif
 
 cleanup:
 
