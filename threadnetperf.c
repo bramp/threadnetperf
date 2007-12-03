@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <malloc.h>
 
+#define _GNU_SOURCE 
 #include <pthread.h> // We assume we have a pthread library (even on windows)
 #include <sched.h>
 
@@ -562,18 +563,21 @@ int main (int argc, const char *argv[]) {
 	// Now wait unti the test is completed
 	pause_for_duration( duration );
 
+cleanup:
+
+	bRunning = 0;
+
 	// Block waiting until all threads die
 	for (i = 0; i < threads; i++) {
 		assert ( thread [i] != 0 );
 		pthread_join( thread[i], NULL );
 	}
 
-
-cleanup:
-
 	free ( thread );
 
 #ifdef WIN32
 	cleanup_winsock();
 #endif
+
+	return 0;
 }
