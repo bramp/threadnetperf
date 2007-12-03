@@ -65,6 +65,9 @@ int duration = 10;
 
 struct server_request {
 	unsigned short port;
+
+	unsigned long long bytes_received;
+	unsigned long long duration;
 };
 
 // Struct to pass to a client thread
@@ -75,8 +78,8 @@ struct client_request {
 };
 
 // Returns the number of microseconds since a epoch
-long long get_microseconds() {
-	long long microseconds = 0;
+unsigned long long get_microseconds() {
+	unsigned long long microseconds = 0;
 
 #ifdef WIN32
 	FILETIME ft;
@@ -155,7 +158,7 @@ cleanup:
 	Creates a server, and handles each incoming client
 */
 void *server_thread(void *data) {
-	const struct server_request *req = data;
+	struct server_request *req = data;
 
 	SOCKET s = INVALID_SOCKET; // The listen server socket
 
@@ -164,8 +167,7 @@ void *server_thread(void *data) {
 	int clients = 0; // The number of clients
 	
 	int i;
-	long long bytes_recv [ FD_SETSIZE - 1 ];
-	long long total_bytes_recv;
+	unsigned long long bytes_recv [ FD_SETSIZE - 1 ]; // Bytes received from each socket
 
 	char *buffer = NULL; // Buffer to read data into, will be malloced later
 	struct sockaddr_in addr; // Address to listen on
@@ -319,14 +321,16 @@ void *server_thread(void *data) {
 	end_time = get_microseconds();
 
 	// Add up all the client bytes
-	total_bytes_recv = 0;
+	req->duration = end_time - start_time;
+	req->bytes_received = 0;
 	for (i = 0 ; i < clients ; i++) {
 		assert ( client[i] != INVALID_SOCKET );
 
-		total_bytes_recv += bytes_recv [ i ];
+		req->bytes_received += bytes_recv [ i ];
 	}
 
-	printf( "Received %lld Mbytes/s\n", (total_bytes_recv / (end_time-start_time)));
+
+	printf( "Received %lld Mbytes for %lld seconds @ %ldd\n", req->bytes_received, req->duration, req->bytes_received / req->duration );
 
 cleanup:
 	// Cleanup
