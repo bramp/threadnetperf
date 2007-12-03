@@ -217,6 +217,7 @@ void *server_thread(void *data) {
 		fd_set readFD;
 		struct timeval waittime = {0, 100}; // 100 microseconds
 		int ret;
+		SOCKET nfds = s;
 
 		FD_ZERO( &readFD );
 
@@ -226,12 +227,19 @@ void *server_thread(void *data) {
 
 		// Add all the client sockets
 		for (c = client ; c < &client [ clients] ; c++) {
-			assert ( *c != INVALID_SOCKET );
+			SOCKET s = *c;
 
-			FD_SET( *c, &readFD);
+			assert ( s != INVALID_SOCKET );
+
+			FD_SET( s, &readFD);
+
+			if ( s > nfds )
+				nfds = s;
 		}
 
-		ret = select(0, &readFD, NULL, NULL, &waittime);
+
+
+		ret = select((int)(nfds + 1), &readFD, NULL, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -396,6 +404,7 @@ void* client_thread(void *data) {
 		fd_set writeFD;
 		int ret;
 		struct timeval waittime = {0, 100}; // 100 microseconds
+		SOCKET nfds = INVALID_SOCKET;
 
 		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
 
@@ -407,9 +416,12 @@ void* client_thread(void *data) {
 			// Add them to FD sets
 			FD_SET( s, &readFD);
 			FD_SET( s, &writeFD);
+
+			if ( s > nfds )
+				nfds = s;
 		}
 
-		ret = select(0, &readFD, &writeFD, NULL, &waittime);
+		ret = select((int)(nfds + 1), &readFD, &writeFD, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -461,7 +473,7 @@ void* client_thread(void *data) {
 				}
 			}
 
-			// Move the socket on (if needed)
+			// Move the socket on
 			i++;
 		}
 
