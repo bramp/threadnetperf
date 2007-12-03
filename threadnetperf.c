@@ -311,22 +311,20 @@ void *server_thread(void *data) {
 				int len = recv( s, buffer, message_size, 0);
 
 				ret--;
+			
+				// The socket has closed (or an error has occured)
+				if ( len <= 0 ) {
 
-				if ( len == SOCKET_ERROR ) {
-					if ( ERRNO != ECONNRESET ) {
+					if ( len == SOCKET_ERROR && ERRNO != ECONNRESET ) {
 						fprintf(stderr, "%s: %d recv() error %d\n", __FILE__, __LINE__, ERRNO );
 						goto cleanup;
-					}
-				} 
-				
-				// The socket has closed
-				if ( len <= 0 ) {
+					} 
 
 					#ifdef _DEBUG
 					printf("Remove client (%d/%d)\n", i, clients );
 					#endif
 
-					// Invalid this client
+					// Invalidate this client
 					closesocket( s );
 					move_down ( &client[ i ], &client[ clients ] );
 					clients--;
