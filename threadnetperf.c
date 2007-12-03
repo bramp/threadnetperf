@@ -481,12 +481,23 @@ void cleanup_winsock() {
 }
 #endif
 
+#ifndef usleep
+int usleep(unsigned int useconds) {
+	struct timespec waittime = {0, useconds * 1000 }; 
+
+	if ( useconds > 1000000 )
+		return EINVAL;
+
+	pthread_delay_np ( &waittime );
+	return 0;
+}
+#endif
+
 /**
 	Wait until duration has passed
 */
 void pause_for_duration(unsigned int duration) {
 	long long start_time; // The time we started
-	struct timespec waittime = {0, 100000000 }; // 1/10 second
 
 	// Make sure duration is in microseconds
 	duration = duration * 1000000;
@@ -502,7 +513,7 @@ void pause_for_duration(unsigned int duration) {
 			break;
 		}
 
-		pthread_delay_np ( &waittime );
+		usleep( 100000 );
 	}
 }
 
