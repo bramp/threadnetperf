@@ -1,3 +1,4 @@
+#define _GNU_SOURCE 
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -49,7 +50,6 @@
 	#endif
 #endif
 
-#define _GNU_SOURCE 
 #include <pthread.h> // We assume we have a pthread library (even on windows)
 #include <sched.h>
 
@@ -531,6 +531,8 @@ void pause_for_duration(unsigned int duration) {
 			bRunning = 0;
 			break;
 		}
+
+		printf(".");
 
 		usleep( 100000 );
 	}
