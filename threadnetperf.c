@@ -127,6 +127,61 @@ void pause_for_duration(unsigned int duration) {
 	}
 }
 
+int parse_arguments( int argc, const char *argv[] ) {
+	int c;
+
+	// Default arguments
+	message_size = 1024;
+	disable_nagles = 0;
+	duration = 10;
+
+	// Lets parse some command line args
+	while ((c = getopt(argc, argv, "tuns:d:")) != -1) {
+		switch ( c ) {
+			// Duration
+			case 'd':
+				duration = atoi( optarg );
+				if ( duration == 0 ) {
+					fprintf(stderr, "Invalid duration given (%s)\n", optarg );
+					return -1;
+				}
+				break;
+
+			// Disable nagles algorithm (ie NO delay)
+			case 'n':
+				disable_nagles = 1;
+				break;
+
+			// Parse the message size
+			case 's':
+				message_size = atoi( optarg );
+				if ( message_size == 0 ) {
+					fprintf(stderr, "Invalid message size given (%s)\n", optarg );
+					return -1;
+				}
+				break;
+			
+			case '?':
+				fprintf(stderr, "Unknown argument (%s)\n", argv[optind-1] );
+				return -1;
+
+			// TCP/UDP
+			case 't':
+			case 'u':
+			default:
+				fprintf(stderr, "Argument not implemented (yet) (%c)\n", c );
+				return -1;
+		}
+	}
+
+	// Try and parse anything else left on the end
+	if (optind < argc) {
+
+	}
+
+	return 0;
+}
+
 int main (int argc, const char *argv[]) {
 	struct server_request sreq;
 	struct client_request creq;
@@ -135,11 +190,14 @@ int main (int argc, const char *argv[]) {
 	unsigned int i;
 	cpu_set_t cpus;
 	int ret;
-	
 
 #ifdef WIN32
 	setup_winsock();
 #endif
+
+	if ( parse_arguments( argc, argv ) ) {
+		goto cleanup;
+	}
 
 	threads = 2;
 	unready_threads = threads;

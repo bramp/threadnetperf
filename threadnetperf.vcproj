@@ -122,6 +122,9 @@
 				RelativePath=".\common.c">
 			</File>
 			<File
+				RelativePath=".\getopt.c">
+			</File>
+			<File
 				RelativePath=".\server.c">
 			</File>
 			<File
@@ -134,6 +137,9 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 			<File
 				RelativePath=".\common.h">
+			</File>
+			<File
+				RelativePath=".\getopt.h">
 			</File>
 			<File
 				RelativePath=".\global.h">

@@ -17,6 +17,8 @@
 	#include "winsock2.h"
 	#include "Ws2tcpip.h"
 
+	#include "getopt.h"
+
 	#define ERRNO (WSAGetLastError())
 	#define ECONNRESET WSAECONNRESET
 
@@ -41,7 +43,7 @@
 	#include <sys/socket.h>
 	#include <netinet/in.h>
 	#include <netinet/tcp.h> // TCP_NODELAY, TCP_MAXSEG
-	#include <unistd.h>
+	#include <unistd.h> // for getopt
 	#include <arpa/inet.h> // For inet_addr
 
 	#define ERRNO errno
