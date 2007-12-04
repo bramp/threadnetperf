@@ -55,12 +55,18 @@
 #include <semaphore.h>
 #include <sched.h>
 
-// Semaphore to indicate when all the threads are connected and ready to go
-sem_t ready_sem;
-sem_t go_sem;
+// Condition Variable that is signed each time a thread is ready
+pthread_cond_t ready_cond;
+
+// Condition Variable to indicate when all the threads are connected and ready to go
+pthread_cond_t go_cond;
+pthread_mutex_t go_mutex;
 
 // Flag to indidcate if we are still running
 volatile int bRunning = 1;
+
+// Flag to indidcate if we should start the main benchmark yet
+volatile int bGo = 0;
 
 // The message size
 int message_size = 65535;
@@ -402,6 +408,7 @@ void* client_thread(void *data) {
 	int clients = 0; // The number of clients
 	int i;
 	char *buffer = NULL;
+	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 
 #ifdef _DEBUG
 	printf("Started client thread %s %d\n",inet_ntoa(req->addr.sin_addr), req->n );
@@ -441,6 +448,10 @@ void* client_thread(void *data) {
 
 	buffer = malloc( message_size );
 	memset( buffer, 0x41414141, message_size );
+
+	// Wait for the go
+	while ( bRunning && !bGo )
+		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 
 	// Now start the main loop
 	while ( bRunning ) {
@@ -561,12 +572,12 @@ void cleanup_winsock() {
 #ifdef WIN32
 int usleep(unsigned int useconds) {
 	struct timespec waittime;
-	
-	waittime.tv_sec = 0;
-	waittime.tv_nsec = useconds * 1000; 
 
 	if ( useconds > 1000000 )
 		return EINVAL;
+
+	waittime.tv_sec = 0;
+	waittime.tv_nsec = useconds * 1000; 
 
 	pthread_delay_np ( &waittime );
 	return 0;
@@ -619,12 +630,21 @@ int main (int argc, const char *argv[]) {
 	setup_winsock();
 #endif
 
-	// Semaphore to say when all threads are connected and ready
-	sem_init(&ready, 0, 0);
-
 	threads = 2;
 	thread = malloc( threads * sizeof(*thread) );
 	memset (thread, 0, threads * sizeof(*thread));
+
+	// Setup the shared conditional variables
+	ret = pthread_cond_init( &go_cond, NULL);
+	if ( ret ) {
+		fprintf(stderr, "%s: %d pthread_cond_init() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+	ret = pthread_mutex_init( &go_mutex, NULL);
+	if ( ret ) {
+		fprintf(stderr, "%s: %d pthread_mutex_init() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
 
 	// Create all the threads
 	CPU_ZERO ( &cpus );
@@ -650,6 +670,11 @@ int main (int argc, const char *argv[]) {
 		goto cleanup;
 	}
 
+	pthread_mutex_lock( &go_mutex );
+	bGo = 1;
+	pthread_cond_broadcast( &go_cond );
+	pthread_mutex_unlock( &go_mutex );
+
 	// Now wait unti the test is completed
 	pause_for_duration( duration );
 
@@ -666,6 +691,9 @@ cleanup:
 		assert ( thread [i] != 0 );
 		pthread_join( thread[i], NULL );
 	}
+
+	pthread_cond_destroy( & go_cond );
+	pthread_mutex_destroy( & go_mutex );
 
 	free ( thread );
 
