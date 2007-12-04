@@ -52,8 +52,12 @@
 #endif
 
 #include <pthread.h> // We assume we have a pthread library (even on windows)
+#include <semaphore.h>
 #include <sched.h>
 
+// Semaphore to indicate when all the threads are connected and ready to go
+sem_t ready_sem;
+sem_t go_sem;
 
 // Flag to indidcate if we are still running
 volatile int bRunning = 1;
@@ -359,7 +363,7 @@ void *server_thread(void *data) {
 	double thruput = (double)req->bytes_received / (double)req->duration;
 	double duration = (double)req->duration / (double)1000000;
 
-	printf( "Received %llu bytes for %.2fs @ %.2f Mbytes/second\n", 
+	printf( "Received %llu bytes in %.2fs @ %.2f Mbytes/second\n", 
 		(req->bytes_received), duration, thruput );
 	}
 
@@ -613,8 +617,10 @@ int main (int argc, const char *argv[]) {
 	double _double = 1.0;
 
 	setup_winsock();
-
 #endif
+
+	// Semaphore to say when all threads are connected and ready
+	sem_init(&ready, 0, 0);
 
 	threads = 2;
 	thread = malloc( threads * sizeof(*thread) );
