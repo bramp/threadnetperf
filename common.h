@@ -45,6 +45,7 @@
 	#include <netinet/tcp.h> // TCP_NODELAY, TCP_MAXSEG
 	#include <unistd.h> // for getopt
 	#include <arpa/inet.h> // For inet_addr
+	#include <netdb.h> // For NI_NUMERICHOST
 
 	#define ERRNO errno
 	#define closesocket(s) close(s)
