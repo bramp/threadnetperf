@@ -2,7 +2,7 @@
 #include "global.h"
 
 void print_results( struct server_request *req ) {
-	float thruput = (float)req->bytes_received / (float)req->duration;
+	float thruput = req->bytes_received > 0 ? (float)req->bytes_received / (float)req->duration : 0;
 	float duration = (float)req->duration / (float)1000000;
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
@@ -48,13 +48,13 @@ void *server_thread(void *data) {
 	//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	s = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if ( s == INVALID_SOCKET ) {
-		fprintf(stderr, "%s: %d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
 	if ( disable_nagles ) {
 		if ( disable_nagle( s ) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s: %d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
 	}
@@ -65,19 +65,19 @@ void *server_thread(void *data) {
 	addr.sin_port = htons( req->port );
 
 	if ( bind( s, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
-		fprintf(stderr, "%s: %d bind() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d bind() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
 	if ( listen(s, SOMAXCONN) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s: %d listen() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
 	// Setup the buffer
 	buffer = malloc( message_size );
 	if ( buffer == NULL ) {
-		fprintf(stderr, "%s: %d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
@@ -118,7 +118,7 @@ void *server_thread(void *data) {
 
 		ret = select((int)(nfds + 1), &readFD, NULL, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
-			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
 
@@ -131,13 +131,13 @@ void *server_thread(void *data) {
 			SOCKET c = accept( s, (struct sockaddr *)&addr, &addr_len );
 
 			if ( c == INVALID_SOCKET ) {
-				fprintf(stderr, "%s: %d accept() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
 
 			if ( disable_nagles ) {
 				if ( disable_nagle( s ) == SOCKET_ERROR ) {
-					fprintf(stderr, "%s: %d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+					fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
 				}
 			}
@@ -172,7 +172,7 @@ void *server_thread(void *data) {
 				if ( len <= 0 ) {
 
 					if ( len == SOCKET_ERROR && ERRNO != ECONNRESET ) {
-						fprintf(stderr, "%s: %d recv() error %d\n", __FILE__, __LINE__, ERRNO );
+						fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
 						goto cleanup;
 					} 
 
@@ -212,6 +212,9 @@ void *server_thread(void *data) {
 	print_results(req);
 
 cleanup:
+	// Force a stop
+	bRunning = 0;
+
 	// Cleanup
 	if ( buffer )
 		free( buffer );

@@ -14,9 +14,17 @@ void* client_thread(void *data) {
 	int i;
 	char *buffer = NULL;
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
+	
+#ifdef _DEBUG
+	char addr[64];
+#endif
+
+	assert ( req != NULL );
 
 #ifdef _DEBUG
-	printf("Started client thread %s %d\n",inet_ntoa(req->addr.sin_addr), req->n );
+	addr_to_ipstr(req->addr, req->addr_len, addr, sizeof(addr));
+
+	printf("Started client thread %s %d\n", addr, req->n );
 #endif
 
 	// Blank client before we start
@@ -29,19 +37,19 @@ void* client_thread(void *data) {
 		//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 		s = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if ( s == INVALID_SOCKET ) {
-			fprintf(stderr, "%s: %d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
 
 		if ( disable_nagles ) {
 			if ( disable_nagle( s ) == SOCKET_ERROR ) {
-				fprintf(stderr, "%s: %d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
 		}
 
-		if ( connect( s, (const struct sockaddr *)&req->addr, sizeof(req->addr) ) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s: %d connect() error %d\n", __FILE__, __LINE__, ERRNO );
+		if ( connect( s, (const struct sockaddr *)&req->addr, req->addr_len ) == SOCKET_ERROR ) {
+			fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
 
@@ -87,7 +95,7 @@ void* client_thread(void *data) {
 
 		ret = select((int)(nfds + 1), &readFD, &writeFD, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
-			fprintf(stderr, "%s: %d select() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
 
@@ -107,7 +115,7 @@ void* client_thread(void *data) {
 
 				if ( len == SOCKET_ERROR ) {
 					if ( ERRNO != ECONNRESET ) {
-						fprintf(stderr, "%s: %d recv() error %d\n", __FILE__, __LINE__, ERRNO );
+						fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
 						goto cleanup;
 					}
 				} 
@@ -132,7 +140,7 @@ void* client_thread(void *data) {
 				ret--;
 
 				if ( send( s, buffer, message_size, 0 ) == SOCKET_ERROR ) {
-					fprintf(stderr, "%s: %d send() error %d\n", __FILE__, __LINE__, ERRNO );
+					fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
 				}
 			}
@@ -143,6 +151,10 @@ void* client_thread(void *data) {
 	}
 
 cleanup:
+
+	// Force a stop
+	bRunning = 0;
+
 	// Cleanup
 	if ( buffer )
 		free( buffer );

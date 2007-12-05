@@ -53,3 +53,22 @@ unsigned long long get_microseconds() {
 
 	return microseconds;
 }
+
+/**
+	Turn a addr into an string representing its address
+*/
+char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen) { 
+    // Validate parameters
+    assert (host != NULL);
+	assert (maxhostlen != 0);
+	assert (addr != 0);
+
+	// Error
+	if ( getnameinfo (addr, addlen, host, maxhostlen, NULL, 0, NI_NUMERICHOST) ) {
+		*host = '\0';
+		return NULL;
+	}
+
+	return host;
+}
+

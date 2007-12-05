@@ -69,9 +69,11 @@ struct server_request {
 
 // Struct to pass to a client thread
 struct client_request {
-	struct sockaddr_in addr;
-	//int addr_len;
+	struct sockaddr *addr;
+	int addr_len;
 	unsigned int n;
+
+	struct client_request *next;
 };
 
 void *server_thread(void *data);
@@ -84,5 +86,7 @@ int disable_nagle(SOCKET s);
 void move_down ( SOCKET *arr, SOCKET *arr_end );
 
 unsigned long long get_microseconds();
+
+char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen);
 
 #endif
