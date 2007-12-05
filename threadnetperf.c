@@ -138,6 +138,7 @@ void pause_for_duration(unsigned int duration) {
 
 int parse_arguments( int argc, char *argv[] ) {
 	int c;
+	unsigned int x, y;
 
 	// Default arguments
 	message_size = 1024;
@@ -192,36 +193,32 @@ int parse_arguments( int argc, char *argv[] ) {
 		}
 	}
 
-	{
-		unsigned int x, y;
+	for (x = 0; x < cores; x++) {
+		for (y = 0; y < cores; y++) {
+			clientserver [ x ] [ y ] = 0;
+		}
+	}
 
-		for (x = 0; x < cores; x++) {
-			for (y = 0; y < cores; y++) {
-				clientserver [ x ] [ y ] = 0;
-			}
+	// Try and parse anything else left on the end
+	// 1{0-0} 10{1-1} 3{0-1}, 1 connection core 0 to core 0, 10 connections core 1 to core 1, and 3 connections core 0 to core 1
+	if (optind < argc) {
+		unsigned int count; // Number of connections in this class
+		unsigned int client, server; // Client and Server cores
+
+		if ( sscanf( argv[optind], "%u{%u-%u}", &count, &client, &server ) <3 ) {
+			fprintf(stderr, "Unknown argument (%s)\n", argv[optind] );
+			return -1;
 		}
 
-		// Try and parse anything else left on the end
-		// 1{0-0} 10{1-1} 3{0-1}, 1 connection core 0 to core 0, 10 connections core 1 to core 1, and 3 connections core 0 to core 1
-		if (optind < argc) {
-			unsigned int count; // Number of connections in this class
-			unsigned int client, server; // Client and Server cores
-
-			if ( sscanf( argv[optind], "%u{%u-%u}", &count, &client, &server ) <3 ) {
-				fprintf(stderr, "Unknown argument (%s)\n", argv[optind] );
-				return -1;
-			}
-
-			// Check all the paramters make sense
-			if ( client >= cores || server >= cores ) {
-				fprintf(stderr, "Cores must not be greater than %d (%s)\n", cores, argv[optind] );
-				return -1;
-			}
-
-			clientserver [ client ] [ server ] += count;
-
-			optind++;
+		// Check all the paramters make sense
+		if ( client >= cores || server >= cores ) {
+			fprintf(stderr, "Cores must not be greater than %d (%s)\n", cores, argv[optind] );
+			return -1;
 		}
+
+		clientserver [ client ] [ server ] += count;
+
+		optind++;
 	}
 
 	return 0;
@@ -247,8 +244,18 @@ int main (int argc, char *argv[]) {
 
 	// Malloc space for a 2D array
 	clientserver = calloc ( cores, sizeof(**clientserver) );
-	for (i = 0; i < cores; i++)
+	if ( clientserver == NULL ) {
+		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+		
+	for (i = 0; i < cores; i++) {
 		clientserver[i] = calloc ( cores, sizeof(*clientserver) );
+		if ( clientserver[i] == NULL ) {
+			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+			goto cleanup;
+		}
+	}
 
 
 	if ( parse_arguments( argc, argv ) ) {
@@ -258,6 +265,11 @@ int main (int argc, char *argv[]) {
 	// Malloc one space for each core
 	sreq = calloc ( cores, sizeof(*sreq) );
 	creq = calloc ( cores, sizeof(*creq) );
+
+	if ( sreq == NULL || creq == NULL  ) {
+		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
 
 	// Number of threads not ready
 	unready_threads = 0;
