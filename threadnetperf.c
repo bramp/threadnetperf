@@ -237,6 +237,10 @@ int main (int argc, char *argv[]) {
 	int ret;
 	unsigned int servercore, clientcore;
 
+	// Silly flags to say if these two variables were init
+	int allocated_go_cond = 0;
+	int allocated_go_mutex = 0;
+
 #ifdef WIN32
 	setup_winsock();
 #endif
@@ -327,11 +331,14 @@ int main (int argc, char *argv[]) {
 		fprintf(stderr, "%s:%d pthread_cond_init() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
+	allocated_go_cond = 1;
+
 	ret = pthread_mutex_init( &go_mutex, NULL);
 	if ( ret ) {
 		fprintf(stderr, "%s:%d pthread_mutex_init() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
+	allocated_go_mutex = 1;
 
 	// Create all the server threads
 	for (servercore = 0; servercore < cores; servercore++) {
@@ -394,14 +401,14 @@ int main (int argc, char *argv[]) {
 #endif
 
 cleanup:
-	
+
 	// Make sure we are not running anymore
 	bRunning = 0;
 
 	if ( clientserver ) {
 		for (i = 0; i < cores; i++)
 			free ( clientserver[i] );
-        
+
 		free( clientserver );
 	}
 
@@ -423,10 +430,11 @@ cleanup:
 		pthread_join( thread[i], NULL );
 	}
 
-	if ( go_cond != NULL )
+	if ( allocated_go_cond )
 		pthread_cond_destroy( & go_cond );
-	if ( go_mutex != NULL )
-		pthread_mutex_destroy( & go_mutex );
+
+	if ( allocated_go_mutex )
+	pthread_mutex_destroy( & go_mutex );
 
 	free ( thread );
 
