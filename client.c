@@ -48,7 +48,7 @@ void* client_thread(void *data) {
 			}
 		}
 
-		if ( connect( s, (const struct sockaddr *)&req->addr, req->addr_len ) == SOCKET_ERROR ) {
+		if ( connect( s, req->addr, req->addr_len ) == SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
