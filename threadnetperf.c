@@ -70,7 +70,7 @@ cleanup:
 */
 void setup_winsock() {
 	WSADATA wsaData;
-	
+
 	if ( WSAStartup(MAKEWORD(2,2), &wsaData) ) {
 		fprintf(stderr, "%s: %d WSAStartup() error\n", __FILE__, __LINE__ );
 		return;
@@ -127,7 +127,7 @@ void pause_for_duration(unsigned int duration) {
 	}
 }
 
-int parse_arguments( int argc, const char *argv[] ) {
+int parse_arguments( int argc, char *argv[] ) {
 	int c;
 
 	// Default arguments
@@ -182,7 +182,7 @@ int parse_arguments( int argc, const char *argv[] ) {
 	return 0;
 }
 
-int main (int argc, const char *argv[]) {
+int main (int argc, char *argv[]) {
 	struct server_request sreq;
 	struct client_request creq;
 	pthread_t *thread; // Array to handle thread handles
