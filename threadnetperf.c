@@ -242,15 +242,17 @@ int main (int argc, char *argv[]) {
 	setup_winsock();
 #endif
 
+	printf("%d core machine %d\n", cores, sizeof(int));
+
 	// Malloc space for a 2D array
-	clientserver = calloc ( cores, sizeof(**clientserver) );
+	clientserver = calloc ( cores, sizeof(*clientserver) );
 	if ( clientserver == NULL ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 		
 	for (i = 0; i < cores; i++) {
-		clientserver[i] = calloc ( cores, sizeof(*clientserver) );
+		clientserver[i] = calloc ( cores, sizeof(clientserver[i]) );
 		if ( clientserver[i] == NULL ) {
 			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 			goto cleanup;
