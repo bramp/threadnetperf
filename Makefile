@@ -1,7 +1,8 @@
 
 #INCLUDES = -I
 CC = gcc
-CFLAGS = -save-temps -g -O0 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
+CFLAGS = -g -O0 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
+#CFLAGS = -O2 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT
 LDFLAGS = -pthread
 
 SOURCES =	threadnetperf.c
