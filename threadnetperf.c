@@ -174,8 +174,37 @@ int parse_arguments( int argc, char *argv[] ) {
 		}
 	}
 
-	// Try and parse anything else left on the end
-	if (optind < argc) {
+	{
+		// Make a 2D array for each possible to and from
+		int *clientserver = malloc ( 8 * 8 * sizeof(*clientserver) );
+
+		// Try and parse anything else left on the end
+		// 1{0-0} 10{1-1} 3{0-1}, 1 connection core 0 to core 0, 10 connections core 1 to core 1, and 3 connections core 0 to core 1
+		if (optind < argc) {
+			char *c = argv[optind];
+			char *c2;
+
+			int count; // Number of connections in this class
+			int client, server; // Client and Server cores
+
+
+
+			if ( count == 0 ) {
+				fprintf(stderr, "Invalid count (%s)\n", argv[optind] );
+				return -1;
+			}
+			
+			c2 = strchr( c2, '-' );
+			if ( c2 == NULL ) {
+				fprintf(stderr, "Unknown argument (%s)\n", argv[optind] );
+				return -1;
+			}
+			*c2 = '\0';
+
+			//clientserver [ client ] [ server ] += count;
+
+			optind++;
+		}
 
 	}
 

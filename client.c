@@ -61,7 +61,6 @@ void* client_thread(void *data) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
-		
 
 	// Now start the main loop
 	while ( bRunning ) {
@@ -141,7 +140,6 @@ void* client_thread(void *data) {
 			// Move the socket on
 			i++;
 		}
-
 	}
 
 cleanup:
