@@ -242,8 +242,6 @@ int main (int argc, char *argv[]) {
 	setup_winsock();
 #endif
 
-	printf("%d core machine %d\n", cores, sizeof(int));
-
 	// Malloc space for a 2D array
 	clientserver = calloc ( cores, sizeof(*clientserver) );
 	if ( clientserver == NULL ) {
