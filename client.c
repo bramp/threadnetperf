@@ -31,6 +31,11 @@ void* client_thread(void *data) {
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
 		*c = INVALID_SOCKET;
 
+	if ( req->n > sizeof(client) / sizeof(*client) ) {
+		fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, sizeof(client) / sizeof(*client) );
+		goto cleanup;
+	}
+
 	// Connect all the clients
 	i = req->n;
 	while ( i > 0 ) {
@@ -75,14 +80,14 @@ void* client_thread(void *data) {
 		fd_set readFD;
 		fd_set writeFD;
 		int ret;
-		struct timeval waittime = {0, 100}; // 100 microseconds
+		struct timeval waittime = {1, 0}; // 1 second
 		SOCKET nfds = INVALID_SOCKET;
 
 		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
 
 		// Loop all client sockets
 		for (c = client ; c < &client [ clients ] ; c++) {
-			s = *c;
+			SOCKET s = *c;
 			assert ( s != INVALID_SOCKET );
 
 			// Add them to FD sets
@@ -98,6 +103,11 @@ void* client_thread(void *data) {
 			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
+
+		#ifdef _DEBUG
+		if ( ret == 0 )
+			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
+		#endif
 
 		// Figure out which sockets have fired
 		i = 0;
@@ -118,7 +128,7 @@ void* client_thread(void *data) {
 						fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
 						goto cleanup;
 					}
-				} 
+				}
 
 				// The socket has closed
 				if ( len <= 0 ) {

@@ -65,6 +65,7 @@ struct server_request {
 	unsigned short port;
 
 	unsigned long long bytes_received;
+	unsigned long long pkts_received;
 	unsigned long long duration;
 };
 

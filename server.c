@@ -6,9 +6,9 @@ void print_results( struct server_request *req ) {
 	float duration = (float)req->duration / (float)1000000;
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
-	printf( "Received %I64u bytes in %.2fs @ %.2f Mbytes/second\n", req->bytes_received, duration, thruput );
+	printf( "Received %I64u bytes in %I64u pkts over %.2fs @ %.2f Mbytes/second\n", req->bytes_received, req->pkts_received, duration, thruput );
 #else
-	printf( "Received %llu bytes in %.2fs @ %.2f Mbytes/second\n", req->bytes_received, duration, thruput );
+	printf( "Received %llu bytes in %llu pkts over %.2fs @ %.2f Mbytes/second\n", req->bytes_received, req->pkts_received, duration, thruput );
 #endif
 }
 
@@ -23,9 +23,10 @@ void *server_thread(void *data) {
 	SOCKET client [ FD_SETSIZE - 1 ]; // We can only have 1 server socket, and (FD_SETSIZE - 1) clients
 	SOCKET *c = client;
 	int clients = 0; // The number of clients
-	
+
 	int i;
 	unsigned long long bytes_recv [ FD_SETSIZE - 1 ]; // Bytes received from each socket
+	unsigned long long pkts_recv [ FD_SETSIZE - 1 ]; // Bytes received from each socket
 
 	char *buffer = NULL; // Buffer to read data into, will be malloced later
 	struct sockaddr_in addr; // Address to listen on
@@ -44,6 +45,7 @@ void *server_thread(void *data) {
 		*c = INVALID_SOCKET;
 
 	memset( bytes_recv, 0, sizeof(bytes_recv) );
+	memset( pkts_recv, 0, sizeof(pkts_recv) );
 
 	//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	s = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -94,7 +96,7 @@ void *server_thread(void *data) {
 
 	while ( bRunning ) {
 		fd_set readFD;
-		struct timeval waittime = {0, 100}; // 100 microseconds
+		struct timeval waittime = {1, 0}; // 1 second
 		int ret;
 		SOCKET nfds = s;
 
@@ -121,6 +123,11 @@ void *server_thread(void *data) {
 			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
+
+		#ifdef _DEBUG
+		if ( ret == 0 )
+			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
+		#endif
 
 		// Did the listen socket fire?
 		if ( FD_ISSET(s, &readFD) ) {
@@ -167,14 +174,14 @@ void *server_thread(void *data) {
 				int len = recv( s, buffer, message_size, 0);
 
 				ret--;
-			
+
 				// The socket has closed (or an error has occured)
 				if ( len <= 0 ) {
 
 					if ( len == SOCKET_ERROR && ERRNO != ECONNRESET ) {
 						fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
 						goto cleanup;
-					} 
+					}
 
 					#ifdef _DEBUG
 					printf("Remove client (%d/%d)\n", i, clients );
@@ -191,6 +198,7 @@ void *server_thread(void *data) {
 
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
+					pkts_recv [ i ] ++;
 				}
 			}
 
@@ -205,8 +213,10 @@ void *server_thread(void *data) {
 	// Add up all the client bytes
 	req->duration = end_time - start_time;
 	req->bytes_received = 0;
+	req->pkts_received = 0;
 	for (i = 0 ; i <  sizeof(bytes_recv) / sizeof(*bytes_recv); i++) {
 		req->bytes_received += bytes_recv [ i ];
+		req->pkts_received += pkts_recv [ i ];
 	}
 
 	print_results(req);
