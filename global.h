@@ -17,4 +17,6 @@ extern int disable_nagles;
 extern int type;
 extern int protocol;
 
+extern int verbose;
+
 #endif
