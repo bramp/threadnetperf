@@ -66,9 +66,11 @@ struct server_request {
 
 	unsigned int n; // The number of connections to accept
 
+	// Stats
 	unsigned long long bytes_received;
 	unsigned long long pkts_received;
 	unsigned long long duration;
+
 };
 
 // Struct to pass to a client thread

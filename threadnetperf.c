@@ -40,6 +40,10 @@ int disable_nagles;
 // First port number
 unsigned short port;
 
+// The socket type and protocl
+int type;
+int protocol;
+
 #ifndef pthread_attr_setaffinity_np
 	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
 		return 0;
@@ -147,7 +151,9 @@ void print_usage() {
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
-	
+	fprintf(stderr, "	-t         Use TCP\n" );
+	fprintf(stderr, "	-u         Use UDP\n" );
+
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "	tests      Combination of cores and clients\n" );
 	fprintf(stderr, "		N{c-s}   N connections\n" );
@@ -176,6 +182,9 @@ int parse_arguments( int argc, char *argv[] ) {
 	disable_nagles = 0;
 	duration = 10;
 	port = 1234;
+
+	type = SOCK_STREAM;
+	protocol = IPPROTO_TCP;
 
 	if ( argc == 1 ) {
 		print_usage();
@@ -227,7 +236,15 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// TCP/UDP
 			case 't':
+				type = SOCK_STREAM;
+				protocol = IPPROTO_TCP;
+				break;
+
 			case 'u':
+				type = SOCK_DGRAM;
+				protocol = IPPROTO_UDP;
+				break;
+
 			default:
 				fprintf(stderr, "Argument not implemented (yet) (%c)\n", c );
 				return -1;

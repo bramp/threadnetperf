@@ -14,4 +14,7 @@ extern int message_size;
 extern int duration;
 extern int disable_nagles;
 
+extern int type;
+extern int protocol;
+
 #endif

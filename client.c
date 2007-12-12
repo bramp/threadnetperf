@@ -32,7 +32,7 @@ void* client_thread(void *data) {
 		#ifdef _DEBUG
 			char addr[64];
 			addr_to_ipstr(req->addr, req->addr_len, addr, sizeof(addr));
-			printf("%d(%s) ", req->n, addr);
+			printf("%d(%s:%u) ", req->n, addr, ntohs( ((struct sockaddr_in *)req->addr)->sin_port) );
 		#endif
 
 		// Connect all the clients
@@ -44,8 +44,7 @@ void* client_thread(void *data) {
 				goto cleanup;
 			}
 
-			//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-			s = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			s = socket( AF_INET, type, protocol);
 			if ( s == INVALID_SOCKET ) {
 				fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
@@ -72,6 +71,10 @@ void* client_thread(void *data) {
 		// move onto the next client request
 		req = req->next;
 	}
+
+	#ifdef _DEBUG
+		printf("\n");
+	#endif
 
 	buffer = malloc( message_size );
 	memset( buffer, 0x41414141, message_size );

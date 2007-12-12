@@ -124,9 +124,8 @@ void *server_thread(void *data) {
 		goto cleanup;
 	}
 
+	s = socket( PF_INET, type, protocol);
 
-	//s = socket( PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	s = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if ( s == INVALID_SOCKET ) {
 		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
@@ -149,7 +148,7 @@ void *server_thread(void *data) {
 		goto cleanup;
 	}
 
-	if ( listen(s, SOMAXCONN) == SOCKET_ERROR ) {
+	if ( (type == SOCK_STREAM || type==SOCK_SEQPACKET) && listen(s, SOMAXCONN) == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
@@ -161,8 +160,17 @@ void *server_thread(void *data) {
 		goto cleanup;
 	}
 
-	if ( accept_connections(s, client, req->n) )
-		goto cleanup;
+	// If this is a STREAM then accept each connection
+	if ( type == SOCK_STREAM ) {
+		if ( accept_connections(s, client, req->n) ) {
+			goto cleanup;
+		}
+
+	// If this is a DGRAM, then we don't have a connection per client, but instead one server socket
+	} else if ( type == SOCK_DGRAM ) {
+		*client = s;
+		clients = 1;
+	}
 
 	nfds = (int)*client;
 	// Quickly loop to find the biggest socket
