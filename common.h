@@ -110,4 +110,6 @@ unsigned long long get_microseconds();
 
 size_t addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen);
 
+void print_results( int core, struct stats *stats );
+
 #endif

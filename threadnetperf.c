@@ -504,17 +504,20 @@ int main (int argc, char *argv[]) {
 	}
 
 	// Now sum all the results up
+	i = 0;
 	for (servercore = 0; servercore < cores; servercore++) {
 		if ( sreq[ servercore ].port != 0 ) {
 			total_stats.bytes_received += sreq[ servercore ].stats.bytes_received;
 			total_stats.duration       += sreq[ servercore ].stats.duration;
 			total_stats.pkts_received  += sreq[ servercore ].stats.pkts_received;
+			i++;
 		}
 	}
 
-	print_results( -1, &total_stats );
-	
+	// Divide the duration by the # of CPUs used
+	total_stats.duration = total_stats.duration / i;
 
+	print_results( -1, &total_stats );
 
 cleanup:
 
