@@ -64,6 +64,8 @@
 struct server_request {
 	unsigned short port;
 
+	unsigned int n; // The number of connections to accept
+
 	unsigned long long bytes_received;
 	unsigned long long pkts_received;
 	unsigned long long duration;
@@ -71,9 +73,12 @@ struct server_request {
 
 // Struct to pass to a client thread
 struct client_request {
+
+	// The address to connect to
 	struct sockaddr *addr;
 	int addr_len;
-	unsigned int n;
+
+	unsigned int n; // The number of connection to create
 
 	struct client_request *next;
 };

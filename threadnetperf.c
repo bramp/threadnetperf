@@ -288,7 +288,7 @@ int main (int argc, char *argv[]) {
 			if ( sreq [ servercore ].port == 0 ) {
 				sreq [ servercore ].port = port + servercore;
 				sreq [ servercore ].duration = duration;
-
+				sreq [ servercore ].n = 0;
 				unready_threads++;
 			}
 			
@@ -313,6 +313,7 @@ int main (int argc, char *argv[]) {
 			memset(c, 0, sizeof(*c));
 
 			c->n = clientserver [ clientcore ] [ servercore ];
+			sreq [ servercore ].n += c->n;
 
 			// Create the client dest addr
 			c->addr_len = sizeof ( struct sockaddr_in );
@@ -445,7 +446,7 @@ cleanup:
 		pthread_cond_destroy( & go_cond );
 
 	if ( allocated_go_mutex )
-	pthread_mutex_destroy( & go_mutex );
+		pthread_mutex_destroy( & go_mutex );
 
 	free ( thread );
 
