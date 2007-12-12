@@ -194,10 +194,9 @@ cleanup:
 
 	// Shutdown client sockets
 	for (c = client ; c < &client [ clients ] ; c++) {
-		s = *c;
-		if ( s != INVALID_SOCKET ) {
-			shutdown ( s, SHUT_RDWR );
-			closesocket( s );
+		if ( *c != INVALID_SOCKET ) {
+			shutdown ( *c, SHUT_RDWR );
+			closesocket( *c );
 		}
 	}
 
