@@ -143,25 +143,25 @@ void print_usage() {
 
 	fprintf(stderr, "\n" );
 
-	fprintf(stderr, "-d time	Set duration to run the test for\n" );
-	fprintf(stderr, "-n			Disable Nagle's algorithm (e.g no delay)\n" );
-	fprintf(stderr, "-s	size	Set the send/recv size\n" );
-	fprintf(stderr, "-p	port	Set the port number for the first server thread to use\n" );
+	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
+	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
+	fprintf(stderr, "	-s	size    Set the send/recv size\n" );
+	fprintf(stderr, "	-p	port    Set the port number for the first server thread to use\n" );
 	
 	fprintf(stderr, "\n" );
-	fprintf(stderr, "tests		Combination of cores and clients\n" );
-	fprintf(stderr, "N{c-s}		N connections\n" );
-	fprintf(stderr, "      		c client core\n" );
-	fprintf(stderr, "      		s server core\n" );
+	fprintf(stderr, "tests      Combination of cores and clients\n" );
+	fprintf(stderr, "	N{c-s}   N connections\n" );
+	fprintf(stderr, "	         c client core\n" );
+	fprintf(stderr, "	         s server core\n" );
 
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "Examples:\n" );
-	fprintf(stderr, "threadnetperf -n -s 10000 1{0-0}\n" );
-	fprintf(stderr, "Disable Nagle's, send size of 10000 with 1 connection from core 0 to core 0\n" );
+	fprintf(stderr, "	threadnetperf -n -s 10000 1{0-0}\n" );
+	fprintf(stderr, "	Disable Nagle's, send size of 10000 with 1 connection from core 0 to core 0\n" );
 	
 	fprintf(stderr, "\n" );
-	fprintf(stderr, "threadnetperf 10{0-0} 10{1-1} 10{2-2}\n" );
-	fprintf(stderr, "10 connection from core 0 to core 0, 10 connections from core 1 to core 1, and 10 connections from core 2 to core 2\n" );
+	fprintf(stderr, "	threadnetperf 10{0-0} 10{1-1} 10{2-2}\n" );
+	fprintf(stderr, "	10 connection from core 0 to core 0, 10 connections from core 1 to core 1, and 10 connections from core 2 to core 2\n" );
 
 	//fprintf(stderr, "-d\n" );
 	//fprintf(stderr, "-d\n" );
@@ -471,13 +471,15 @@ cleanup:
 		free( clientserver );
 	}
 
-	for (i = 0; i < cores; i++) {
-		struct client_request *c = creq[i];
-		if ( c != NULL ) {
-			struct client_request *nextC = c->next;
-			free ( c->addr );
-			free( c );
-			c = nextC;
+	if ( creq ) { 
+		for (i = 0; i < cores; i++) {
+			struct client_request *c = creq[i];
+			if ( c != NULL ) {
+				struct client_request *nextC = c->next;
+				free ( c->addr );
+				free( c );
+				c = nextC;
+			}
 		}
 	}
 
