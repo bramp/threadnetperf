@@ -16,53 +16,61 @@ void* client_thread(void *data) {
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 	int nfds;
 
-#ifdef _DEBUG
-	char addr[64];
-#endif
-
 	assert ( req != NULL );
-
-#ifdef _DEBUG
-	addr_to_ipstr(req->addr, req->addr_len, addr, sizeof(addr));
-
-	printf("Started client thread %s %d\n", addr, req->n );
-#endif
 
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
 		*c = INVALID_SOCKET;
 
-	if ( req->n > sizeof(client) / sizeof(*client) ) {
-		fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
-		goto cleanup;
-	}
+#ifdef _DEBUG
+	printf("Started client thread " );
+#endif
 
-	// Connect all the clients
-	i = req->n;
-	while ( i > 0 ) {
-		//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-		s = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP);
-		if ( s == INVALID_SOCKET ) {
-			fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
+	// Loop all the client requests for this thread
+	while ( req != NULL ) {
 
-		if ( disable_nagles ) {
-			if ( disable_nagle( s ) == SOCKET_ERROR ) {
-				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+		#ifdef _DEBUG
+			char addr[64];
+			addr_to_ipstr(req->addr, req->addr_len, addr, sizeof(addr));
+			printf("%d(%s) ", req->n, addr);
+		#endif
+
+		// Connect all the clients
+		i = req->n;
+		while ( i > 0 ) {
+
+			if ( clients >= sizeof(client) / sizeof(*client) ) {
+				fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
 				goto cleanup;
 			}
+
+			//s = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+			s = socket( AF_INET, SOCK_STREAM, IPPROTO_TCP);
+			if ( s == INVALID_SOCKET ) {
+				fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+				goto cleanup;
+			}
+
+			if ( disable_nagles ) {
+				if ( disable_nagle( s ) == SOCKET_ERROR ) {
+					fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+					goto cleanup;
+				}
+			}
+
+			if ( connect( s, req->addr, req->addr_len ) == SOCKET_ERROR ) {
+				fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
+				goto cleanup;
+			}
+
+			client [ clients ] = s;
+			clients++;
+
+			i--;
 		}
 
-		if ( connect( s, req->addr, req->addr_len ) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
-
-		client [ clients ] = s;
-		clients++;
-
-		i--;
+		// move onto the next client request
+		req = req->next;
 	}
 
 	buffer = malloc( message_size );
