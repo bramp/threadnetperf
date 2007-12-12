@@ -33,7 +33,7 @@ void* client_thread(void *data) {
 		*c = INVALID_SOCKET;
 
 	if ( req->n > sizeof(client) / sizeof(*client) ) {
-		fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, sizeof(client) / sizeof(*client) );
+		fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
 		goto cleanup;
 	}
 

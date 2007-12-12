@@ -425,8 +425,6 @@ cleanup:
 		free( clientserver );
 	}
 
-	free( sreq );
-
 	for (i = 0; i < cores; i++) {
 		struct client_request *c = creq[i];
 		if ( c != NULL ) {
@@ -436,6 +434,9 @@ cleanup:
 			c = nextC;
 		}
 	}
+
+	free( creq );
+	free( sreq );
 
 	// Block waiting until all threads die
 	for (i = 0; i < threads; i++) {
