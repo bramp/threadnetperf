@@ -499,8 +499,8 @@ int main (int argc, char *argv[]) {
 		printf("\nFinished\n" );
 
 	// Block waiting until all threads die
-	for (i = threads - 1; i >= 0; i--) {
-		pthread_join( thread[i], NULL );
+	while (threads > 0) {
+		pthread_join( thread[threads - 1], NULL );
 		threads--;
 	}
 
@@ -526,13 +526,13 @@ cleanup:
 	bRunning = 0;
 
 	// Block waiting until all threads die
-	for (i = threads - 1; i >= 0; i--) {
-		pthread_join( thread[i], NULL );
+	while (threads > 0) {
+		pthread_join( thread[threads - 1], NULL );
 		threads--;
 	}
 
 	if ( clientserver ) {
-		for (i = 0; i < cores; i++)
+		for (i = 0; i < cores; ++i)
 			free ( clientserver[i] );
 
 		free( clientserver );
