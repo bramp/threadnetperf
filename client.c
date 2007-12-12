@@ -14,7 +14,8 @@ void* client_thread(void *data) {
 	int i;
 	char *buffer = NULL;
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
-	
+	int nfds;
+
 #ifdef _DEBUG
 	char addr[64];
 #endif
@@ -67,6 +68,15 @@ void* client_thread(void *data) {
 	buffer = malloc( message_size );
 	memset( buffer, 0x41414141, message_size );
 
+	// Quickly loop to find the biggest socket
+	nfds = (int)*client;
+	// Quickly loop to find the biggest socket
+	for (c = client + 1 ; c < &client [clients] ; ++c)
+		if ( (int)*c > nfds )
+			nfds = (int)*c;
+
+	nfds = nfds + 1;
+
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
@@ -81,24 +91,19 @@ void* client_thread(void *data) {
 		fd_set writeFD;
 		int ret;
 		struct timeval waittime = {1, 0}; // 1 second
-		SOCKET nfds = INVALID_SOCKET;
 
 		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
 
 		// Loop all client sockets
 		for (c = client ; c < &client [ clients ] ; c++) {
-			SOCKET s = *c;
-			assert ( s != INVALID_SOCKET );
+			assert ( *c != INVALID_SOCKET );
 
 			// Add them to FD sets
-			FD_SET( s, &readFD);
-			FD_SET( s, &writeFD);
-
-			if ( s > nfds )
-				nfds = s;
+			FD_SET( *c, &readFD);
+			FD_SET( *c, &writeFD);
 		}
 
-		ret = select((int)(nfds + 1), &readFD, &writeFD, NULL, &waittime);
+		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
