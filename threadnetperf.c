@@ -20,8 +20,8 @@ volatile int bRunning = 1;
 // Count of how many threads are ready
 volatile unsigned int unready_threads = 0;
 
-// The number of cores this machine has, TODO get the read number!
-const unsigned int cores = 8;
+// The number of cores this machine has
+const unsigned int cores = 8; // TODO get the read number!
 
 // Settings
 
@@ -29,16 +29,16 @@ const unsigned int cores = 8;
 int **clientserver = NULL;
 
 // The message size
-int message_size = 65535;
+int message_size;
 
 // How long (in seconds) this should run for
-int duration = 10;
+int duration;
 
 // Should we diable Nagle's Algorithm
-int disable_nagles = 1;
+int disable_nagles;
 
 // First port number
-unsigned short port = 1234;
+unsigned short port;
 
 #ifndef pthread_attr_setaffinity_np
 	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
@@ -144,6 +144,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	message_size = 1024;
 	disable_nagles = 0;
 	duration = 10;
+	port = 1234;
 
 	// Lets parse some command line args
 	while ((c = getopt(argc, argv, "tuns:d:p:")) != -1) {
