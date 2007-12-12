@@ -499,8 +499,9 @@ int main (int argc, char *argv[]) {
 		printf("\nFinished\n" );
 
 	// Block waiting until all threads die
-	for (i = 0; i < threads; i++) {
+	for (i = threads - 1; i >= 0; i--) {
 		pthread_join( thread[i], NULL );
+		threads--;
 	}
 
 	// Now sum all the results up
@@ -525,8 +526,9 @@ cleanup:
 	bRunning = 0;
 
 	// Block waiting until all threads die
-	for (i = 0; i < threads; i++) {
+	for (i = threads - 1; i >= 0; i--) {
 		pthread_join( thread[i], NULL );
+		threads--;
 	}
 
 	if ( clientserver ) {
