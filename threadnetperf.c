@@ -418,6 +418,11 @@ cleanup:
 	// Make sure we are not running anymore
 	bRunning = 0;
 
+	// Block waiting until all threads die
+	for (i = 0; i < threads; i++) {
+		pthread_join( thread[i], NULL );
+	}
+
 	if ( clientserver ) {
 		for (i = 0; i < cores; i++)
 			free ( clientserver[i] );
@@ -437,11 +442,6 @@ cleanup:
 
 	free( creq );
 	free( sreq );
-
-	// Block waiting until all threads die
-	for (i = 0; i < threads; i++) {
-		pthread_join( thread[i], NULL );
-	}
 
 	if ( allocated_go_cond )
 		pthread_cond_destroy( & go_cond );
