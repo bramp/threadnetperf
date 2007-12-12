@@ -40,6 +40,8 @@ int disable_nagles;
 // First port number
 unsigned short port;
 
+int verbose;
+
 // The socket type and protocl
 int type;
 int protocol;
@@ -131,10 +133,10 @@ void pause_for_duration(unsigned int duration) {
 			break;
 		}
 
-#ifdef _DEBUG
-		printf(".");
-		fflush(stdout);
-#endif
+		if ( verbose ) {
+			printf(".");
+			fflush(stdout);
+		}
 
 		usleep( 100000 );
 	}
@@ -149,10 +151,11 @@ void print_usage() {
 
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
-	fprintf(stderr, "	-s size    Set the send/recv size\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
+	fprintf(stderr, "	-s size    Set the send/recv size\n" );
 	fprintf(stderr, "	-t         Use TCP\n" );
 	fprintf(stderr, "	-u         Use UDP\n" );
+	fprintf(stderr, "	-v         Verbose\n" );
 
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "	tests      Combination of cores and clients\n" );
@@ -182,6 +185,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	disable_nagles = 0;
 	duration = 10;
 	port = 1234;
+	verbose = 0;
 
 	type = SOCK_STREAM;
 	protocol = IPPROTO_TCP;
@@ -192,7 +196,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "tunsh:d:p:")) != -1) {
+	while ((c = getopt(argc, argv, "tunvhs:d:p:")) != -1) {
 		switch ( c ) {
 			// Duration
 			case 'd':
@@ -226,9 +230,10 @@ int parse_arguments( int argc, char *argv[] ) {
 				}
 				break;
 			
-			case '?':
-				fprintf(stderr, "Unknown argument (%s)\n", argv[optind-1] );
-				return -1;
+			// Increase the verbose level
+			case 'v':
+				verbose++;
+				break;
 
 			case 'h':
 				print_usage();
@@ -245,6 +250,9 @@ int parse_arguments( int argc, char *argv[] ) {
 				protocol = IPPROTO_UDP;
 				break;
 
+			case '?':
+				fprintf(stderr, "Unknown argument (%s)\n", argv[optind-1] );
+				return -1;
 			default:
 				fprintf(stderr, "Argument not implemented (yet) (%c)\n", c );
 				return -1;
@@ -469,9 +477,8 @@ int main (int argc, char *argv[]) {
 	// Pauses for the duration, then sets bRunning to false
 	pause_for_duration( duration );
 
-#ifdef _DEBUG
-	printf("\nFinished\n" );
-#endif
+	if ( verbose )
+		printf("\nFinished\n" );
 
 cleanup:
 

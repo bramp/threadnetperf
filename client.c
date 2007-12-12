@@ -16,11 +16,9 @@ void* client_thread(void *data) {
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 	int nfds;
 
-#ifdef _DEBUG
 	char msg[1024]; // Debug message for each set of connected clients
 	const size_t msg_max_len = sizeof(msg) / sizeof(*msg);
 	size_t msg_len = 0;
-#endif
 
 	assert ( req != NULL );
 
@@ -28,19 +26,18 @@ void* client_thread(void *data) {
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
 		*c = INVALID_SOCKET;
 
-#ifdef _DEBUG
-	msg_len += sprintf(msg, "Core %d: Started client thread ", req->core);
-#endif
+	if ( verbose )
+		msg_len += sprintf(msg, "Core %d: Started client thread ", req->core);
 
 	// Loop all the client requests for this thread
 	while ( req != NULL ) {
 
-		#ifdef _DEBUG
+		if ( verbose ) {
 			// Print the host/port
 			msg_len += sprintf(msg + msg_len, "%d(", req->n );
 			msg_len += addr_to_ipstr(req->addr, req->addr_len, msg + msg_len, msg_max_len - msg_len);
 			msg_len += sprintf(msg + msg_len, ":%u) ", ntohs( ((struct sockaddr_in *)req->addr)->sin_port) );
-		#endif
+		}
 
 		// Connect all the clients
 		i = req->n;
@@ -79,9 +76,8 @@ void* client_thread(void *data) {
 		req = req->next;
 	}
 
-	#ifdef _DEBUG
+	if ( verbose )
 		printf("%s\n", msg);
-	#endif
 
 	buffer = malloc( message_size );
 	memset( buffer, 0x41414141, message_size );

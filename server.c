@@ -75,9 +75,8 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 		++clients;
 		connected++;
 
-		#ifdef _DEBUG
-		printf("  Server %d incoming client %s (%d)\n", servercore, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected );
-		#endif
+		if ( verbose )
+			printf("  Server %d incoming client %s (%d)\n", servercore, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected );
 
 		n--;
 	}
@@ -113,9 +112,8 @@ void *server_thread(void *data) {
 
 	int nfds;
 
-#ifdef _DEBUG
-	printf("Core %d: Started server thread port %d\n", req->core, req->port );
-#endif
+	if ( verbose )
+		printf("Core %d: Started server thread port %d\n", req->core, req->port );
 
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
@@ -249,9 +247,8 @@ void *server_thread(void *data) {
 						goto cleanup;
 					}
 
-					#ifdef _DEBUG
-					printf("Remove client (%d/%d)\n", i, clients );
-					#endif
+					if ( verbose )
+						printf("Remove client (%d/%d)\n", i, clients );
 
 					// Invalidate this client
 					closesocket( s );
