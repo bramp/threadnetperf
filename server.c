@@ -44,6 +44,9 @@ int accept_connections(SOCKET listen, SOCKET *clients, int n) {
 			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 		#endif
 
+		if ( ret == 0 )
+			continue;
+
 		// Did the listen socket fire?
 		if ( ! FD_ISSET(listen, &readFD) ) {
 			fprintf(stderr, "%s:%d FD_ISSET() has an invalid socket firing\n", __FILE__, __LINE__ );
