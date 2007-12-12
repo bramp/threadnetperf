@@ -90,7 +90,7 @@ void* client_thread(void *data) {
 		fd_set readFD;
 		fd_set writeFD;
 		int ret;
-		struct timeval waittime = {1, 0}; // 1 second
+		const struct timeval waittime = {1, 0}; // 1 second
 
 		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
 
