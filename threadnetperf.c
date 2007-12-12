@@ -201,7 +201,7 @@ int parse_arguments( int argc, char *argv[] ) {
 
 	// Try and parse anything else left on the end
 	// 1{0-0} 10{1-1} 3{0-1}, 1 connection core 0 to core 0, 10 connections core 1 to core 1, and 3 connections core 0 to core 1
-	if (optind < argc) {
+	while (optind < argc) {
 		unsigned int count; // Number of connections in this class
 		unsigned int client, server; // Client and Server cores
 
