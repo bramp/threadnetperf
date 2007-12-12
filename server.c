@@ -106,6 +106,8 @@ void *server_thread(void *data) {
 	long long start_time; // The time we started
 	long long end_time; // The time we ended
 
+	int one = 1;
+
 	int nfds;
 
 #ifdef _DEBUG
@@ -124,6 +126,7 @@ void *server_thread(void *data) {
 		goto cleanup;
 	}
 
+	// Create the listen socket
 	s = socket( PF_INET, type, protocol);
 
 	if ( s == INVALID_SOCKET ) {
@@ -136,6 +139,12 @@ void *server_thread(void *data) {
 			fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
+	}
+
+	// SO_REUSEADDR
+	if ( setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
+		fprintf(stderr, "%s:%d setsockopt(SO_REUSEADDR) error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
 	}
 
 	memset(&addr, 0, sizeof(addr));
