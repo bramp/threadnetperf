@@ -29,8 +29,7 @@ void* client_thread(void *data) {
 		*c = INVALID_SOCKET;
 
 #ifdef _DEBUG
-	strncpy(msg, "Started client thread ", msg_max_len - msg_len);
-	msg_len += strlen(msg);
+	msg_len += sprintf(msg, "Core %d: Started client thread ", req->core);
 #endif
 
 	// Loop all the client requests for this thread

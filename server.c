@@ -17,6 +17,8 @@ void print_results( struct server_request *req ) {
 **/
 int accept_connections(SOCKET listen, SOCKET *clients, int n) {
 
+	int connected = 0;
+
 	assert ( listen != INVALID_SOCKET );
 	assert ( clients != NULL );
 	assert ( n > 0 );
@@ -71,9 +73,10 @@ int accept_connections(SOCKET listen, SOCKET *clients, int n) {
 		assert ( *clients == INVALID_SOCKET );
 		*clients = s;
 		++clients;
+		connected++;
 
 		#ifdef _DEBUG
-		printf("New client %s (%d)\n", inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), n );
+		printf("Incoming client %s (%d)\n", inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected );
 		#endif
 
 		n--;
@@ -111,7 +114,7 @@ void *server_thread(void *data) {
 	int nfds;
 
 #ifdef _DEBUG
-	printf("Started server thread %d\n", req->port );
+	printf("Core %d: Started server thread %d\n", req->port, req->core );
 #endif
 
 	// Blank client before we start

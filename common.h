@@ -83,6 +83,8 @@ struct client_request {
 
 	unsigned int n; // The number of connection to create
 
+	unsigned int core; // Which core this server is running on
+
 	struct client_request *next;
 };
 

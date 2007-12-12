@@ -371,6 +371,7 @@ int main (int argc, char *argv[]) {
 
 			memset(c, 0, sizeof(*c));
 
+			c->core = clientcore;
 			c->n = clientserver [ clientcore ] [ servercore ];
 			sreq [ servercore ].n += c->n;
 
