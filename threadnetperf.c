@@ -474,7 +474,7 @@ cleanup:
 	if ( creq ) { 
 		for (i = 0; i < cores; i++) {
 			struct client_request *c = creq[i];
-			if ( c != NULL ) {
+			while ( c != NULL ) {
 				struct client_request *nextC = c->next;
 				free ( c->addr );
 				free( c );
