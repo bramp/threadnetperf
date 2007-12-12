@@ -24,7 +24,7 @@ int accept_connections(SOCKET listen, SOCKET *clients, int n) {
 	// Wait for all connections
 	while ( bRunning && n > 0 ) {
 		fd_set readFD;
-		const struct timeval waittime = {1, 0}; // 1 second
+		struct timeval waittime = {1, 0}; // 1 second
 		int ret;
 		struct sockaddr_storage addr;
 		socklen_t addr_len = sizeof(addr);
@@ -182,7 +182,7 @@ void *server_thread(void *data) {
 
 	while ( bRunning ) {
 		fd_set readFD;
-		const struct timeval waittime = {1, 0}; // 1 second
+		struct timeval waittime = {1, 0}; // 1 second
 		int ret;
 
 		FD_ZERO( &readFD );
