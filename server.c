@@ -15,7 +15,7 @@ void print_results( struct server_request *req ) {
 /**
 	Wait for and accept N connections
 **/
-int accept_connections(int serverport, SOCKET listen, SOCKET *clients, int n) {
+int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 
 	int connected = 0;
 	
@@ -76,7 +76,7 @@ int accept_connections(int serverport, SOCKET listen, SOCKET *clients, int n) {
 		connected++;
 
 		#ifdef _DEBUG
-		printf("  Server %d incoming client %s (%d)\n", serverport, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected );
+		printf("  Server %d incoming client %s (%d)\n", servercore, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected );
 		#endif
 
 		n--;
@@ -114,7 +114,7 @@ void *server_thread(void *data) {
 	int nfds;
 
 #ifdef _DEBUG
-	printf("Core %d: Started server thread %d\n", req->core, req->port );
+	printf("Core %d: Started server thread port %d\n", req->core, req->port );
 #endif
 
 	// Blank client before we start
@@ -174,7 +174,7 @@ void *server_thread(void *data) {
 
 	// If this is a STREAM then accept each connection
 	if ( type == SOCK_STREAM ) {
-		if ( accept_connections(req->port, s, client, req->n) ) {
+		if ( accept_connections(req->core, s, client, req->n) ) {
 			goto cleanup;
 		}
 
