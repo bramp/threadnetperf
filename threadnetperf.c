@@ -40,6 +40,7 @@ int disable_nagles;
 // First port number
 unsigned short port;
 
+// How verbose are we?
 int verbose;
 
 // The socket type and protocl
@@ -290,6 +291,19 @@ int parse_arguments( int argc, char *argv[] ) {
 	return 0;
 }
 
+void print_results( int core, struct stats *stats ) {
+	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
+	float duration = (float)stats->duration / (float)1000000;
+
+#ifdef WIN32 // Work around a silly windows bug in handling %llu
+	printf( "Core %i: recv'd %I64u bytes in %I64u recv() over %.2fs @ %.2f Mbytes/second\n", 
+#else
+	printf( "Core %i: recv'd %llu bytes in %llu recv() over %.2fs @ %.2f Mbytes/second\n", 
+#endif
+		core, stats->bytes_received, stats->pkts_received, duration, thruput );
+
+}
+
 int main (int argc, char *argv[]) {
 	struct server_request *sreq = NULL;
 	struct client_request **creq = NULL;
@@ -303,6 +317,9 @@ int main (int argc, char *argv[]) {
 	// Silly flags to say if these two variables were init
 	int allocated_go_cond = 0;
 	int allocated_go_mutex = 0;
+
+	// The sum of all the stats
+	struct stats total_stats = {0,0,0};
 
 #ifdef WIN32
 	setup_winsock();
@@ -353,7 +370,7 @@ int main (int argc, char *argv[]) {
 			// Check if we haven't set up this server yet
 			if ( sreq [ servercore ].port == 0 ) {
 				sreq [ servercore ].port = port + servercore;
-				sreq [ servercore ].duration = duration;
+				sreq [ servercore ].stats.duration = duration;
 				sreq [ servercore ].n = 0;
 				sreq [ servercore ].core = servercore;
 				unready_threads++;
@@ -443,6 +460,7 @@ int main (int argc, char *argv[]) {
 		threads++;
 	}
 
+	// TODO REMOVE THIS SLEEP
 	usleep( 100000 );
 
 	for (clientcore = 0; clientcore < cores; clientcore++) {
@@ -479,6 +497,24 @@ int main (int argc, char *argv[]) {
 
 	if ( verbose )
 		printf("\nFinished\n" );
+
+	// Block waiting until all threads die
+	for (i = 0; i < threads; i++) {
+		pthread_join( thread[i], NULL );
+	}
+
+	// Now sum all the results up
+	for (servercore = 0; servercore < cores; servercore++) {
+		if ( sreq[ servercore ].port != 0 ) {
+			total_stats.bytes_received += sreq[ servercore ].stats.bytes_received;
+			total_stats.duration       += sreq[ servercore ].stats.duration;
+			total_stats.pkts_received  += sreq[ servercore ].stats.pkts_received;
+		}
+	}
+
+	print_results( -1, &total_stats );
+	
+
 
 cleanup:
 

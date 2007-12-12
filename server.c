@@ -1,16 +1,7 @@
 #include "common.h"
 #include "global.h"
 
-void print_results( struct server_request *req ) {
-	float thruput = req->bytes_received > 0 ? (float)req->bytes_received / (float)req->duration : 0;
-	float duration = (float)req->duration / (float)1000000;
 
-#ifdef WIN32 // Work around a silly windows bug in handling %llu
-	printf( "Core %i: recv'd %I64u bytes in %I64u recv() over %.2fs @ %.2f Mbytes/second\n", req->core, req->bytes_received, req->pkts_received, duration, thruput );
-#else
-	printf( "Core %i: recv'd %llu bytes in %llu recv() over %.2fs @ %.2f Mbytes/second\n", req->core, req->bytes_received, req->pkts_received, duration, thruput );
-#endif
-}
 
 /**
 	Wait for and accept N connections
@@ -274,15 +265,15 @@ void *server_thread(void *data) {
 	end_time = get_microseconds();
 
 	// Add up all the client bytes
-	req->duration = end_time - start_time;
-	req->bytes_received = 0;
-	req->pkts_received = 0;
+	req->stats.duration = end_time - start_time;
+	req->stats.bytes_received = 0;
+	req->stats.pkts_received = 0;
 	for (i = 0 ; i <  sizeof(bytes_recv) / sizeof(*bytes_recv); i++) {
-		req->bytes_received += bytes_recv [ i ];
-		req->pkts_received += pkts_recv [ i ];
+		req->stats.bytes_received += bytes_recv [ i ];
+		req->stats.pkts_received += pkts_recv [ i ];
 	}
 
-	print_results(req);
+	print_results(req->core, &req->stats);
 
 cleanup:
 	// Force a stop

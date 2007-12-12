@@ -61,15 +61,24 @@
 #include <semaphore.h>
 #include <sched.h>
 
+struct stats {
+	// The number of bytes received
+	unsigned long long bytes_received;
+	
+	// The number of recv() handled
+	unsigned long long pkts_received;
+	
+	// The duration over which these stats were recorded
+	unsigned long long duration;
+};
+
 struct server_request {
 	unsigned short port;
 
 	unsigned int n; // The number of connections to accept
 
 	// Stats
-	unsigned long long bytes_received;
-	unsigned long long pkts_received;
-	unsigned long long duration;
+	struct stats stats;
 
 	unsigned int core; // Which core this server is running on
 };
