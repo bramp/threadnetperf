@@ -6,9 +6,9 @@ void print_results( struct server_request *req ) {
 	float duration = (float)req->duration / (float)1000000;
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
-	printf( "Received %I64u bytes in %I64u recv() over %.2fs @ %.2f Mbytes/second\n", req->bytes_received, req->pkts_received, duration, thruput );
+	printf( "Core %i: recv'd %I64u bytes in %I64u recv() over %.2fs @ %.2f Mbytes/second\n", req->core, req->bytes_received, req->pkts_received, duration, thruput );
 #else
-	printf( "Received %llu bytes in %llu recv() over %.2fs @ %.2f Mbytes/second\n", req->bytes_received, req->pkts_received, duration, thruput );
+	printf( "Core %i: recv'd %llu bytes in %llu recv() over %.2fs @ %.2f Mbytes/second\n", req->core, req->bytes_received, req->pkts_received, duration, thruput );
 #endif
 }
 

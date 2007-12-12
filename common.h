@@ -71,6 +71,7 @@ struct server_request {
 	unsigned long long pkts_received;
 	unsigned long long duration;
 
+	unsigned int core; // Which core this server is running on
 };
 
 // Struct to pass to a client thread

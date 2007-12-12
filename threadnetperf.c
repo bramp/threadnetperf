@@ -347,6 +347,7 @@ int main (int argc, char *argv[]) {
 				sreq [ servercore ].port = port + servercore;
 				sreq [ servercore ].duration = duration;
 				sreq [ servercore ].n = 0;
+				sreq [ servercore ].core = servercore;
 				unready_threads++;
 			}
 			
