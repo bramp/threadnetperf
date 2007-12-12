@@ -16,6 +16,12 @@ void* client_thread(void *data) {
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 	int nfds;
 
+#ifdef _DEBUG
+	char msg[1024]; // Debug message for each set of connected clients
+	const size_t msg_max_len = sizeof(msg) / sizeof(*msg);
+	size_t msg_len = 0;
+#endif
+
 	assert ( req != NULL );
 
 	// Blank client before we start
@@ -23,16 +29,18 @@ void* client_thread(void *data) {
 		*c = INVALID_SOCKET;
 
 #ifdef _DEBUG
-	printf("Started client thread " );
+	strncpy(msg, "Started client thread ", msg_max_len - msg_len);
+	msg_len += strlen(msg);
 #endif
 
 	// Loop all the client requests for this thread
 	while ( req != NULL ) {
 
 		#ifdef _DEBUG
-			char addr[64];
-			addr_to_ipstr(req->addr, req->addr_len, addr, sizeof(addr));
-			printf("%d(%s:%u) ", req->n, addr, ntohs( ((struct sockaddr_in *)req->addr)->sin_port) );
+			// Print the host/port
+			msg_len += sprintf(msg + msg_len, "%d(", req->n );
+			msg_len += addr_to_ipstr(req->addr, req->addr_len, msg + msg_len, msg_max_len - msg_len);
+			msg_len += sprintf(msg + msg_len, ":%u) ", ntohs( ((struct sockaddr_in *)req->addr)->sin_port) );
 		#endif
 
 		// Connect all the clients
@@ -73,7 +81,7 @@ void* client_thread(void *data) {
 	}
 
 	#ifdef _DEBUG
-		printf("\n");
+		printf("%s\n", msg);
 	#endif
 
 	buffer = malloc( message_size );
