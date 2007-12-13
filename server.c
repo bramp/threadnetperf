@@ -297,5 +297,6 @@ cleanup:
 		}
 	}
 
-	return NULL;
+	pthread_exit( NULL );
+	//return NULL;
 }

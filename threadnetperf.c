@@ -500,9 +500,13 @@ int main (int argc, char *argv[]) {
 
 	// Block waiting until all threads die
 	while (threads > 0) {
-		pthread_join( thread[threads - 1], NULL );
 		threads--;
+		printf("GO %d\n", threads);
+		pthread_join( thread[threads], NULL );
+		printf("GOT %d\n", threads);
 	}
+
+	printf("A\n");
 
 	// Now sum all the results up
 	i = 0;
@@ -515,11 +519,14 @@ int main (int argc, char *argv[]) {
 		}
 	}
 
+	printf("B\n");
+
 	// Divide the duration by the # of CPUs used
 	total_stats.duration = total_stats.duration / i;
 
 	print_results( -1, &total_stats );
 
+	printf("C\n");
 cleanup:
 
 	// Make sure we are not running anymore
