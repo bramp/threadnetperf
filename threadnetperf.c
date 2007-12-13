@@ -508,9 +508,9 @@ int main (int argc, char *argv[]) {
 	// Block waiting until all threads die
 	while (threads > 0) {
 		threads--;
-		printf("GO %d\n", threads);
+		printf("GO %d\n", threads); fflush(stdout);
 		pthread_join( thread[threads], NULL );
-		printf("GOT %d\n", threads);
+		printf("GOT %d\n", threads); fflush(stdout);
 	}
 
 	printf("A\n");
