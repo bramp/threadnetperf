@@ -277,7 +277,7 @@ void *server_thread(void *data) {
 
 cleanup:
 	// Force a stop
-	bRunning = 0;
+	//bRunning = 0;
 
 	// Cleanup
 	if ( buffer )
