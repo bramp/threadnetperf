@@ -534,8 +534,8 @@ cleanup:
 
 	// Block waiting until all threads die
 	while (threads > 0) {
-		pthread_join( thread[threads - 1], NULL );
 		threads--;
+		pthread_join( thread[threads], NULL );
 	}
 
 	if ( clientserver ) {
