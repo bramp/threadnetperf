@@ -71,6 +71,12 @@ int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_ro
 	if (ret)
 		goto cleanup;
 
+	// Make sure the thread is joinable
+	ret = pthread_attr_setdetachstate( attr, PTHREAD_CREATE_JOINABLE);
+	if (ret)
+		goto cleanup;
+
+	// Now create the thread
 	ret = pthread_create(thread, attr, start_routine, arg);
 
 cleanup:
@@ -144,6 +150,7 @@ void pause_for_duration(unsigned int duration) {
 }
 
 void print_usage() {
+
 	fprintf(stderr, "threadnetperf by bramp 2007\n" );
 	fprintf(stderr, "Usage: threadnetperf [options] tests\n" );
 	fprintf(stderr, "Runs a threaded network test\n" );
