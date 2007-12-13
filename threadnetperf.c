@@ -11,8 +11,8 @@
 pthread_cond_t ready_cond;
 
 // Condition Variable to indicate when all the threads are connected and ready to go
-pthread_cond_t go_cond;
-pthread_mutex_t go_mutex;
+pthread_cond_t go_cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Flag to indidcate if we are still running
 volatile int bRunning = 1;
@@ -321,10 +321,6 @@ int main (int argc, char *argv[]) {
 	int ret;
 	unsigned int servercore, clientcore;
 
-	// Silly flags to say if these two variables were init
-	int allocated_go_cond = 0;
-	int allocated_go_mutex = 0;
-
 	// The sum of all the stats
 	struct stats total_stats = {0,0,0};
 
@@ -429,21 +425,6 @@ int main (int argc, char *argv[]) {
 	// A list of threads
 	thread = malloc( unready_threads * sizeof(*thread) );
 	memset (thread, 0, unready_threads * sizeof(*thread));
-
-	// Setup the shared conditional variables
-	ret = pthread_cond_init( &go_cond, NULL);
-	if ( ret ) {
-		fprintf(stderr, "%s:%d pthread_cond_init() error\n", __FILE__, __LINE__ );
-		goto cleanup;
-	}
-	allocated_go_cond = 1;
-
-	ret = pthread_mutex_init( &go_mutex, NULL);
-	if ( ret ) {
-		fprintf(stderr, "%s:%d pthread_mutex_init() error\n", __FILE__, __LINE__ );
-		goto cleanup;
-	}
-	allocated_go_mutex = 1;
 
 	// Create all the server threads
 	for (servercore = 0; servercore < cores; servercore++) {
@@ -567,11 +548,8 @@ cleanup:
 	free( creq );
 	free( sreq );
 
-	if ( allocated_go_cond )
-		pthread_cond_destroy( & go_cond );
-
-	if ( allocated_go_mutex )
-		pthread_mutex_destroy( & go_mutex );
+	pthread_cond_destroy( & go_cond );
+	pthread_mutex_destroy( & go_mutex );
 
 	free ( thread );
 
