@@ -19,4 +19,6 @@ extern int protocol;
 
 extern int verbose;
 
+extern int dirty;
+
 #endif

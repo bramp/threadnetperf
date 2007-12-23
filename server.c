@@ -249,7 +249,16 @@ void *server_thread(void *data) {
 
 				} else {
 					// We could dirty the buffer
-
+					if (dirty) {
+						int *d;
+						int temp;
+						for (d=(int *)buffer; d<(int *)(buffer + len); d++)
+							temp += *d;
+						
+						// Read temp to avoid this code being otomised out
+						if ( temp )
+							temp = 0;
+					}
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
 					pkts_recv [ i ] ++;
@@ -277,7 +286,7 @@ void *server_thread(void *data) {
 
 cleanup:
 	// Force a stop
-	//bRunning = 0;
+	bRunning = 0;
 
 	// Cleanup
 	if ( buffer )

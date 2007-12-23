@@ -47,6 +47,9 @@ int verbose;
 int type;
 int protocol;
 
+// Dirty the data?
+int dirty;
+
 #ifndef pthread_attr_setaffinity_np
 	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
 		return 0;
@@ -124,18 +127,18 @@ int usleep(unsigned int useconds) {
 	Wait until duration has passed
 */
 void pause_for_duration(unsigned int duration) {
-	long long start_time; // The time we started
+	long long end_time; // The time we need to end
 
 	// Make sure duration is in microseconds
 	duration = duration * 1000000;
 
 	// This main thread controls when the test ends
-	start_time = get_microseconds();
+	end_time = get_microseconds() + duration;
 
 	while ( bRunning ) {
 		long long now = get_microseconds();
 
-		if ( now - start_time > duration ) {
+		if ( now > end_time ) {
 			bRunning = 0;
 			break;
 		}
@@ -145,8 +148,11 @@ void pause_for_duration(unsigned int duration) {
 			fflush(stdout);
 		}
 
+		// Pause for 0.1 second
 		usleep( 100000 );
 	}
+	
+	printf("\n");
 }
 
 void print_usage() {
@@ -158,6 +164,7 @@ void print_usage() {
 	fprintf(stderr, "\n" );
 
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
+	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
@@ -194,6 +201,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	duration = 10;
 	port = 1234;
 	verbose = 0;
+	dirty = 0;
 
 	type = SOCK_STREAM;
 	protocol = IPPROTO_TCP;
@@ -204,7 +212,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "tunvhs:d:p:")) != -1) {
+	while ((c = getopt(argc, argv, "teunvhs:d:p:")) != -1) {
 		switch ( c ) {
 			// Duration
 			case 'd':
@@ -236,6 +244,11 @@ int parse_arguments( int argc, char *argv[] ) {
 					fprintf(stderr, "Invalid port number given (%s)\n", optarg );
 					return -1;
 				}
+				break;
+
+			// Dirty the data
+			case 'e':
+				dirty = 1;
 				break;
 			
 			// Increase the verbose level
@@ -483,18 +496,11 @@ int main (int argc, char *argv[]) {
 	// Pauses for the duration, then sets bRunning to false
 	pause_for_duration( duration );
 
-	if ( verbose )
-		printf("\nFinished\n" );
-
 	// Block waiting until all threads die
 	while (threads > 0) {
 		threads--;
-		printf("GO %d\n", threads); fflush(stdout);
 		pthread_join( thread[threads], NULL );
-		printf("GOT %d\n", threads); fflush(stdout);
 	}
-
-	printf("A\n");
 
 	// Now sum all the results up
 	i = 0;
@@ -507,14 +513,11 @@ int main (int argc, char *argv[]) {
 		}
 	}
 
-	printf("B\n");
-
 	// Divide the duration by the # of CPUs used
 	total_stats.duration = total_stats.duration / i;
 
 	print_results( -1, &total_stats );
 
-	printf("C\n");
 cleanup:
 
 	// Make sure we are not running anymore
