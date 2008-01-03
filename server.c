@@ -101,6 +101,8 @@ void *server_thread(void *data) {
 	long long start_time; // The time we started
 	long long end_time; // The time we ended
 
+	fd_set readFD;
+
 	int one = 1;
 
 	int nfds;
@@ -192,21 +194,20 @@ void *server_thread(void *data) {
 	}
 	pthread_mutex_unlock( &go_mutex );
 
+	FD_ZERO( &readFD );
+
+	// Add all the client sockets
+	for (c = client ; c < &client [clients] ; c++) {
+		assert ( *c != INVALID_SOCKET );
+		FD_SET( *c, &readFD);
+	}
+
 	// Start timing
 	start_time = get_microseconds();
 
 	while ( bRunning ) {
-		fd_set readFD;
 		struct timeval waittime = {1, 0}; // 1 second
 		int ret;
-
-		FD_ZERO( &readFD );
-
-		// Add all the client sockets
-		for (c = client ; c < &client [clients] ; c++) {
-			assert ( *c != INVALID_SOCKET );
-			FD_SET( *c, &readFD);
-		}
 
 		ret = select( nfds, &readFD, NULL, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
@@ -220,12 +221,15 @@ void *server_thread(void *data) {
 		#endif
 
 		// Figure out which sockets have fired
-		i = 0;
-		while ( ret > 0 ) {
-			SOCKET s = client [ i ];
+		for (c = client, i = 0 ; c < &client [ clients ]; c++ ) {
+			SOCKET s = *c;
 
-			assert ( i < sizeof( client ) / sizeof( *client) );
 			assert ( s  != INVALID_SOCKET );
+
+			if ( ret == 0 ) {
+				FD_SET( s, &readFD);
+				continue;
+			}
 
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
@@ -244,10 +248,15 @@ void *server_thread(void *data) {
 					if ( verbose )
 						printf("Remove client (%d/%d)\n", i, clients );
 
+					FD_CLR( s, &readFD );
+
 					// Invalidate this client
 					closesocket( s );
-					move_down ( &client[ i ], &client[ clients ] );
+					move_down ( c, &client[ clients ] );
 					clients--;
+
+					// Move back
+					c--;
 					continue;
 
 				} else {
@@ -271,9 +280,11 @@ void *server_thread(void *data) {
 					bytes_recv [ i ] += len;
 					pkts_recv [ i ] ++;
 				}
+			} else {
+				// Set the socket on this FD, to save us doing it at the beginning of each loop
+				FD_SET( s, &readFD);
 			}
 
-			// Move the socket on
 			i++;
 		}
 	}

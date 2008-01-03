@@ -20,6 +20,9 @@ void* client_thread(void *data) {
 	const size_t msg_max_len = sizeof(msg) / sizeof(*msg);
 	size_t msg_len = 0;
 
+	fd_set readFD;
+	fd_set writeFD;
+
 	assert ( req != NULL );
 
 	// Blank client before we start
@@ -99,24 +102,22 @@ void* client_thread(void *data) {
 	}
 	pthread_mutex_unlock( &go_mutex );
 
+	FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
+
+	// Loop all client sockets
+	for (c = client ; c < &client [ clients ] ; c++) {
+		assert ( *c != INVALID_SOCKET );
+
+		// Add them to FD sets
+		FD_SET( *c, &readFD);
+		FD_SET( *c, &writeFD);
+	}
+
 	// Now start the main loop
 	while ( bRunning ) {
-		fd_set readFD;
-		fd_set writeFD;
+
 		int ret;
-		struct timeval waittime = {1, 0}; // 1 second
-
-		FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
-
-		// Loop all client sockets
-		for (c = client ; c < &client [ clients ] ; c++) {
-			assert ( *c != INVALID_SOCKET );
-
-			// Add them to FD sets
-			FD_SET( *c, &readFD);
-			FD_SET( *c, &writeFD);
-		}
-
+		struct timeval waittime = {1, 0}; // 1 second
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -128,13 +129,18 @@ void* client_thread(void *data) {
 			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 		#endif
 
-		// Figure out which sockets have fired
-		i = 0;
-		while ( ret > 0 ) {
-			SOCKET s = client [ i ];
+		// Figure out which sockets have fired
+		for (c = client ; c < &client [ clients ]; c++ ) {
+			SOCKET s = *c;
 
-			assert ( i < sizeof( client ) / sizeof( *client) );
 			assert ( s != INVALID_SOCKET );
+
+			// Speed hack
+			if ( ret == 0 ) {
+				FD_SET( s, &readFD);
+				FD_SET( s, &writeFD);
+				continue;
+			}
 
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
@@ -151,17 +157,29 @@ void* client_thread(void *data) {
 
 				// The socket has closed
 				if ( len <= 0 ) {
-					// Invalid this client
-					closesocket( s );
-					move_down ( &client[ i ], &client[ clients ] );
-					clients--;
 
 					// Quickly check if this client was in the write set
-					if ( FD_ISSET( s, &writeFD) )
+					if ( FD_ISSET( s, &writeFD) ) {
+						FD_CLR( s, &writeFD );
 						ret--;
+					}
+
+					// Unset me from the set
+					FD_CLR( s, &readFD );
+
+					// Invalid this client
+					closesocket( s );
+					move_down ( c, &client[ clients ] );
+					clients--;
+
+					// Move this back
+					c--;
 
 					continue;
 				}
+			} else {
+				// Set the socket on this FD, to save us doing it at the beginning of each loop
+				FD_SET( s, &readFD);
 			}
 
 			// Check if we are ready to write
@@ -176,10 +194,11 @@ void* client_thread(void *data) {
 					fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
 				}
+			} else {
+				// Set the socket on this FD, to save us doing it at the beginning of each loop
+				FD_SET( s, &writeFD);
 			}
 
-			// Move the socket on
-			i++;
 		}
 	}
 
