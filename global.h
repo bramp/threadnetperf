@@ -21,4 +21,6 @@ extern int verbose;
 
 extern int dirty;
 
+extern int timestamp;
+
 #endif

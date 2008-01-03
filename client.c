@@ -168,6 +168,10 @@ void* client_thread(void *data) {
 			if ( FD_ISSET( s, &writeFD) ) {
 				ret--;
 
+				if (timestamp) {
+					*((unsigned long long *)buffer) = get_microseconds();
+				}
+
 				if ( send( s, buffer, message_size, 0 ) == SOCKET_ERROR ) {
 					fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;

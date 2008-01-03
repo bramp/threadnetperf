@@ -50,6 +50,9 @@ int protocol;
 // Dirty the data?
 int dirty;
 
+// Timestamps
+int timestamp;
+
 #ifndef pthread_attr_setaffinity_np
 	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
 		return 0;
@@ -168,6 +171,7 @@ void print_usage() {
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
+	fprintf(stderr, "	-T         Timestamp packets, and measure latency\n" );
 	fprintf(stderr, "	-t         Use TCP\n" );
 	fprintf(stderr, "	-u         Use UDP\n" );
 	fprintf(stderr, "	-v         Verbose\n" );
@@ -202,6 +206,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	port = 1234;
 	verbose = 0;
 	dirty = 0;
+	timestamp = 0;
 
 	type = SOCK_STREAM;
 	protocol = IPPROTO_TCP;
@@ -212,7 +217,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "teunvhs:d:p:")) != -1) {
+	while ((c = getopt(argc, argv, "tTeunvhs:d:p:")) != -1) {
 		switch ( c ) {
 			// Duration
 			case 'd':
@@ -250,6 +255,10 @@ int parse_arguments( int argc, char *argv[] ) {
 			case 'e':
 				dirty = 1;
 				break;
+
+			case 'T':
+				timestamp = 1;
+				break;
 			
 			// Increase the verbose level
 			case 'v':
@@ -278,6 +287,11 @@ int parse_arguments( int argc, char *argv[] ) {
 				fprintf(stderr, "Argument not implemented (yet) (%c)\n", c );
 				return -1;
 		}
+	}
+
+	if ( disable_nagles && protocol != IPPROTO_TCP ) {
+		fprintf(stderr, "Must use TCP when disable Nagles\n" );
+		return -1;
 	}
 
 	for (x = 0; x < cores; x++) {
@@ -314,14 +328,19 @@ int parse_arguments( int argc, char *argv[] ) {
 void print_results( int core, struct stats *stats ) {
 	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
 	float duration = (float)stats->duration / (float)1000000;
+	float pkt_latency = ((float)stats->pkts_time / (float)stats->pkts_received);
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
-	printf( "Core %i: recv'd %I64u bytes in %I64u recv() over %.2fs @ %.2f Mbytes/second\n", 
+	printf( "Core %i: recv'd %I64u bytes in %I64u recv() over %.2fs @ %.2f Mbytes/second", 
 #else
-	printf( "Core %i: recv'd %llu bytes in %llu recv() over %.2fs @ %.2f Mbytes/second\n", 
+	printf( "Core %i: recv'd %llu bytes in %llu recv() over %.2fs @ %.2f Mbytes/second", 
 #endif
 		core, stats->bytes_received, stats->pkts_received, duration, thruput );
 
+	if ( timestamp )
+		printf( " packet latency %.2fus", pkt_latency );
+
+	printf("\n");
 }
 
 int main (int argc, char *argv[]) {
@@ -509,6 +528,7 @@ int main (int argc, char *argv[]) {
 			total_stats.bytes_received += sreq[ servercore ].stats.bytes_received;
 			total_stats.duration       += sreq[ servercore ].stats.duration;
 			total_stats.pkts_received  += sreq[ servercore ].stats.pkts_received;
+			total_stats.pkts_time  += sreq[ servercore ].stats.pkts_time;
 			i++;
 		}
 	}

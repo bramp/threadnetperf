@@ -89,7 +89,9 @@ void *server_thread(void *data) {
 
 	int i;
 	unsigned long long bytes_recv [ FD_SETSIZE ]; // Bytes received from each socket
-	unsigned long long pkts_recv [ FD_SETSIZE ]; // Bytes received from each socket
+	unsigned long long pkts_recv [ FD_SETSIZE ]; // Number of recv calls from each socket
+
+	unsigned long long pkts_time [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
 
 	char *buffer = NULL; // Buffer to read data into, will be malloced later
 	struct sockaddr_in addr; // Address to listen on
@@ -112,6 +114,7 @@ void *server_thread(void *data) {
 
 	memset( bytes_recv, 0, sizeof(bytes_recv) );
 	memset( pkts_recv, 0, sizeof(pkts_recv) );
+	memset( pkts_time, 0, sizeof(pkts_time) );
 
 	if ( req->n > sizeof(client) / sizeof(*client) ) {
 		fprintf(stderr, "%s:%d server_thread() error Server thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
@@ -248,13 +251,18 @@ void *server_thread(void *data) {
 					continue;
 
 				} else {
+					if (timestamp) {
+						unsigned long long us = *((unsigned long long *)buffer);
+						pkts_time[ i ] += get_microseconds() - us;
+					}
+
 					// We could dirty the buffer
 					if (dirty) {
 						int *d;
 						int temp;
 						for (d=(int *)buffer; d<(int *)(buffer + len); d++)
 							temp += *d;
-						
+
 						// Read temp to avoid this code being otomised out
 						if ( temp )
 							temp = 0;
@@ -265,7 +273,7 @@ void *server_thread(void *data) {
 				}
 			}
 
-			// Move the socket on (if needed)
+			// Move the socket on
 			i++;
 		}
 	}
@@ -280,6 +288,7 @@ void *server_thread(void *data) {
 	for (i = 0 ; i <  sizeof(bytes_recv) / sizeof(*bytes_recv); i++) {
 		req->stats.bytes_received += bytes_recv [ i ];
 		req->stats.pkts_received += pkts_recv [ i ];
+		req->stats.pkts_time += pkts_time [ i ];
 	}
 
 	print_results(req->core, &req->stats);

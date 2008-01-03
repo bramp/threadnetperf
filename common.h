@@ -67,6 +67,9 @@ struct stats {
 	
 	// The number of recv() handled
 	unsigned long long pkts_received;
+
+	// The duration packets were inside the network
+	unsigned long long pkts_time;	
 	
 	// The duration over which these stats were recorded
 	unsigned long long duration;
