@@ -69,6 +69,12 @@ void* client_thread(void *data) {
 				goto cleanup;
 			}
 
+			// Always disable blocking (to work around linux bug)
+			if ( disable_blocking(s) == SOCKET_ERROR ) {
+				fprintf(stderr, "%s:%d disable_blocking() error %d\n", __FILE__, __LINE__, ERRNO );
+				goto cleanup;
+			}
+
 			client [ clients ] = s;
 			clients++;
 
@@ -85,12 +91,21 @@ void* client_thread(void *data) {
 	buffer = malloc( message_size );
 	memset( buffer, 0x41414141, message_size );
 
-	// Quickly loop to find the biggest socket
+
 	nfds = (int)*client;
-	// Quickly loop to find the biggest socket
-	for (c = client + 1 ; c < &client [clients] ; ++c)
+	FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
+
+	// Loop all client sockets
+	for (c = client ; c < &client [ clients ] ; c++) {
+		assert ( *c != INVALID_SOCKET );
+
+		// Add them to FD sets
+		FD_SET( *c, &readFD);
+		FD_SET( *c, &writeFD);
+
 		if ( (int)*c > nfds )
 			nfds = (int)*c;
+	}
 
 	nfds = nfds + 1;
 
@@ -101,17 +116,6 @@ void* client_thread(void *data) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
-
-	FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
-
-	// Loop all client sockets
-	for (c = client ; c < &client [ clients ] ; c++) {
-		assert ( *c != INVALID_SOCKET );
-
-		// Add them to FD sets
-		FD_SET( *c, &readFD);
-		FD_SET( *c, &writeFD);
-	}
 
 	// Now start the main loop
 	while ( bRunning ) {

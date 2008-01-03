@@ -9,21 +9,20 @@
 int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 
 	int connected = 0;
-	
+	fd_set readFD;
+
 	assert ( listen != INVALID_SOCKET );
 	assert ( clients != NULL );
 	assert ( n > 0 );
 
 	// Wait for all connections
 	while ( bRunning && n > 0 ) {
-		fd_set readFD;
 		struct timeval waittime = {1, 0}; // 1 second
 		int ret;
 		struct sockaddr_storage addr;
 		socklen_t addr_len = sizeof(addr);
 		SOCKET s;
 
-		FD_ZERO( &readFD );
 		FD_SET( listen, &readFD);
 
 		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
@@ -32,13 +31,13 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 			return 1;
 		}
 
-		#ifdef _DEBUG
-		if ( ret == 0 )
+		if ( ret == 0 ) {
+			#ifdef _DEBUG
 			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
-		#endif
+			#endif
 
-		if ( ret == 0 )
 			continue;
+		}
 
 		// Did the listen socket fire?
 		if ( ! FD_ISSET(listen, &readFD) ) {
@@ -59,6 +58,12 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 				return 1;
 			}
+		}
+
+		// Always disable blocking (to work around linux bug)
+		if ( disable_blocking(s) == SOCKET_ERROR ) {
+			fprintf(stderr, "%s:%d disable_blocking() error %d\n", __FILE__, __LINE__, ERRNO );
+			return 1;
 		}
 
 		assert ( *clients == INVALID_SOCKET );
@@ -178,12 +183,17 @@ void *server_thread(void *data) {
 		clients = 1;
 	}
 
+	FD_ZERO( &readFD );
 	nfds = (int)*client;
-	// Quickly loop to find the biggest socket
-	for (c = client + 1 ; c < &client [clients] ; ++c)
+
+	// Add all the client sockets
+	for (c = client ; c < &client [clients] ; c++) {
+		assert ( *c != INVALID_SOCKET );
+		
+		FD_SET( *c, &readFD);
 		if ( (int)*c > nfds )
 			nfds = (int)*c;
-
+	}
 	nfds = nfds + 1;
 
 	// Wait for the go
@@ -193,14 +203,6 @@ void *server_thread(void *data) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
-
-	FD_ZERO( &readFD );
-
-	// Add all the client sockets
-	for (c = client ; c < &client [clients] ; c++) {
-		assert ( *c != INVALID_SOCKET );
-		FD_SET( *c, &readFD);
-	}
 
 	// Start timing
 	start_time = get_microseconds();

@@ -46,6 +46,7 @@
 	#include <unistd.h> // for getopt
 	#include <arpa/inet.h> // For inet_addr
 	#include <netdb.h> // For NI_NUMERICHOST
+	#include <fcntl.h>
 
 	#define ERRNO errno
 	#define closesocket(s) close(s)
@@ -105,6 +106,9 @@ void *client_thread(void *data);
 
 int enable_nagle(SOCKET s);
 int disable_nagle(SOCKET s);
+
+int enable_blocking(SOCKET s);
+int disable_blocking(SOCKET s);
 
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end );

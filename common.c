@@ -1,8 +1,8 @@
 #include "common.h"
 
 int enable_nagle(SOCKET s) {
-	int one = 0;
-	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
+	int zero = 0;
+	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&zero, sizeof(zero));
 }
 
 int disable_nagle(SOCKET s) {
@@ -10,6 +10,23 @@ int disable_nagle(SOCKET s) {
 	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
 }
 
+int enable_blocking(SOCKET s) {
+#ifdef WIN32
+	unsigned long flags = 0;
+	return ioctlsocket(s, FIONBIO, &flags);
+#else
+	return fcntl(s, F_SETFL, O_NONBLOCK);
+#endif
+}
+
+int disable_blocking(SOCKET s) {
+#ifdef WIN32
+	unsigned long flags = 1;
+	return ioctlsocket(s, FIONBIO, &flags);
+#else
+	return fcntl(s, F_SETFL, O_NONBLOCK);
+#endif
+}
 
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end ) {
