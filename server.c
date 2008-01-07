@@ -22,6 +22,7 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 		struct sockaddr_storage addr;
 		socklen_t addr_len = sizeof(addr);
 		SOCKET s;
+		int send_socket_size, recv_socket_size;
 
 		FD_SET( listen, &readFD);
 
@@ -53,7 +54,19 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 			return 1;
 		}
 
-		if ( disable_nagles ) {
+		send_socket_size = set_socket_send_buffer( s, global_settings.socket_size );
+		if ( send_socket_size < 0 ) {
+			fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+			return 1;
+		}
+		
+		recv_socket_size = set_socket_recv_buffer( s, global_settings.socket_size );
+		if ( send_socket_size < 0 ) {
+			fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+			return 1;
+		}
+
+		if ( global_settings.disable_nagles ) {
 			if ( disable_nagle( s ) == SOCKET_ERROR ) {
 				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 				return 1;
@@ -71,8 +84,10 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 		++clients;
 		connected++;
 
-		if ( verbose )
-			printf("  Server %d incoming client %s (%d)\n", servercore, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected );
+		if ( global_settings.verbose )
+			printf("  Server %d incoming client %s (%d) socket size: %d/%d\n", 
+				servercore, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
+				send_socket_size, recv_socket_size );
 
 		n--;
 	}
@@ -85,7 +100,10 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 */
 void *server_thread(void *data) {
 	struct server_request *req = data;
-
+	
+	// Copy the global settings	
+	struct settings settings = global_settings;
+	
 	SOCKET s = INVALID_SOCKET; // The listen server socket
 
 	SOCKET client [ FD_SETSIZE ];
@@ -106,13 +124,15 @@ void *server_thread(void *data) {
 	long long start_time; // The time we started
 	long long end_time; // The time we ended
 
+	int send_socket_size, recv_socket_size; // The socket buffer sizes
+
 	fd_set readFD;
 
 	int one = 1;
 
 	int nfds;
 
-	if ( verbose )
+	if ( settings.verbose )
 		printf("Core %d: Started server thread port %d\n", req->core, req->port );
 
 	// Blank client before we start
@@ -129,14 +149,26 @@ void *server_thread(void *data) {
 	}
 
 	// Create the listen socket
-	s = socket( PF_INET, type, protocol);
+	s = socket( PF_INET, settings.type, settings.protocol);
 
 	if ( s == INVALID_SOCKET ) {
 		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
-	if ( disable_nagles ) {
+	send_socket_size = set_socket_send_buffer( s, settings.socket_size );
+	if ( send_socket_size < 0 ) {
+		fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+	
+	recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
+	if ( send_socket_size < 0 ) {
+		fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	if ( settings.disable_nagles ) {
 		if ( disable_nagle( s ) == SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -159,26 +191,26 @@ void *server_thread(void *data) {
 		goto cleanup;
 	}
 
-	if ( (type == SOCK_STREAM || type==SOCK_SEQPACKET) && listen(s, SOMAXCONN) == SOCKET_ERROR ) {
+	if ( (settings.type == SOCK_STREAM || settings.type==SOCK_SEQPACKET) && listen(s, SOMAXCONN) == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
 	// Setup the buffer
-	buffer = malloc( message_size );
+	buffer = malloc( settings.message_size );
 	if ( buffer == NULL ) {
 		fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
 	// If this is a STREAM then accept each connection
-	if ( type == SOCK_STREAM ) {
+	if ( settings.type == SOCK_STREAM ) {
 		if ( accept_connections(req->core, s, client, req->n) ) {
 			goto cleanup;
 		}
 
 	// If this is a DGRAM, then we don't have a connection per client, but instead one server socket
-	} else if ( type == SOCK_DGRAM ) {
+	} else if ( settings.type == SOCK_DGRAM ) {
 		*client = s;
 		clients = 1;
 	}
@@ -235,7 +267,7 @@ void *server_thread(void *data) {
 
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
-				int len = recv( s, buffer, message_size, 0);
+				int len = recv( s, buffer, settings.message_size, 0);
 
 				ret--;
 
@@ -247,7 +279,7 @@ void *server_thread(void *data) {
 						goto cleanup;
 					}
 
-					if ( verbose )
+					if ( settings.verbose )
 						printf("Remove client (%d/%d)\n", i, clients );
 
 					FD_CLR( s, &readFD );
@@ -262,13 +294,13 @@ void *server_thread(void *data) {
 					continue;
 
 				} else {
-					if (timestamp) {
+					if (settings.timestamp) {
 						unsigned long long us = *((unsigned long long *)buffer);
 						pkts_time[ i ] += get_microseconds() - us;
 					}
 
 					// We could dirty the buffer
-					if (dirty) {
+					if (settings.dirty) {
 						int *d;
 						int temp;
 						for (d=(int *)buffer; d<(int *)(buffer + len); d++)
@@ -278,6 +310,7 @@ void *server_thread(void *data) {
 						if ( temp )
 							temp = 0;
 					}
+					
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
 					pkts_recv [ i ] ++;

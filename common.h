@@ -101,6 +101,24 @@ struct client_request {
 	struct client_request *next;
 };
 
+// Settings
+struct settings {
+	unsigned int duration;
+	
+	unsigned short port;
+	
+	int type;
+	int protocol;
+	
+	int verbose;
+	int dirty;
+	int timestamp;
+	int disable_nagles;
+
+	unsigned int message_size;	
+	unsigned int socket_size;
+};
+
 void *server_thread(void *data);
 void *client_thread(void *data);
 
@@ -109,6 +127,9 @@ int disable_nagle(SOCKET s);
 
 int enable_blocking(SOCKET s);
 int disable_blocking(SOCKET s);
+
+int set_socket_send_buffer(SOCKET s, unsigned int socket_size);
+int set_socket_recv_buffer(SOCKET s, unsigned int socket_size);
 
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end );

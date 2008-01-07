@@ -28,6 +28,31 @@ int disable_blocking(SOCKET s) {
 #endif
 }
 
+int set_socket_buffer( SOCKET s, int opt, int size ) {
+
+    int new_size;
+    socklen_t new_size_len = sizeof(new_size);
+ 
+    if (size > 0 && setsockopt(s, SOL_SOCKET, opt, (char *)&size, sizeof(size)) < 0) {
+      return -1;
+    }
+
+	if (getsockopt(s, SOL_SOCKET, opt, (char *)&new_size, &new_size_len) < 0) {
+		return -1;
+ 	}
+
+ 	return new_size;
+}
+
+// Sets the socket's send, and returns the new size
+int set_socket_send_buffer(SOCKET s, unsigned int socket_size) {
+	return set_socket_buffer(s, SO_SNDBUF, socket_size);
+}
+
+int set_socket_recv_buffer(SOCKET s, unsigned int socket_size) {
+	return set_socket_buffer(s, SO_RCVBUF, socket_size);
+}
+
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end ) {
 

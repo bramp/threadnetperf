@@ -28,30 +28,7 @@ const unsigned int cores = 8; // TODO get the read number!
 // Make a 2D array for each possible to and from connection
 int **clientserver = NULL;
 
-// The message size
-int message_size;
-
-// How long (in seconds) this should run for
-int duration;
-
-// Should we diable Nagle's Algorithm
-int disable_nagles;
-
-// First port number
-unsigned short port;
-
-// How verbose are we?
-int verbose;
-
-// The socket type and protocl
-int type;
-int protocol;
-
-// Dirty the data?
-int dirty;
-
-// Timestamps
-int timestamp;
+struct settings global_settings;
 
 #ifdef WIN32
 	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
@@ -146,7 +123,7 @@ void pause_for_duration(unsigned int duration) {
 			break;
 		}
 
-		if ( verbose ) {
+		if ( global_settings.verbose ) {
 			printf(".");
 			fflush(stdout);
 		}
@@ -200,16 +177,17 @@ int parse_arguments( int argc, char *argv[] ) {
 	unsigned int x, y;
 
 	// Default arguments
-	message_size = 1024;
-	disable_nagles = 0;
-	duration = 10;
-	port = 1234;
-	verbose = 0;
-	dirty = 0;
-	timestamp = 0;
+	global_settings.message_size = 1024;
+	global_settings.socket_size = -1;
+	global_settings.disable_nagles = 0;
+	global_settings.duration = 10;
+	global_settings.port = 1234;
+	global_settings.verbose = 0;
+	global_settings.dirty = 0;
+	global_settings.timestamp = 0;
 
-	type = SOCK_STREAM;
-	protocol = IPPROTO_TCP;
+	global_settings.type = SOCK_STREAM;
+	global_settings.protocol = IPPROTO_TCP;
 
 	if ( argc == 1 ) {
 		print_usage();
@@ -221,8 +199,8 @@ int parse_arguments( int argc, char *argv[] ) {
 		switch ( c ) {
 			// Duration
 			case 'd':
-				duration = atoi( optarg );
-				if ( duration == 0 ) {
+				global_settings.duration = atoi( optarg );
+				if ( global_settings.duration == 0 ) {
 					fprintf(stderr, "Invalid duration given (%s)\n", optarg );
 					return -1;
 				}
@@ -230,13 +208,13 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// Disable nagles algorithm (ie NO delay)
 			case 'n':
-				disable_nagles = 1;
+				global_settings.disable_nagles = 1;
 				break;
 
 			// Parse the message size
 			case 's':
-				message_size = atoi( optarg );
-				if ( message_size == 0 ) {
+				global_settings.message_size = atoi( optarg );
+				if ( global_settings.message_size == 0 ) {
 					fprintf(stderr, "Invalid message size given (%s)\n", optarg );
 					return -1;
 				}
@@ -244,8 +222,8 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// Parse the message size
 			case 'p':
-				port = atoi( optarg );
-				if ( port == 0 ) {
+				global_settings.port = atoi( optarg );
+				if ( global_settings.port == 0 ) {
 					fprintf(stderr, "Invalid port number given (%s)\n", optarg );
 					return -1;
 				}
@@ -253,16 +231,16 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// Dirty the data
 			case 'e':
-				dirty = 1;
+				global_settings.dirty = 1;
 				break;
 
 			case 'T':
-				timestamp = 1;
+				global_settings.timestamp = 1;
 				break;
 			
 			// Increase the verbose level
 			case 'v':
-				verbose++;
+				global_settings.verbose++;
 				break;
 
 			case 'h':
@@ -271,13 +249,13 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// TCP/UDP
 			case 't':
-				type = SOCK_STREAM;
-				protocol = IPPROTO_TCP;
+				global_settings.type = SOCK_STREAM;
+				global_settings.protocol = IPPROTO_TCP;
 				break;
 
 			case 'u':
-				type = SOCK_DGRAM;
-				protocol = IPPROTO_UDP;
+				global_settings.type = SOCK_DGRAM;
+				global_settings.protocol = IPPROTO_UDP;
 				break;
 
 			case '?':
@@ -289,8 +267,8 @@ int parse_arguments( int argc, char *argv[] ) {
 		}
 	}
 
-	if ( disable_nagles && protocol != IPPROTO_TCP ) {
-		fprintf(stderr, "Must use TCP when disable Nagles\n" );
+	if ( global_settings.disable_nagles && global_settings.protocol != IPPROTO_TCP ) {
+		fprintf(stderr, "Must use TCP when disabling Nagles\n" );
 		return -1;
 	}
 
@@ -337,7 +315,7 @@ void print_results( int core, struct stats *stats ) {
 #endif
 		core, stats->bytes_received, stats->pkts_received, duration, thruput );
 
-	if ( timestamp )
+	if ( global_settings.timestamp )
 		printf( " packet latency %.2fus", pkt_latency );
 
 	printf("\n");
@@ -404,8 +382,8 @@ int main (int argc, char *argv[]) {
 
 			// Check if we haven't set up this server yet
 			if ( sreq [ servercore ].port == 0 ) {
-				sreq [ servercore ].port = port + servercore;
-				sreq [ servercore ].stats.duration = duration;
+				sreq [ servercore ].port = global_settings.port + servercore;
+				sreq [ servercore ].stats.duration = global_settings.duration;
 				sreq [ servercore ].n = 0;
 				sreq [ servercore ].core = servercore;
 				unready_threads++;
@@ -443,7 +421,7 @@ int main (int argc, char *argv[]) {
 
 			((struct sockaddr_in *)c->addr)->sin_family = AF_INET;
 			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( "127.0.0.1" );
-			((struct sockaddr_in *)c->addr)->sin_port = htons( port + servercore );
+			((struct sockaddr_in *)c->addr)->sin_port = htons( global_settings.port + servercore );
 
 		}
 	}
@@ -513,7 +491,7 @@ int main (int argc, char *argv[]) {
 	pthread_mutex_unlock( &go_mutex );
 
 	// Pauses for the duration, then sets bRunning to false
-	pause_for_duration( duration );
+	pause_for_duration( global_settings.duration );
 
 	// Block waiting until all threads die
 	while (threads > 0) {

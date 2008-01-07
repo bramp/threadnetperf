@@ -1,8 +1,8 @@
 
 #INCLUDES = -I
 CC = gcc
-#CFLAGS = -g -O0 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
-CFLAGS = -O2 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT
+CFLAGS = -g -O0 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
+#CFLAGS = -O2 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT
 LDFLAGS = -pthread
 
 SOURCES =	threadnetperf.c common.c server.c client.c

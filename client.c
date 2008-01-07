@@ -6,7 +6,10 @@
 */
 void* client_thread(void *data) {
 	const struct client_request *req = data;
-
+	
+	// Make a copy of the global settings
+	const struct settings settings = global_settings;
+	
 	SOCKET client [ FD_SETSIZE ];
 	SOCKET *c = client;
 	SOCKET s;
@@ -29,13 +32,13 @@ void* client_thread(void *data) {
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
 		*c = INVALID_SOCKET;
 
-	if ( verbose )
+	if ( settings.verbose )
 		msg_len += sprintf(msg, "Core %d: Started client thread ", req->core);
 
 	// Loop all the client requests for this thread
 	while ( req != NULL ) {
 
-		if ( verbose ) {
+		if ( settings.verbose ) {
 			// Print the host/port
 			msg_len += sprintf(msg + msg_len, "%d(", req->n );
 			msg_len += addr_to_ipstr(req->addr, req->addr_len, msg + msg_len, msg_max_len - msg_len);
@@ -45,19 +48,37 @@ void* client_thread(void *data) {
 		// Connect all the clients
 		i = req->n;
 		while ( i > 0 ) {
-
+			int send_socket_size, recv_socket_size;
+			
 			if ( clients >= sizeof(client) / sizeof(*client) ) {
 				fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
 				goto cleanup;
 			}
 
-			s = socket( AF_INET, type, protocol);
+			s = socket( AF_INET, settings.type, settings.protocol);
 			if ( s == INVALID_SOCKET ) {
 				fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
 
-			if ( disable_nagles ) {
+	 		send_socket_size = set_socket_send_buffer( s, settings.socket_size );
+			if ( send_socket_size < 0 ) {
+				fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+				goto cleanup;
+			}
+			
+	 		recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
+			if ( send_socket_size < 0 ) {
+				fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+				goto cleanup;
+			}
+			
+			if ( settings.verbose ) {
+				// TODO tidy this
+				printf("client socket size: %d/%d\n", send_socket_size, recv_socket_size );
+			}
+
+			if ( settings.disable_nagles ) {
 				if ( disable_nagle( s ) == SOCKET_ERROR ) {
 					fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
@@ -85,11 +106,11 @@ void* client_thread(void *data) {
 		req = req->next;
 	}
 
-	if ( verbose )
+	if ( settings.verbose )
 		printf("%s\n", msg);
-
-	buffer = malloc( message_size );
-	memset( buffer, 0x41414141, message_size );
+	
+	buffer = malloc( settings.message_size );
+	memset( buffer, 0x41414141, settings.message_size );
 
 
 	nfds = (int)*client;
@@ -133,7 +154,7 @@ void* client_thread(void *data) {
 			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 		#endif
 
-		// Figure out which sockets have fired
+		// Figure out which sockets have fired
 		for (c = client ; c < &client [ clients ]; c++ ) {
 			SOCKET s = *c;
 
@@ -148,7 +169,7 @@ void* client_thread(void *data) {
 
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
-				int len = recv( s, buffer, message_size, 0);
+				int len = recv( s, buffer, settings.message_size, 0);
 
 				ret--;
 
@@ -190,11 +211,11 @@ void* client_thread(void *data) {
 			if ( FD_ISSET( s, &writeFD) ) {
 				ret--;
 
-				if (timestamp) {
+				if (settings.timestamp) {
 					*((unsigned long long *)buffer) = get_microseconds();
 				}
 
-				if ( send( s, buffer, message_size, 0 ) == SOCKET_ERROR ) {
+				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
 					fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
 				}
