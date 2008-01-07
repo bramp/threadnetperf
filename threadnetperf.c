@@ -53,7 +53,7 @@ int dirty;
 // Timestamps
 int timestamp;
 
-#ifndef pthread_attr_setaffinity_np
+#ifdef WIN32
 	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
 		return 0;
 	}
