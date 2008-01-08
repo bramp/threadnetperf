@@ -336,8 +336,8 @@ void *server_thread(void *data) {
 		req->stats.pkts_received += pkts_recv [ i ];
 		req->stats.pkts_time += pkts_time [ i ];
 	}
-
-	print_results(req->core, &req->stats);
+//TODO: Un comment this line
+//	print_results(req->core, &req->stats);
 
 cleanup:
 	// Force a stop

@@ -303,20 +303,28 @@ int parse_arguments( int argc, char *argv[] ) {
 	return 0;
 }
 
+void print_headers() {
+	printf("\tCore\treceived bytes\tnum recv()s\ttime\tthroughput (MBytes/second)");
+	if ( global_settings.timestamp )
+		printf("\t packet latency");
+	
+	printf("\n");
+}
+
 void print_results( int core, struct stats *stats ) {
 	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
 	float duration = (float)stats->duration / (float)1000000;
 	float pkt_latency = ((float)stats->pkts_time / (float)stats->pkts_received);
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
-	printf( "Core %i: recv'd %I64u bytes in %I64u recv() over %.2fs @ %.2f Mbytes/second", 
+	printf( "%i\t%I64u\t%I64u\t%.2fs\t%.2f", 
 #else
-	printf( "Core %i: recv'd %llu bytes in %llu recv() over %.2fs @ %.2f Mbytes/second", 
+	printf( "\t%i\t%llu\t%llu\t%.2fs\t%.2f",
 #endif
 		core, stats->bytes_received, stats->pkts_received, duration, thruput );
 
 	if ( global_settings.timestamp )
-		printf( " packet latency %.2fus", pkt_latency );
+		printf( "\t%.2fus", pkt_latency );
 
 	printf("\n");
 }
@@ -514,6 +522,7 @@ int main (int argc, char *argv[]) {
 	// Divide the duration by the # of CPUs used
 	total_stats.duration = total_stats.duration / i;
 
+	print_headers();
 	print_results( -1, &total_stats );
 
 cleanup:
