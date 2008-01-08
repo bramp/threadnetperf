@@ -15,6 +15,8 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 	assert ( clients != NULL );
 	assert ( n > 0 );
 
+	FD_ZERO(&readFD);
+
 	// Wait for all connections
 	while ( bRunning && n > 0 ) {
 		struct timeval waittime = {1, 0}; // 1 second
