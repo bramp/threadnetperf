@@ -304,7 +304,7 @@ int parse_arguments( int argc, char *argv[] ) {
 }
 
 void print_headers() {
-	printf("\tCore\treceived bytes\tnum recv()s\ttime\tthroughput (MBytes/second)");
+	printf("\tCore\tsend msg size\treceived bytes\tnum recv()s\ttime\tthroughput (MBytes/second)");
 	if ( global_settings.timestamp )
 		printf("\t packet latency");
 	
@@ -317,11 +317,11 @@ void print_results( int core, struct stats *stats ) {
 	float pkt_latency = ((float)stats->pkts_time / (float)stats->pkts_received);
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
-	printf( "%i\t%I64u\t%I64u\t%.2fs\t%.2f", 
+	printf( "%i\t%u\t%I64u\t%I64u\t%.2fs\t%.2f", 
 #else
-	printf( "\t%i\t%llu\t%llu\t%.2fs\t%.2f",
+	printf( "\t%i\t%u\t%llu\t%llu\t%.2fs\t%.2f",
 #endif
-		core, stats->bytes_received, stats->pkts_received, duration, thruput );
+		core, global_settings.message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
 
 	if ( global_settings.timestamp )
 		printf( "\t%.2fus", pkt_latency );
