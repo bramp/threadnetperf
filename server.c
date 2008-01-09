@@ -297,8 +297,16 @@ void *server_thread(void *data) {
 
 				} else {
 					if (settings.timestamp) {
+						unsigned long long now;
 						unsigned long long us = *((unsigned long long *)buffer);
-						pkts_time[ i ] += get_microseconds() - us;
+						now = get_microseconds();
+#ifdef CHECK_TIMES
+						if(pkts_recv [ i ] < CHECK_TIMES ) {
+							req->stats.processed_something = 1;
+							req->stats.processing_times[pkts_recv [ i ]] =  (now - us);
+						}
+#endif
+						pkts_time[ i ] += now - us;
 					}
 
 					// We could dirty the buffer
@@ -339,7 +347,7 @@ void *server_thread(void *data) {
 		req->stats.pkts_time += pkts_time [ i ];
 	}
 //TODO: Un comment this line
-//	print_results(req->core, &req->stats);
+	print_results(req->core, &req->stats);
 
 cleanup:
 	// Force a stop

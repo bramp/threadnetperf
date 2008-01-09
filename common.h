@@ -1,7 +1,9 @@
 #ifndef _COMMON_H
 #define _COMMON_H
 
-#define _GNU_SOURCE 
+#define _GNU_SOURCE
+//Used to turn on the checking of the microseconds 
+#define CHECK_TIMES 100000
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -74,6 +76,10 @@ struct stats {
 	
 	// The duration over which these stats were recorded
 	unsigned long long duration;
+	
+	//Temp buffer for the recv time values used to plot a histogram
+	float processing_times[CHECK_TIMES];
+	int processed_something;
 };
 
 struct server_request {

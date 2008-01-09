@@ -329,6 +329,19 @@ void print_results( int core, struct stats *stats ) {
 		printf( "\t%.2fus", pkt_latency );
 
 	printf("\n");
+	
+#ifdef CHECK_TIMES 
+{ 	
+	int i;
+	if(stats->processed_something) {
+		for(i=0; i<CHECK_TIMES && i < stats-> pkts_received; i++ ) {
+	
+			printf("%f\n", stats->processing_times[i]);
+		} 
+	}
+}
+	printf("\n");
+#endif
 }
 
 int main (int argc, char *argv[]) {
