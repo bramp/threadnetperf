@@ -306,11 +306,12 @@ int parse_arguments( int argc, char *argv[] ) {
 }
 
 void print_headers() {
-	printf("\tCore\tsend msg size\treceived bytes\tnum recv()s\ttime\tthroughput (MBytes/second)");
+	printf("\tCore\tsend\treceived\tnum\ttime\tgoodput");
 	if ( global_settings.timestamp )
-		printf("\t packet latency");
-	
+		printf("\tlatency");
 	printf("\n");
+	printf("\t\tmsg\tbytes\t\trecv()s\t\t(MB/s)\n");
+	printf("\t\tsize\n");
 }
 
 void print_results( int core, struct stats *stats ) {
@@ -360,7 +361,7 @@ int main (int argc, char *argv[]) {
 #ifdef WIN32
 	setup_winsock();
 #endif
-
+	
 	// Malloc space for a 2D array
 	clientserver = calloc ( cores, sizeof(*clientserver) );
 	if ( clientserver == NULL ) {
@@ -380,7 +381,7 @@ int main (int argc, char *argv[]) {
 	if ( parse_arguments( argc, argv ) ) {
 		goto cleanup;
 	}
-
+	print_headers();
 	// Malloc one space for each core
 	sreq = calloc ( cores, sizeof(*sreq) );
 	creq = calloc ( cores, sizeof(*creq) );
@@ -537,7 +538,7 @@ int main (int argc, char *argv[]) {
 	// Divide the duration by the # of CPUs used
 	total_stats.duration = total_stats.duration / i;
 
-	print_headers();
+	
 	print_results( -1, &total_stats );
 
 cleanup:
