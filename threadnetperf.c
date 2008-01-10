@@ -273,6 +273,11 @@ int parse_arguments( int argc, char *argv[] ) {
 		fprintf(stderr, "Must use TCP when disabling Nagles\n" );
 		return -1;
 	}
+	
+	if( global_settings.timestamp && global_settings.message_size < sizeof(unsigned long long) ) {
+		fprintf(stderr, "Message size must be greater than %d when using timestamps\n",  sizeof(unsigned long long) );
+		return -1;
+	}
 
 	for (x = 0; x < cores; x++) {
 		for (y = 0; y < cores; y++) {

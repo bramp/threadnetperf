@@ -303,6 +303,7 @@ void *server_thread(void *data) {
 #ifdef CHECK_TIMES
 						if(pkts_recv [ i ] < CHECK_TIMES ) {
 							req->stats.processed_something = 1;
+							printf("%llu, %llu\n", now, us);
 							req->stats.processing_times[pkts_recv [ i ]] =  (now - us);
 						}
 #endif

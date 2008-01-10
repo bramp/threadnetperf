@@ -212,7 +212,8 @@ void* client_thread(void *data) {
 				ret--;
 
 				if (settings.timestamp) {
-					*((unsigned long long *)buffer) = get_microseconds();
+					unsigned long long now = get_microseconds();
+					 *( (unsigned long long *)buffer ) = now;
 				}
 
 				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
