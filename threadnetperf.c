@@ -315,12 +315,14 @@ int parse_arguments( int argc, char *argv[] ) {
 }
 
 void print_headers() {
-	printf("Core\tsend\treceived\tnum\ttime\tgoodput");
-	if ( global_settings.timestamp )
-		printf("\ttotal");
-	printf("\n");
-	printf("\tmsg\tbytes\t\trecv()s\t\t(MB/s)\tpacket\n");
-	printf("\tsize\t\t\t\t\t\tlatency\n");
+	
+	printf("Core\tsend\treceived\tnum\ttime\tgoodput%s\n",
+		global_settings.timestamp ? "\tpacket" : "");
+
+	printf("\tmsg\tbytes\t\trecv()s\t\t(MB/s)\t%s\n",
+		global_settings.timestamp ? "\tlatency" : "");
+
+	printf("\tsize\t\t\t\t\t\t\n");
 }
 
 void print_results( int core, struct stats *stats ) {
