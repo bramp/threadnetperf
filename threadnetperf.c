@@ -16,6 +16,9 @@ pthread_cond_t ready_cond;
 pthread_cond_t go_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// Printf Mutex, to stop printing ontop of each other
+pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 // Flag to indidcate if we are still running
 volatile int bRunning = 1;
 
@@ -126,8 +129,10 @@ void pause_for_duration(unsigned int duration) {
 		}
 
 		if ( global_settings.verbose ) {
+			pthread_mutex_lock( &printf_mutex );
 			printf(".");
 			fflush(stdout);
+			pthread_mutex_unlock( &printf_mutex );
 		}
 
 		// Pause for 0.1 second
@@ -315,7 +320,9 @@ int parse_arguments( int argc, char *argv[] ) {
 }
 
 void print_headers() {
-	
+
+	pthread_mutex_lock( &printf_mutex );
+
 	printf("Core\tsend\treceived\tnum\ttime\tgoodput%s\n",
 		global_settings.timestamp ? "\tpacket" : "");
 
@@ -323,12 +330,16 @@ void print_headers() {
 		global_settings.timestamp ? "\tlatency" : "");
 
 	printf("\tsize\t\t\t\t\t\t\n");
+
+	pthread_mutex_unlock( &printf_mutex );
 }
 
 void print_results( int core, struct stats *stats ) {
 	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
 	float duration = (float)stats->duration / (float)1000000;
 //	float pkt_latency = (float)stats->pkts_time /  (float)stats->pkts_received;
+
+	pthread_mutex_lock( &printf_mutex );
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
 	printf( "%i\t%u\t%I64u\t%I64u\t%.2fs\t%.2f", 
@@ -354,6 +365,8 @@ void print_results( int core, struct stats *stats ) {
 }
 	printf("\n");
 #endif
+
+	pthread_mutex_unlock( &printf_mutex );
 }
 
 int main (int argc, char *argv[]) {
