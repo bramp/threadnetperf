@@ -275,7 +275,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	}
 	
 	if( global_settings.timestamp && global_settings.message_size < sizeof(unsigned long long) ) {
-		fprintf(stderr, "Message size must be greater than %lu when using timestamps\n",  sizeof(unsigned long long) );
+		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  sizeof(unsigned long long) );
 		return -1;
 	}
 
@@ -311,12 +311,12 @@ int parse_arguments( int argc, char *argv[] ) {
 }
 
 void print_headers() {
-	printf("\tCore\tsend\treceived\tnum\ttime\tgoodput");
+	printf("Core\tsend\treceived\tnum\ttime\tgoodput");
 	if ( global_settings.timestamp )
 		printf("\ttotal");
 	printf("\n");
-	printf("\t\tmsg\tbytes\t\trecv()s\t\t(MB/s)\tpacket\n");
-	printf("\t\tsize\t\t\t\t\t\tlatency\n");
+	printf("\tmsg\tbytes\t\trecv()s\t\t(MB/s)\tpacket\n");
+	printf("\tsize\t\t\t\t\t\tlatency\n");
 }
 
 void print_results( int core, struct stats *stats ) {
@@ -327,7 +327,7 @@ void print_results( int core, struct stats *stats ) {
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
 	printf( "%i\t%u\t%I64u\t%I64u\t%.2fs\t%.2f", 
 #else
-	printf( "\t%i\t%u\t%llu\t%llu\t%.2fs\t%.2f",
+	printf( "%i\t%u\t%llu\t%llu\t%.2fs\t%.2f",
 #endif
 		core, global_settings.message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
 
