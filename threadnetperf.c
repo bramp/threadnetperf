@@ -28,6 +28,9 @@ volatile unsigned int unready_threads = 0;
 // The number of cores this machine has
 const unsigned int cores = 8; // TODO get the read number!
 
+struct server_request *sreq = NULL;
+struct client_request **creq = NULL;
+
 // Settings
 
 // Make a 2D array for each possible to and from connection
@@ -108,6 +111,28 @@ int usleep(unsigned int useconds) {
 }
 #endif
 
+// Signals all threads to stop
+void stop_all () {
+	unsigned int i;
+
+	bRunning = 0;
+
+	if ( creq ) { 
+		for (i = 0; i < cores; i++) {
+			struct client_request *c = creq[i];
+			if ( c != NULL ) {
+				c->bRunning = 0;
+			}
+		}
+	}
+
+	if ( sreq ) {
+		for (i = 0; i < cores; i++) {
+			sreq[i].bRunning = 0;
+		}
+	}
+}
+
 /**
 	Wait until duration has passed
 */
@@ -124,7 +149,7 @@ void pause_for_duration(unsigned int duration) {
 		long long now = get_microseconds();
 
 		if ( now > end_time ) {
-			bRunning = 0;
+			stop_all();
 			break;
 		}
 
@@ -370,9 +395,6 @@ void print_results( int core, struct stats *stats ) {
 }
 
 int main (int argc, char *argv[]) {
-	struct server_request *sreq = NULL;
-	struct client_request **creq = NULL;
-
 	pthread_t *thread = NULL; // Array to handle thread handles
 	unsigned int threads = 0; // Total number of threads
 	unsigned int i;
@@ -430,6 +452,7 @@ int main (int argc, char *argv[]) {
 
 			// Check if we haven't set up this server yet
 			if ( sreq [ servercore ].port == 0 ) {
+				sreq [ servercore ].bRunning = 1;
 				sreq [ servercore ].port = global_settings.port + servercore;
 				sreq [ servercore ].stats.duration = global_settings.duration;
 				sreq [ servercore ].n = 0;
@@ -443,19 +466,21 @@ int main (int argc, char *argv[]) {
 			// If this is the first then add a thread
 			if ( c == NULL ) {
 				unready_threads++;
-				c = malloc( sizeof(*c) );
+				c = calloc( 1, sizeof(*c) );
 				creq [ clientcore ] = c;
+				
+				// Make sure this client is running
+				c->bRunning = 1;
 			} else {
 
 				// Find the last 
 				while ( c->next != NULL )
 					c = c->next;
 
-				c->next = malloc( sizeof( *c ) );
+				// Malloc the new next one
+				c->next = calloc( 1, sizeof( *c ) );
 				c = c->next;
 			}
-
-			memset(c, 0, sizeof(*c));
 
 			c->core = clientcore;
 			c->n = clientserver [ clientcore ] [ servercore ];
@@ -464,8 +489,7 @@ int main (int argc, char *argv[]) {
 			// Create the client dest addr
 			c->addr_len = sizeof ( struct sockaddr_in );
 
-			c->addr = malloc ( c->addr_len ) ;
-			memset( c->addr, 0, c->addr_len );
+			c->addr = calloc ( 1, c->addr_len ) ;
 
 			((struct sockaddr_in *)c->addr)->sin_family = AF_INET;
 			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( "127.0.0.1" );
@@ -481,8 +505,7 @@ int main (int argc, char *argv[]) {
 	}
 
 	// A list of threads
-	thread = malloc( unready_threads * sizeof(*thread) );
-	memset (thread, 0, unready_threads * sizeof(*thread));
+	thread = calloc( unready_threads, sizeof(*thread) );
 
 	// Create all the server threads
 	for (servercore = 0; servercore < cores; servercore++) {
@@ -568,7 +591,7 @@ int main (int argc, char *argv[]) {
 cleanup:
 
 	// Make sure we are not running anymore
-	bRunning = 0;
+	stop_all();
 
 	// Block waiting until all threads die
 	while (threads > 0) {

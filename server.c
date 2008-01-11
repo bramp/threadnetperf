@@ -6,19 +6,20 @@
 /**
 	Wait for and accept N connections
 **/
-int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
+int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *clients) {
 
+	unsigned int n = req->n;
 	int connected = 0;
 	fd_set readFD;
 
 	assert ( listen != INVALID_SOCKET );
 	assert ( clients != NULL );
-	assert ( n > 0 );
+	assert ( req->n > 0 );
 
 	FD_ZERO(&readFD);
 
 	// Wait for all connections
-	while ( bRunning && n > 0 ) {
+	while ( req->bRunning && n > 0 ) {
 		struct timeval waittime = {1, 0}; // 1 second
 		int ret;
 		struct sockaddr_storage addr;
@@ -87,8 +88,8 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 		connected++;
 
 		if ( global_settings.verbose )
-			printf("  Server %d incoming client %s (%d) socket size: %d/%d\n", 
-				servercore, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
+			printf("  Server: %d incoming client %s (%d) socket size: %d/%d\n", 
+				req->core, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
 				send_socket_size, recv_socket_size );
 
 		n--;
@@ -101,10 +102,10 @@ int accept_connections(int servercore, SOCKET listen, SOCKET *clients, int n) {
 	Creates a server, and handles each incoming client
 */
 void *server_thread(void *data) {
-	struct server_request *req = data;
+	struct server_request * const req = data;
 	
 	// Copy the global settings	
-	struct settings settings = global_settings;
+	const struct settings settings = global_settings;
 	
 	SOCKET s = INVALID_SOCKET; // The listen server socket
 
@@ -117,7 +118,6 @@ void *server_thread(void *data) {
 	unsigned long long pkts_recv [ FD_SETSIZE ]; // Number of recv calls from each socket
 
 	unsigned long long pkts_time [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
-	
 
 	char *buffer = NULL; // Buffer to read data into, will be malloced later
 	struct sockaddr_in addr; // Address to listen on
@@ -208,7 +208,7 @@ void *server_thread(void *data) {
 
 	// If this is a STREAM then accept each connection
 	if ( settings.type == SOCK_STREAM ) {
-		if ( accept_connections(req->core, s, client, req->n) ) {
+		if ( accept_connections(req, s, client) ) {
 			goto cleanup;
 		}
 
@@ -234,7 +234,7 @@ void *server_thread(void *data) {
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
-	while ( bRunning && unready_threads > 0 ) {
+	while ( req->bRunning && unready_threads > 0 ) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
@@ -242,7 +242,7 @@ void *server_thread(void *data) {
 	// Start timing
 	start_time = get_microseconds();
 
-	while ( bRunning ) {
+	while ( req->bRunning ) {
 		struct timeval waittime = {1, 0}; // 1 second
 		int ret;
 
@@ -277,9 +277,17 @@ void *server_thread(void *data) {
 				// The socket has closed (or an error has occured)
 				if ( len <= 0 ) {
 
-					if ( len == SOCKET_ERROR && ERRNO != ECONNRESET ) {
-						fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
-						goto cleanup;
+					if ( len == SOCKET_ERROR ) {
+						int lastErr = ERRNO;
+
+						// If it is a blocking error just continue
+						if ( lastErr == EWOULDBLOCK )
+							continue;
+
+						else if ( lastErr != ECONNRESET ) {
+							fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, lastErr );
+							goto cleanup;
+						}
 					}
 
 					if ( settings.verbose )
@@ -356,7 +364,7 @@ void *server_thread(void *data) {
 
 cleanup:
 	// Force a stop
-	bRunning = 0;
+	stop_all();
 
 	// Cleanup
 	if ( buffer )

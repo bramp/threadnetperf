@@ -23,6 +23,7 @@
 
 	#define ERRNO (WSAGetLastError())
 	#define ECONNRESET WSAECONNRESET
+	#define EWOULDBLOCK WSAEWOULDBLOCK
 
 	#define SHUT_RDWR SD_BOTH
 
@@ -87,18 +88,23 @@ struct stats {
 };
 
 struct server_request {
-	unsigned short port;
+ 
+	volatile int bRunning; // Flag to indicate if the server should be running
 
+	unsigned short port; // The port the server is listening on
 	unsigned int n; // The number of connections to accept
 
 	// Stats
 	struct stats stats;
 
 	unsigned int core; // Which core this server is running on
+
 };
 
 // Struct to pass to a client thread
 struct client_request {
+
+	volatile int bRunning; // Flag to indicate if the client should be running
 
 	// The address to connect to
 	struct sockaddr *addr;
@@ -153,4 +159,7 @@ void print_results( int core, struct stats *stats );
 void print_headers();
 
 void print_hex(void *data, int size);
+
+void stop_all();
+
 #endif

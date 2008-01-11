@@ -6,7 +6,8 @@
 */
 void* client_thread(void *data) {
 	const struct client_request *req = data;
-	
+	const struct client_request * const main_req = req;
+
 	// Make a copy of the global settings
 	const struct settings settings = global_settings;
 	
@@ -137,13 +138,13 @@ void* client_thread(void *data) {
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
-	while ( bRunning && unready_threads > 0 ) {
+	while ( main_req->bRunning && unready_threads > 0 ) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
 
 	// Now start the main loop
-	while ( bRunning ) {
+	while ( main_req->bRunning ) {
 
 		int ret;
 		struct timeval waittime = {1, 0}; // 1 second
@@ -214,7 +215,6 @@ void* client_thread(void *data) {
 
 			// Check if we are ready to write
 			if ( FD_ISSET( s, &writeFD) ) {
-				int send_len;
 				ret--;
 				
 				if (settings.timestamp) {
@@ -222,11 +222,12 @@ void* client_thread(void *data) {
 					*end_buffer = now;
 				}
 
-				if ( (send_len=send( s, buffer, settings.message_size, 0 )) == SOCKET_ERROR ) {
-					fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
-					goto cleanup;
+				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
+					if ( ERRNO != EWOULDBLOCK) {
+						fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
+						goto cleanup;
+					}
 				}
-			//	printf("send len %d\n", send_len);	
 			} else {
 				// Set the socket on this FD, to save us doing it at the beginning of each loop
 				FD_SET( s, &writeFD);
@@ -238,7 +239,7 @@ void* client_thread(void *data) {
 cleanup:
 
 	// Force a stop
-	bRunning = 0;
+	stop_all();
 
 	// Cleanup
 	if ( buffer )
