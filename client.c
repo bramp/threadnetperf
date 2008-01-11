@@ -10,6 +10,9 @@ void* client_thread(void *data) {
 	// Make a copy of the global settings
 	const struct settings settings = global_settings;
 	
+	//Const pointer to the end of the buffer
+	unsigned long long* end_buffer = NULL ;
+	
 	SOCKET client [ FD_SETSIZE ];
 	SOCKET *c = client;
 	SOCKET s;
@@ -108,8 +111,9 @@ void* client_thread(void *data) {
 
 	if ( settings.verbose )
 		printf("%s\n", msg);
-	
+
 	buffer = malloc( settings.message_size );
+	end_buffer = (unsigned long long *) &buffer[settings.message_size - sizeof(unsigned long long)] ;
 	memset( buffer, 0x41414141, settings.message_size );
 
 
@@ -209,17 +213,19 @@ void* client_thread(void *data) {
 
 			// Check if we are ready to write
 			if ( FD_ISSET( s, &writeFD) ) {
+				int send_len;
 				ret--;
-
+				
 				if (settings.timestamp) {
 					unsigned long long now = get_microseconds();
-					 *( (unsigned long long *)buffer ) = now;
+					*end_buffer = now;
 				}
 
-				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
+				if ( (send_len=send( s, buffer, settings.message_size, 0 )) == SOCKET_ERROR ) {
 					fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
 				}
+			//	printf("send len %d\n", send_len);	
 			} else {
 				// Set the socket on this FD, to save us doing it at the beginning of each loop
 				FD_SET( s, &writeFD);

@@ -149,4 +149,6 @@ size_t addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, 
 void print_results( int core, struct stats *stats );
 
 void print_headers();
+
+void print_hex(void *data, int size);
 #endif

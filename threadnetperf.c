@@ -275,7 +275,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	}
 	
 	if( global_settings.timestamp && global_settings.message_size < sizeof(unsigned long long) ) {
-		fprintf(stderr, "Message size must be greater than %d when using timestamps\n",  sizeof(unsigned long long) );
+		fprintf(stderr, "Message size must be greater than %lu when using timestamps\n",  sizeof(unsigned long long) );
 		return -1;
 	}
 
@@ -313,16 +313,16 @@ int parse_arguments( int argc, char *argv[] ) {
 void print_headers() {
 	printf("\tCore\tsend\treceived\tnum\ttime\tgoodput");
 	if ( global_settings.timestamp )
-		printf("\tlatency");
+		printf("\ttotal");
 	printf("\n");
-	printf("\t\tmsg\tbytes\t\trecv()s\t\t(MB/s)\n");
-	printf("\t\tsize\n");
+	printf("\t\tmsg\tbytes\t\trecv()s\t\t(MB/s)\tpacket\n");
+	printf("\t\tsize\t\t\t\t\t\tlatency\n");
 }
 
 void print_results( int core, struct stats *stats ) {
 	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
 	float duration = (float)stats->duration / (float)1000000;
-	float pkt_latency = ((float)stats->pkts_time / (float)stats->pkts_received);
+//	float pkt_latency = (float)stats->pkts_time /  (float)stats->pkts_received;
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
 	printf( "%i\t%u\t%I64u\t%I64u\t%.2fs\t%.2f", 
@@ -332,7 +332,7 @@ void print_results( int core, struct stats *stats ) {
 		core, global_settings.message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
 
 	if ( global_settings.timestamp )
-		printf( "\t%.2fus", pkt_latency );
+		printf( "\t%lluus",stats->pkts_time );
 
 	printf("\n");
 	

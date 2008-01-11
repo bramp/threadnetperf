@@ -117,6 +117,7 @@ void *server_thread(void *data) {
 	unsigned long long pkts_recv [ FD_SETSIZE ]; // Number of recv calls from each socket
 
 	unsigned long long pkts_time [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
+	
 
 	char *buffer = NULL; // Buffer to read data into, will be malloced later
 	struct sockaddr_in addr; // Address to listen on
@@ -298,16 +299,21 @@ void *server_thread(void *data) {
 				} else {
 					if (settings.timestamp) {
 						unsigned long long now;
-						unsigned long long us = *((unsigned long long *)buffer);
+						unsigned long long us = *((unsigned long long *)&buffer[len - sizeof(unsigned long long)]);
 						now = get_microseconds();
-#ifdef CHECK_TIMES
-						if(pkts_recv [ i ] < CHECK_TIMES ) {
-							req->stats.processed_something = 1;
-							printf("%llu, %llu\n", now, us);
-							req->stats.processing_times[pkts_recv [ i ]] =  (now - us);
-						}
-#endif
-						pkts_time[ i ] += now - us;
+						
+						if(us != 0x4141414141414141 ) {
+							pkts_time[ i ] += now - us;
+							
+							#ifdef CHECK_TIMES
+								if(pkts_recv [ i ] < CHECK_TIMES ) {
+									req->stats.processed_something = 1;
+									req->stats.processing_times[pkts_recv [ i ]] =  (now - us);
+								}
+								
+								printf("%llu\t%llu\t%llu\n", pkts_recv [ i ]+ 1,  bytes_recv[ i ] +len, pkts_time[ i ]);
+							#endif
+						} 
 					}
 
 					// We could dirty the buffer
@@ -321,7 +327,6 @@ void *server_thread(void *data) {
 						if ( temp )
 							temp = 0;
 					}
-					
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
 					pkts_recv [ i ] ++;
@@ -347,7 +352,6 @@ void *server_thread(void *data) {
 		req->stats.pkts_received += pkts_recv [ i ];
 		req->stats.pkts_time += pkts_time [ i ];
 	}
-//TODO: Un comment this line
 	print_results(req->core, &req->stats);
 
 cleanup:
