@@ -37,6 +37,8 @@
 	#define CPU_CLR(cpu, cpusetp)
 	#define CPU_ISSET(cpu, cpusetp)
 
+	#define snprintf _snprintf
+
 #else
 
 	#include <errno.h>
