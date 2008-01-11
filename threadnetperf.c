@@ -280,7 +280,7 @@ int parse_arguments( int argc, char *argv[] ) {
 	}
 	
 	if( global_settings.timestamp && global_settings.message_size < sizeof(unsigned long long) ) {
-		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  sizeof(unsigned long long) );
+		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );
 		return -1;
 	}
 
