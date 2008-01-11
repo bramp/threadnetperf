@@ -146,7 +146,8 @@ void* client_thread(void *data) {
 	while ( bRunning ) {
 
 		int ret;
-		struct timeval waittime = {1, 0}; // 1 second
+		struct timeval waittime = {1, 0}; // 1 second
+
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
