@@ -291,9 +291,13 @@ int parse_arguments( int argc, char *argv[] ) {
 		unsigned int count; // Number of connections in this class
 		unsigned int client, server; // Client and Server cores
 
+		// Parse N{C-S}
 		if ( sscanf( argv[optind], "%u{%u-%u}", &count, &client, &server ) <3 ) {
-			fprintf(stderr, "Unknown argument (%s)\n", argv[optind] );
-			return -1;
+			// Check if they are using the wrong brackets
+			if ( sscanf( argv[optind], "%u(%u-%u)", &count, &client, &server ) <3 ) {
+				fprintf(stderr, "Unknown argument (%s)\n", argv[optind] );
+				return -1;
+			}
 		}
 
 		// Check all the paramters make sense
