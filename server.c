@@ -310,7 +310,7 @@ void *server_thread(void *data) {
 						unsigned long long us = *((unsigned long long *)&buffer[len - sizeof(unsigned long long)]);
 						now = get_microseconds();
 						
-						if(us != 0x4141414141414141 ) {
+						if(us != BUFFER_FILL ) {
 							pkts_time[ i ] += now - us;
 							
 							#ifdef CHECK_TIMES

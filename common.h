@@ -162,4 +162,6 @@ void print_hex(void *data, int size);
 
 void stop_all();
 
+#define BUFFER_FILL 0x4141414141414141
+
 #endif

@@ -3,7 +3,6 @@
 	by Andrew Brampton (2007)
 
 	Note, this app is very rough, and needs cleaning up, but it works!
-	TODO Changed bRunning to be per request, rather than be global
 	TODO Allow the app to work across networks
 */
 

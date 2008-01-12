@@ -115,7 +115,7 @@ void* client_thread(void *data) {
 
 	buffer = malloc( settings.message_size );
 	end_buffer = (unsigned long long *) &buffer[settings.message_size - sizeof(unsigned long long)] ;
-	memset( buffer, 0x41414141, settings.message_size );
+	memset( buffer, BUFFER_FILL, settings.message_size );
 
 
 	nfds = (int)*client;
