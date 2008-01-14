@@ -4,7 +4,7 @@
 #define _GNU_SOURCE
 
 //Used to turn on the checking of the microseconds 
-#define CHECK_TIMES 100000
+//#define CHECK_TIMES 100000
 
 #include <stdlib.h>
 #include <stdio.h>
