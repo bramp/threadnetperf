@@ -305,21 +305,26 @@ void *server_thread(void *data) {
 					continue;
 
 				} else {
-					if (settings.timestamp) {
-						unsigned long long now;
+					if (settings.timestamp && len > sizeof(unsigned long long) ) {
+						unsigned long long now = get_microseconds();
 						unsigned long long us = *((unsigned long long *)&buffer[len - sizeof(unsigned long long)]);
-						now = get_microseconds();
-						
+
 						if(us != BUFFER_FILL ) {
-							pkts_time[ i ] += now - us;
-							
+							unsigned long long t = now - us;
+
+//							if ( t > 100 ) {
+//								printf("ERROR %llu\t%llu\t%llu\n", t, now, us);
+//							}
+
+							pkts_time[ i ] += t;
+
 							#ifdef CHECK_TIMES
 								if(pkts_recv [ i ] < CHECK_TIMES ) {
 									req->stats.processed_something = 1;
-									req->stats.processing_times[pkts_recv [ i ]] =  (now - us);
+									req->stats.processing_times[pkts_recv [ i ]] = t;
 								}
-								
-								printf("%llu\t%llu\t%llu\n", pkts_recv [ i ]+ 1,  bytes_recv[ i ] +len, pkts_time[ i ]);
+
+//								printf("%llu\t%llu\t%llu\n", pkts_recv [ i ] + 1,  bytes_recv[ i ] + len, t );
 							#endif
 						} 
 					}

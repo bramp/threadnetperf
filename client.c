@@ -114,9 +114,10 @@ void* client_thread(void *data) {
 		printf("%s\n", msg);
 
 	buffer = malloc( settings.message_size );
-	end_buffer = (unsigned long long *) &buffer[settings.message_size - sizeof(unsigned long long)] ;
 	memset( buffer, BUFFER_FILL, settings.message_size );
 
+	if (settings.timestamp && settings.message_size > sizeof(*end_buffer) )
+		end_buffer = (unsigned long long *) &buffer[settings.message_size - sizeof(*end_buffer) ];
 
 	nfds = (int)*client;
 	FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
@@ -217,9 +218,8 @@ void* client_thread(void *data) {
 			if ( FD_ISSET( s, &writeFD) ) {
 				ret--;
 				
-				if (settings.timestamp) {
-					unsigned long long now = get_microseconds();
-					*end_buffer = now;
+				if (end_buffer != NULL) {
+					*end_buffer = get_microseconds();
 				}
 
 				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
