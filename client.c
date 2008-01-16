@@ -9,6 +9,11 @@
 #include <errno.h>
 #include <string.h>
 
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
+
 /**
 	Creates n client connects to address
 */

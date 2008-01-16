@@ -9,6 +9,10 @@
 #include <errno.h>
 #include <string.h>
 
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
 // Count of how many threads are not listening
 volatile unsigned int server_listen_unready = 0;
 
