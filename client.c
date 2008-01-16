@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <errno.h>
+#include <string.h>
 
 /**
 	Creates n client connects to address

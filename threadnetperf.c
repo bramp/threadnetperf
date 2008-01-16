@@ -522,12 +522,13 @@ int main (int argc, char *argv[]) {
 
 	// All the settings we parse
 	struct settings settings;
-	
+
+	unsigned int iteration = 0;
+
 	unsigned long long sum = 0;
 	unsigned long long sumsquare = 0;
 	unsigned long long mean = 0;
 	double variance = 0.0;
-	int current_iterations =0;
 	
 	// Malloc space for a 2D array
 	clientserver = calloc ( cores, sizeof(*clientserver) );
@@ -565,7 +566,7 @@ int main (int argc, char *argv[]) {
 	}
 
 	//Rerun the tests for a certain number of itterations as specified by the user
-	for(current_iterations = 0; current_iterations < settings.max_iterations; current_iterations++) {
+	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
 
 		// Otherwise just run the test locally
 		threads = 0;
@@ -615,8 +616,8 @@ int main (int argc, char *argv[]) {
 
 		sum += total_stats.bytes_received;
 		sumsquare += (total_stats.bytes_received * total_stats.bytes_received);
-		mean = sum / (current_iterations+1);
-		variance = sumsquare / (current_iterations+1) - mean * mean;
+		mean = sum / (iteration+1);
+		variance = (double) (sumsquare / (iteration+1) - mean * mean);
 	
 		print_stats(sum, sumsquare, mean, variance);
 

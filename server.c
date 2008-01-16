@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <errno.h>
+#include <string.h>
 
 // Count of how many threads are not listening
 volatile unsigned int server_listen_unready = 0;
