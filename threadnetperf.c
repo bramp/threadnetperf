@@ -1,9 +1,12 @@
 /***
-	A network benchmark tool
+	A multi-threaded network benchmark tool
 	by Andrew Brampton (2007)
 
 	Note, this app is very rough, and needs cleaning up, but it works!
 	TODO Allow the app to work across networks
+	TODO Implement optomisations
+	TODO Add flag to output bandwidth at set intervals during the experiment
+	TODO Add flag to allow iteration until a confidence interval is meant
 */
 
 #include "common.h"
@@ -35,81 +38,6 @@ struct client_request **creq = NULL;
 // Make a 2D array for each possible to and from connection
 int **clientserver = NULL;
 
-struct settings global_settings;
-
-#ifdef WIN32
-	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
-		return 0;
-	}
-#endif
-
-/**
-	Create a thread on a specific core(s)
-*/
-int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
-
-	pthread_attr_t thread_attr;
-	int ret;
-
-	if (attr == NULL) {
-		pthread_attr_init ( &thread_attr );
-		attr = &thread_attr;
-	}
-
-	// Set the CPU
-	ret = pthread_attr_setaffinity_np( attr, cpusetsize, cpuset );
-	if (ret)
-		goto cleanup;
-
-	// Make sure the thread is joinable
-	ret = pthread_attr_setdetachstate( attr, PTHREAD_CREATE_JOINABLE);
-	if (ret)
-		goto cleanup;
-
-	// Now create the thread
-	ret = pthread_create(thread, attr, start_routine, arg);
-
-cleanup:
-	if ( attr == &thread_attr )
-		pthread_attr_destroy ( &thread_attr );
-
-	return ret;
-}
-
-#ifdef WIN32
-/**
-	Function to setup the winsock libs
-*/
-void setup_winsock() {
-	WSADATA wsaData;
-
-	if ( WSAStartup(MAKEWORD(2,2), &wsaData) ) {
-		fprintf(stderr, "%s:%d WSAStartup() error\n", __FILE__, __LINE__ );
-		return;
-	}
-}
-
-void cleanup_winsock() {
-	WSACleanup();
-}
-#endif
-
-#ifdef WIN32
-// Sleep for a number of microseconds
-int usleep(unsigned int useconds) {
-	struct timespec waittime;
-
-	if ( useconds > 1000000 )
-		return EINVAL;
-
-	waittime.tv_sec = 0;
-	waittime.tv_nsec = useconds * 1000; 
-
-	pthread_delay_np ( &waittime );
-	return 0;
-}
-#endif
-
 // Signals all threads to stop
 void stop_all () {
 	unsigned int i;
@@ -135,11 +63,11 @@ void stop_all () {
 /**
 	Wait until duration has passed
 */
-void pause_for_duration(unsigned int duration) {
+void pause_for_duration(const struct settings *settings) {
 	long long end_time; // The time we need to end
 
 	// Make sure duration is in microseconds
-	duration = duration * 1000000;
+	long long duration = settings->duration * 1000000;
 
 	// This main thread controls when the test ends
 	end_time = get_microseconds() + duration;
@@ -152,7 +80,7 @@ void pause_for_duration(unsigned int duration) {
 			break;
 		}
 
-		if ( global_settings.verbose ) {
+		if ( settings->verbose ) {
 			pthread_mutex_lock( &printf_mutex );
 			printf(".");
 			fflush(stdout);
@@ -170,9 +98,12 @@ void print_usage() {
 
 	fprintf(stderr, "threadnetperf by bramp 2007\n" );
 	fprintf(stderr, "Usage: threadnetperf [options] tests\n" );
+	fprintf(stderr, "Usage: threadnetperf -D [options]\n" );
 	fprintf(stderr, "Runs a threaded network test\n" );
 
 	fprintf(stderr, "\n" );
+
+	fprintf(stderr, "	-D         Use deamon mode (wait for incoming tests)\n" );
 
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
 	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
@@ -203,22 +134,23 @@ void print_usage() {
 	//fprintf(stderr, "-d\n" );
 }
 
-int parse_arguments( int argc, char *argv[] ) {
+int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	int c;
 	unsigned int x, y;
 
 	// Default arguments
-	global_settings.message_size = 1024;
-	global_settings.socket_size = -1;
-	global_settings.disable_nagles = 0;
-	global_settings.duration = 10;
-	global_settings.port = 1234;
-	global_settings.verbose = 0;
-	global_settings.dirty = 0;
-	global_settings.timestamp = 0;
+	settings->deamon = 0;
+	settings->message_size = 1024;
+	settings->socket_size = -1;
+	settings->disable_nagles = 0;
+	settings->duration = 10;
+	settings->port = 1234;
+	settings->verbose = 0;
+	settings->dirty = 0;
+	settings->timestamp = 0;
 
-	global_settings.type = SOCK_STREAM;
-	global_settings.protocol = IPPROTO_TCP;
+	settings->type = SOCK_STREAM;
+	settings->protocol = IPPROTO_TCP;
 
 	if ( argc == 1 ) {
 		print_usage();
@@ -226,12 +158,18 @@ int parse_arguments( int argc, char *argv[] ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "tTeunvhs:d:p:")) != -1) {
+	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:")) != -1) {
 		switch ( c ) {
+
+			// Deamon mode (wait for incoming tests)
+			case 'D':
+				settings->deamon = 1;
+				break;
+
 			// Duration
 			case 'd':
-				global_settings.duration = atoi( optarg );
-				if ( global_settings.duration == 0 ) {
+				settings->duration = atoi( optarg );
+				if ( settings->duration == 0 ) {
 					fprintf(stderr, "Invalid duration given (%s)\n", optarg );
 					return -1;
 				}
@@ -239,13 +177,13 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// Disable nagles algorithm (ie NO delay)
 			case 'n':
-				global_settings.disable_nagles = 1;
+				settings->disable_nagles = 1;
 				break;
 
 			// Parse the message size
 			case 's':
-				global_settings.message_size = atoi( optarg );
-				if ( global_settings.message_size == 0 ) {
+				settings->message_size = atoi( optarg );
+				if ( settings->message_size == 0 ) {
 					fprintf(stderr, "Invalid message size given (%s)\n", optarg );
 					return -1;
 				}
@@ -253,8 +191,8 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// Parse the message size
 			case 'p':
-				global_settings.port = atoi( optarg );
-				if ( global_settings.port == 0 ) {
+				settings->port = atoi( optarg );
+				if ( settings->port == 0 ) {
 					fprintf(stderr, "Invalid port number given (%s)\n", optarg );
 					return -1;
 				}
@@ -262,16 +200,16 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// Dirty the data
 			case 'e':
-				global_settings.dirty = 1;
+				settings->dirty = 1;
 				break;
 
 			case 'T':
-				global_settings.timestamp = 1;
+				settings->timestamp = 1;
 				break;
 			
 			// Increase the verbose level
 			case 'v':
-				global_settings.verbose++;
+				settings->verbose++;
 				break;
 
 			case 'h':
@@ -280,30 +218,31 @@ int parse_arguments( int argc, char *argv[] ) {
 
 			// TCP/UDP
 			case 't':
-				global_settings.type = SOCK_STREAM;
-				global_settings.protocol = IPPROTO_TCP;
+				settings->type = SOCK_STREAM;
+				settings->protocol = IPPROTO_TCP;
 				break;
 
 			case 'u':
-				global_settings.type = SOCK_DGRAM;
-				global_settings.protocol = IPPROTO_UDP;
+				settings->type = SOCK_DGRAM;
+				settings->protocol = IPPROTO_UDP;
 				break;
 
 			case '?':
 				fprintf(stderr, "Unknown argument (%s)\n", argv[optind-1] );
 				return -1;
+
 			default:
 				fprintf(stderr, "Argument not implemented (yet) (%c)\n", c );
 				return -1;
 		}
 	}
 
-	if ( global_settings.disable_nagles && global_settings.protocol != IPPROTO_TCP ) {
+	if ( settings->disable_nagles && settings->protocol != IPPROTO_TCP ) {
 		fprintf(stderr, "Must use TCP when disabling Nagles\n" );
 		return -1;
 	}
 	
-	if( global_settings.timestamp && global_settings.message_size < sizeof(unsigned long long) ) {
+	if( settings->timestamp && settings->message_size < sizeof(unsigned long long) ) {
 		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );
 		return -1;
 	}
@@ -312,6 +251,11 @@ int parse_arguments( int argc, char *argv[] ) {
 		for (y = 0; y < cores; y++) {
 			clientserver [ x ] [ y ] = 0;
 		}
+	}
+
+	if ( settings->deamon && optind < argc ) {
+		fprintf(stderr, "Tests can not be specified on the command line in Deamon mode\n" );
+		return -1;
 	}
 
 	// Try and parse anything else left on the end
@@ -343,22 +287,22 @@ int parse_arguments( int argc, char *argv[] ) {
 	return 0;
 }
 
-void print_headers() {
+void print_headers(const struct settings* settings) {
 
 	pthread_mutex_lock( &printf_mutex );
 
 	printf("Core\tsend\treceived\tnum\ttime\tgoodput%s\n",
-		global_settings.timestamp ? "\tpacket" : "");
+		settings->timestamp ? "\tpacket" : "");
 
 	printf("\tmsg\tbytes\t\trecv()s\t\t(MB/s)\t%s\n",
-		global_settings.timestamp ? "\tlatency" : "");
+		settings->timestamp ? "\tlatency" : "");
 
 	printf("\tsize\t\t\t\t\t\t\n");
 
 	pthread_mutex_unlock( &printf_mutex );
 }
 
-void print_results( int core, struct stats *stats ) {
+void print_results( const struct settings *settings, int core, struct stats *stats ) {
 	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
 	float duration = (float)stats->duration / (float)1000000;
 //	float pkt_latency = (float)stats->pkts_time /  (float)stats->pkts_received;
@@ -370,9 +314,9 @@ void print_results( int core, struct stats *stats ) {
 #else
 	printf( "%i\t%u\t%llu\t%llu\t%.2fs\t%.2f",
 #endif
-		core, global_settings.message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
+		core, settings->message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
 
-	if ( global_settings.timestamp )
+	if ( settings->timestamp )
 		printf( "\t%lluus",stats->pkts_time );
 
 	printf("\n");
@@ -403,6 +347,9 @@ int main (int argc, char *argv[]) {
 	// The sum of all the stats
 	struct stats total_stats = {0,0,0};
 
+	// All the settings we parse
+	struct settings settings;
+
 #ifdef WIN32
 	setup_winsock();
 #endif
@@ -422,11 +369,12 @@ int main (int argc, char *argv[]) {
 		}
 	}
 
-
-	if ( parse_arguments( argc, argv ) ) {
+	if ( parse_arguments( argc, argv, &settings ) ) {
 		goto cleanup;
 	}
-	print_headers();
+
+	print_headers( &settings );
+	
 	// Malloc one space for each core
 	sreq = calloc ( cores, sizeof(*sreq) );
 	creq = calloc ( cores, sizeof(*creq) );
@@ -452,8 +400,9 @@ int main (int argc, char *argv[]) {
 			// Check if we haven't set up this server yet
 			if ( sreq [ servercore ].port == 0 ) {
 				sreq [ servercore ].bRunning = 1;
-				sreq [ servercore ].port = global_settings.port + servercore;
-				sreq [ servercore ].stats.duration = global_settings.duration;
+				sreq [ servercore ].settings = &settings;
+				sreq [ servercore ].port = settings.port + servercore;
+				sreq [ servercore ].stats.duration = settings.duration;
 				sreq [ servercore ].n = 0;
 				sreq [ servercore ].core = servercore;
 				unready_threads++;
@@ -470,6 +419,7 @@ int main (int argc, char *argv[]) {
 				
 				// Make sure this client is running
 				c->bRunning = 1;
+				c->settings = &settings;
 			} else {
 
 				// Find the last 
@@ -492,7 +442,7 @@ int main (int argc, char *argv[]) {
 
 			((struct sockaddr_in *)c->addr)->sin_family = AF_INET;
 			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( "127.0.0.1" );
-			((struct sockaddr_in *)c->addr)->sin_port = htons( global_settings.port + servercore );
+			((struct sockaddr_in *)c->addr)->sin_port = htons( settings.port + servercore );
 
 		}
 	}
@@ -561,7 +511,7 @@ int main (int argc, char *argv[]) {
 	pthread_mutex_unlock( &go_mutex );
 
 	// Pauses for the duration, then sets bRunning to false
-	pause_for_duration( global_settings.duration );
+	pause_for_duration( &settings );
 
 	// Block waiting until all threads die
 	while (threads > 0) {
@@ -585,7 +535,7 @@ int main (int argc, char *argv[]) {
 	total_stats.duration = total_stats.duration / i;
 
 	
-	print_results( -1, &total_stats );
+	print_results( &settings, -1, &total_stats );
 
 cleanup:
 

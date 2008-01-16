@@ -8,6 +8,4 @@ extern pthread_mutex_t go_mutex;
 
 extern volatile unsigned int unready_threads;
 
-extern struct settings global_settings;
-
 #endif

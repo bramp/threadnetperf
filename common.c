@@ -97,6 +97,82 @@ unsigned long long get_microseconds() {
 	return microseconds;
 }
 
+struct settings global_settings;
+
+#ifdef WIN32
+	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
+		return 0;
+	}
+#endif
+
+/**
+	Create a thread on a specific core(s)
+*/
+int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
+
+	pthread_attr_t thread_attr;
+	int ret;
+
+	if (attr == NULL) {
+		pthread_attr_init ( &thread_attr );
+		attr = &thread_attr;
+	}
+
+	// Set the CPU
+	ret = pthread_attr_setaffinity_np( attr, cpusetsize, cpuset );
+	if (ret)
+		goto cleanup;
+
+	// Make sure the thread is joinable
+	ret = pthread_attr_setdetachstate( attr, PTHREAD_CREATE_JOINABLE);
+	if (ret)
+		goto cleanup;
+
+	// Now create the thread
+	ret = pthread_create(thread, attr, start_routine, arg);
+
+cleanup:
+	if ( attr == &thread_attr )
+		pthread_attr_destroy ( &thread_attr );
+
+	return ret;
+}
+
+#ifdef WIN32
+/**
+	Function to setup the winsock libs
+*/
+void setup_winsock() {
+	WSADATA wsaData;
+
+	if ( WSAStartup(MAKEWORD(2,2), &wsaData) ) {
+		fprintf(stderr, "%s:%d WSAStartup() error\n", __FILE__, __LINE__ );
+		return;
+	}
+}
+
+void cleanup_winsock() {
+	WSACleanup();
+}
+#endif
+
+#ifdef WIN32
+// Sleep for a number of microseconds
+int usleep(unsigned int useconds) {
+	struct timespec waittime;
+
+	if ( useconds > 1000000 )
+		return EINVAL;
+
+	waittime.tv_sec = 0;
+	waittime.tv_nsec = useconds * 1000; 
+
+	pthread_delay_np ( &waittime );
+	return 0;
+}
+#endif
+
+
 /**
 	Turn a addr into an string representing its address
 */

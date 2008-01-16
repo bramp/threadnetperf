@@ -88,6 +88,26 @@ struct stats {
 #endif
 };
 
+// Settings
+struct settings {
+	unsigned int duration;
+	
+	int type;
+	int protocol;
+	
+	int deamon;
+	int verbose;
+	int dirty;
+	int timestamp;
+	int disable_nagles;
+
+	unsigned int message_size;	
+	unsigned int socket_size;
+
+	unsigned short port;
+
+};
+
 struct server_request {
  
 	volatile int bRunning; // Flag to indicate if the server should be running
@@ -95,11 +115,12 @@ struct server_request {
 	unsigned short port; // The port the server is listening on
 	unsigned int n; // The number of connections to accept
 
-	// Stats
-	struct stats stats;
-
 	unsigned int core; // Which core this server is running on
 
+	const struct settings *settings;
+
+	// Stats
+	struct stats stats;
 };
 
 // Struct to pass to a client thread
@@ -111,29 +132,12 @@ struct client_request {
 	struct sockaddr *addr;
 	int addr_len;
 
-	unsigned int n; // The number of connection to create
+	const struct settings *settings;
 
+	unsigned int n; // The number of connection to create
 	unsigned int core; // Which core this server is running on
 
 	struct client_request *next;
-};
-
-// Settings
-struct settings {
-	unsigned int duration;
-	
-	unsigned short port;
-	
-	int type;
-	int protocol;
-	
-	int verbose;
-	int dirty;
-	int timestamp;
-	int disable_nagles;
-
-	unsigned int message_size;	
-	unsigned int socket_size;
 };
 
 void *server_thread(void *data);
@@ -155,14 +159,25 @@ unsigned long long get_microseconds();
 
 size_t addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen);
 
-void print_results( int core, struct stats *stats );
+void print_results( const struct settings * settings, int core, struct stats *stats );
 
-void print_headers();
+void print_headers( const struct settings * settings );
 
 void print_hex(void *data, int size);
 
 void stop_all();
 
+int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset);
+
+#ifdef WIN32
+void cleanup_winsock();
+void setup_winsock();
+
+// Sleep for a number of microseconds
+int usleep(unsigned int useconds);
+
+#endif
+	
 #define BUFFER_FILL 0x4141414141414141
 
 #endif

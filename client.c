@@ -9,7 +9,7 @@ void* client_thread(void *data) {
 	const struct client_request * const main_req = req;
 
 	// Make a copy of the global settings
-	const struct settings settings = global_settings;
+	const struct settings settings = *req->settings;
 	
 	//Const pointer to the end of the buffer
 	unsigned long long* end_buffer = NULL ;
@@ -114,7 +114,7 @@ void* client_thread(void *data) {
 		printf("%s\n", msg);
 
 	buffer = malloc( settings.message_size );
-	memset( buffer, BUFFER_FILL, settings.message_size );
+	memset( buffer, (int)BUFFER_FILL, settings.message_size );
 
 	if (settings.timestamp && settings.message_size > sizeof(*end_buffer) )
 		end_buffer = (unsigned long long *) &buffer[settings.message_size - sizeof(*end_buffer) ];

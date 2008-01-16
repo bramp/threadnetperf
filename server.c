@@ -8,6 +8,8 @@
 **/
 int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *clients) {
 
+	struct settings settings = *req->settings; // Make a local copy of the settings
+
 	unsigned int n = req->n;
 	int connected = 0;
 	fd_set readFD;
@@ -57,19 +59,19 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			return 1;
 		}
 
-		send_socket_size = set_socket_send_buffer( s, global_settings.socket_size );
+		send_socket_size = set_socket_send_buffer( s, settings.socket_size );
 		if ( send_socket_size < 0 ) {
 			fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 			return 1;
 		}
 		
-		recv_socket_size = set_socket_recv_buffer( s, global_settings.socket_size );
+		recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
 		if ( send_socket_size < 0 ) {
 			fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 			return 1;
 		}
 
-		if ( global_settings.disable_nagles ) {
+		if ( settings.disable_nagles ) {
 			if ( disable_nagle( s ) == SOCKET_ERROR ) {
 				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 				return 1;
@@ -87,7 +89,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		++clients;
 		connected++;
 
-		if ( global_settings.verbose )
+		if ( settings.verbose )
 			printf("  Server: %d incoming client %s (%d) socket size: %d/%d\n", 
 				req->core, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
 				send_socket_size, recv_socket_size );
@@ -105,7 +107,7 @@ void *server_thread(void *data) {
 	struct server_request * const req = data;
 	
 	// Copy the global settings	
-	const struct settings settings = global_settings;
+	const struct settings settings = *req->settings;
 	
 	SOCKET s = INVALID_SOCKET; // The listen server socket
 
@@ -365,7 +367,7 @@ void *server_thread(void *data) {
 		req->stats.pkts_received += pkts_recv [ i ];
 		req->stats.pkts_time += pkts_time [ i ];
 	}
-	print_results(req->core, &req->stats);
+	print_results( &settings, req->core, &req->stats);
 
 cleanup:
 	// Force a stop
