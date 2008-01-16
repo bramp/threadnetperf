@@ -1,6 +1,8 @@
 // Code that prints out to the user
 #include "print.h"
 
+ #include <ctype.h>
+
 // Printf Mutex, to stop printing ontop of each other
 pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
 

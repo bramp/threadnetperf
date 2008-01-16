@@ -26,7 +26,7 @@ pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 int bRunning = 1;
 
 // Count of how many threads are ready
-volatile unsigned int unready_threads = 0;
+unsigned int unready_threads = 0;
 
 // The number of cores this machine has
 const unsigned int cores = 8; // TODO get the read number!
@@ -579,7 +579,6 @@ int main (int argc, char *argv[]) {
 	// Divide the duration by the # of CPUs used
 	total_stats.duration = total_stats.duration / i;
 
-	
 	print_results( &settings, -1, &total_stats );
 
 cleanup:
