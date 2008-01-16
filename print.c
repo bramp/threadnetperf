@@ -2,6 +2,8 @@
 #include "print.h"
 
 #include <ctype.h>
+#include <stdio.h>
+#include <string.h>
 
 #ifdef WIN32
 	#define snprintf _snprintf
