@@ -13,6 +13,9 @@
 #include "print.h"
 #include "server.h"
 
+
+#include "signal.h"
+
 // Condition Variable that is signaled each time a thread is ready
 pthread_cond_t ready_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t ready_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -529,8 +532,15 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	}
 
+#ifdef SIGPIPE
+	// Disable SIGPIPE signals because they can fire from within send/read
+	signal ( SIGPIPE, SIG_IGN );
+#endif
+
 #ifdef WIN32
 	setup_winsock();
+#else
+
 #endif
 	// If we are daemon mode start that
 	if (settings.deamon) {

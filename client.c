@@ -133,7 +133,6 @@ void* client_thread(void *data) {
 
 	nfds = nfds + 1;
 
-	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
 
@@ -142,6 +141,7 @@ void* client_thread(void *data) {
 	pthread_cond_signal( &ready_cond );
 	pthread_mutex_unlock( &ready_mutex );
 
+	// Wait for the go
 	while ( req->bRunning && unready_threads > 0 ) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
