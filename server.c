@@ -1,7 +1,10 @@
-#include "common.h"
+#include "server.h"
 #include "global.h"
 
 #include "print.h"
+
+// Count of how many threads are not listening
+volatile unsigned int server_listen_unready = 0;
 
 /**
 	Wait for and accept N connections
@@ -191,25 +194,27 @@ void *server_thread(void *data) {
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons( req->port );
 
+	// Bind
 	if ( bind( s, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
 		fprintf(stderr, "%s:%d bind() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
-	if ( (settings.type == SOCK_STREAM || settings.type==SOCK_SEQPACKET) && listen(s, SOMAXCONN) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
+	// Listen
+	if ( (settings.type == SOCK_STREAM || settings.type==SOCK_SEQPACKET) ) {
+		if ( listen(s, SOMAXCONN) == SOCKET_ERROR ) {
+			fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+		}
 	}
 
-	// Setup the buffer
-	buffer = malloc( settings.message_size );
-	if ( buffer == NULL ) {
-		fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
+	pthread_mutex_lock( &go_mutex );
+	server_listen_unready--;
+	pthread_mutex_unlock( &go_mutex );
 
 	// If this is a STREAM then accept each connection
 	if ( settings.type == SOCK_STREAM ) {
+		// Wait until all connections have been accepted
 		if ( accept_connections(req, s, client) ) {
 			goto cleanup;
 		}
@@ -220,10 +225,19 @@ void *server_thread(void *data) {
 		clients = 1;
 	}
 
+	// By this point all the clients have connected, but the test hasn't started yet
+
+	// Setup the buffer
+	buffer = malloc( settings.message_size );
+	if ( buffer == NULL ) {
+		fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
 	FD_ZERO( &readFD );
 	nfds = (int)*client;
 
-	// Add all the client sockets
+	// Add all the client sockets to the fd_set
 	for (c = client ; c < &client [clients] ; c++) {
 		assert ( *c != INVALID_SOCKET );
 		
@@ -314,10 +328,6 @@ void *server_thread(void *data) {
 						if(us != BUFFER_FILL ) {
 							unsigned long long t = now - us;
 
-//							if ( t > 100 ) {
-//								printf("ERROR %llu\t%llu\t%llu\n", t, now, us);
-//							}
-
 							pkts_time[ i ] += t;
 
 							#ifdef CHECK_TIMES
@@ -325,8 +335,6 @@ void *server_thread(void *data) {
 									req->stats.processed_something = 1;
 									req->stats.processing_times[pkts_recv [ i ]] = t;
 								}
-
-//								printf("%llu\t%llu\t%llu\n", pkts_recv [ i ] + 1,  bytes_recv[ i ] + len, t );
 							#endif
 						} 
 					}

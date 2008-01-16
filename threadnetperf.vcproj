@@ -157,6 +157,9 @@
 			<File
 				RelativePath=".\print.h">
 			</File>
+			<File
+				RelativePath=".\server.h">
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

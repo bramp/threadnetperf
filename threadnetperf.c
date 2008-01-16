@@ -11,6 +11,7 @@
 
 #include "common.h"
 #include "print.h"
+#include "server.h"
 
 // Condition Variable that is signed each time a thread is ready
 pthread_cond_t ready_cond;
@@ -133,6 +134,7 @@ void print_usage() {
 int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	int c;
 	unsigned int x, y;
+	unsigned int tests = 0;
 
 	// Default arguments
 	settings->deamon = 0;
@@ -155,7 +157,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "cDtTeunvhs:d:p:")) != -1) {
+	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:")) != -1) {
 		switch ( c ) {
 			//confidence level, must be either 95 or 99
 			case 'c':
@@ -254,15 +256,16 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		return -1;
 	}
 
+	if ( settings->deamon && optind < argc ) {
+		// TODO make this test that other conflicting options haven't been needlessly set
+		fprintf(stderr, "Tests can not be specified on the command line in Deamon mode\n" );
+		return -1;
+	}
+
 	for (x = 0; x < cores; x++) {
 		for (y = 0; y < cores; y++) {
 			clientserver [ x ] [ y ] = 0;
 		}
-	}
-
-	if ( settings->deamon && optind < argc ) {
-		fprintf(stderr, "Tests can not be specified on the command line in Deamon mode\n" );
-		return -1;
 	}
 
 	// Try and parse anything else left on the end
@@ -287,19 +290,192 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		}
 
 		clientserver [ client ] [ server ] += count;
+		tests++;
 
 		optind++;
+	}
+
+	// If there are no tests then error
+	if ( tests == 0 ) {
+		fprintf(stderr, "Please enter atleast one client/server combination\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+void start_daemon(const struct settings * settings) {
+	//unready_threads = 0; // Number of threads not ready
+
+	//start_servers(&settings);
+	//start_clients(&settings);
+
+	//free(sreq); free(creq);
+}
+
+pthread_t *thread = NULL; // Array to handle thread handles
+unsigned int threads = 0; // Total number of threads
+
+int prepare_clients(const struct settings * settings) {
+
+	unsigned int servercore, clientcore;
+
+	// Malloc one space for each core
+	creq = calloc ( cores, sizeof(*creq) );
+
+	if ( !creq ) {
+		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		return -1;
+	}
+
+	// Loop through clientserver looking for each server we need to create
+	for (servercore = 0; servercore < cores; servercore++) {
+		for (clientcore = 0; clientcore < cores; clientcore++) {
+
+			struct client_request_details *c;
+
+			// Don't bother if there are zero requests
+			if ( clientserver [ clientcore ] [ servercore ] == 0 )
+				continue;
+
+			// Check if we haven't set up this client thread yet
+			if ( creq [ clientcore ].bRunning == 0 ) {
+				creq [ clientcore ].bRunning = 1;
+				creq [ clientcore ].settings = settings;
+				creq [ clientcore ].core = clientcore;
+
+				unready_threads++;
+			} 
+
+			// Malloc the request details
+			c = calloc( 1, sizeof( *c ) );
+			if ( !c ) {
+				fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+				return -1;
+			}
+
+			// Add this new details before the other details
+			c->next = creq [ clientcore ].details;
+			creq [ clientcore ].details = c;
+
+			c->n = clientserver [ clientcore ] [ servercore ];
+			sreq [ servercore ].n += c->n;
+
+			// Create the client dest addr
+			c->addr_len = sizeof ( struct sockaddr_in );
+
+			c->addr = calloc ( 1, c->addr_len ) ;
+			if ( !c->addr ) {
+				fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+				return -1;
+			}
+
+			((struct sockaddr_in *)c->addr)->sin_family = AF_INET;
+			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( "127.0.0.1" );
+			((struct sockaddr_in *)c->addr)->sin_port = htons( settings->port + servercore );
+		}
+	}
+
+	return 0;
+}
+
+int create_clients() {
+	unsigned int clientcore;
+
+	for (clientcore = 0; clientcore < cores; clientcore++) {
+		cpu_set_t cpus;
+
+		if ( ! creq[clientcore].bRunning )
+			continue;
+
+		CPU_ZERO ( &cpus );
+		CPU_SET ( clientcore, &cpus );
+
+		if ( pthread_create_on( &thread[threads], NULL, client_thread, &creq [clientcore] , sizeof(cpus), &cpus) ) {
+			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
+			return -1;
+		}
+
+		threads++;
+	}
+
+	return 0;
+}
+
+int prepare_servers(const struct settings * settings) {
+
+	unsigned int servercore, clientcore;
+
+	// Malloc one space for each core
+	sreq = calloc ( cores, sizeof(*sreq) );
+
+	if ( !sreq ) {
+		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		return -1;
+	}
+
+	// Loop through clientserver looking for each server we need to create
+	for (servercore = 0; servercore < cores; servercore++) {
+		for (clientcore = 0; clientcore < cores; clientcore++) {
+
+			// Don't bother if there are zero requests
+			if ( clientserver [ clientcore ] [ servercore ] == 0 )
+				continue;
+
+			// Check if we haven't set up this server thread yet
+			if ( sreq [ servercore ].bRunning == 0 ) {
+				sreq [ servercore ].bRunning = 1;
+				sreq [ servercore ].settings = settings;
+				sreq [ servercore ].port = settings->port + servercore;
+				sreq [ servercore ].stats.duration = settings->duration;
+				sreq [ servercore ].n = 0;
+				sreq [ servercore ].core = servercore;
+
+				unready_threads++;
+				server_listen_unready++;
+			}
+		}
+	}
+
+
+	return 0;
+}
+
+int create_servers() {
+	unsigned int servercore;
+
+	// Create all the server threads
+	for (servercore = 0; servercore < cores; servercore++) {
+		
+		cpu_set_t cpus;
+
+		// Don't bother if we don't have a server on this core
+		if ( ! sreq[servercore].bRunning )
+			continue;
+
+		// Set which CPU this thread should be on
+		CPU_ZERO ( &cpus );
+		CPU_SET ( servercore, &cpus );
+
+		if ( pthread_create_on( &thread[threads], NULL, server_thread, &sreq[servercore], sizeof(cpus), &cpus) ) {
+			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
+			return -1;
+		}
+
+		threads++;
+	}
+
+	// Wait until all the servers are ready to accept connections
+	while ( bRunning && server_listen_unready > 0 ) {
+		usleep( 1000 );
 	}
 
 	return 0;
 }
 
 int main (int argc, char *argv[]) {
-	pthread_t *thread = NULL; // Array to handle thread handles
-	unsigned int threads = 0; // Total number of threads
 	unsigned int i;
-	int ret;
-	unsigned int servercore, clientcore;
+	unsigned int servercore;
 
 	// The sum of all the stats
 	struct stats total_stats = {0,0,0};
@@ -330,123 +506,29 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	}
 
-	print_headers( &settings );
+	// If we are daemon mode start that
+	if (settings.deamon) {
+		start_daemon(&settings);
+		goto cleanup;
+	}
+	// Otherwise just run the test locally
 	
-	// Malloc one space for each core
-	sreq = calloc ( cores, sizeof(*sreq) );
-	creq = calloc ( cores, sizeof(*creq) );
+	threads = 0;
+	unready_threads = 0; // Number of threads not ready
 
-	if ( sreq == NULL || creq == NULL  ) {
-		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+	// Setup all the data for each server and client
+	if ( prepare_servers(&settings) )
 		goto cleanup;
-	}
 
-	// Number of threads not ready
-	unready_threads = 0;
-
-	// Loop through clientserver looking for each set of connections we need to create
-	for (servercore = 0; servercore < cores; servercore++) {
-		for (clientcore = 0; clientcore < cores; clientcore++) {
-
-			struct client_request_details *c;
-
-			// Don't bother if there are zero requests
-			if ( clientserver [ clientcore ] [ servercore ] == 0 )
-				continue;
-
-			// Check if we haven't set up this server thread yet
-			if ( sreq [ servercore ].bRunning == 0 ) {
-				sreq [ servercore ].bRunning = 1;
-				sreq [ servercore ].settings = &settings;
-				sreq [ servercore ].port = settings.port + servercore;
-				sreq [ servercore ].stats.duration = settings.duration;
-				sreq [ servercore ].n = 0;
-				sreq [ servercore ].core = servercore;
-
-				unready_threads++;
-			}
-
-			// Check if we haven't set up this client thread yet
-			if ( creq [ clientcore ].bRunning == 0 ) {
-				creq [ clientcore ].bRunning = 1;
-				creq [ clientcore ].settings = &settings;
-				creq [ clientcore ].core = clientcore;
-				unready_threads++;
-			} 
-
-			// Malloc the request details
-			c = calloc( 1, sizeof( *c ) );
-
-			// Add this new details before the other details
-			c->next = creq [ clientcore ].details;
-			creq [ clientcore ].details = c;
-
-			c->n = clientserver [ clientcore ] [ servercore ];
-			sreq [ servercore ].n += c->n;
-
-			// Create the client dest addr
-			c->addr_len = sizeof ( struct sockaddr_in );
-
-			c->addr = calloc ( 1, c->addr_len ) ;
-
-			((struct sockaddr_in *)c->addr)->sin_family = AF_INET;
-			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( "127.0.0.1" );
-			((struct sockaddr_in *)c->addr)->sin_port = htons( settings.port + servercore );
-
-		}
-	}
-
-	// If there are no paramters then error
-	if ( unready_threads == 0 ) {
-		fprintf(stderr, "Please enter atleast one client/server combination\n");
+	if ( prepare_clients(&settings) )
 		goto cleanup;
-	}
 
 	// A list of threads
 	thread = calloc( unready_threads, sizeof(*thread) );
 
-	// Create all the server threads
-	for (servercore = 0; servercore < cores; servercore++) {
-		
-		cpu_set_t cpus;
-
-		// Don't bother if we don't have a server on this core
-		if ( ! sreq[servercore].bRunning )
-			continue;
-
-		// Set which CPU this thread should be on
-		CPU_ZERO ( &cpus );
-		CPU_SET ( servercore, &cpus );
-
-		ret = pthread_create_on( &thread[threads], NULL, server_thread, &sreq[servercore], sizeof(cpus), &cpus);
-		if ( ret ) {
-			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
-			goto cleanup;
-		}
-
-		threads++;
-	}
-
-	// TODO REMOVE THIS SLEEP
-	usleep( 100000 );
-
-	for (clientcore = 0; clientcore < cores; clientcore++) {
-		cpu_set_t cpus;
-
-		if ( ! creq[clientcore].bRunning )
-			continue;
-
-		CPU_ZERO ( &cpus );
-		CPU_SET ( clientcore, &cpus );
-
-		ret = pthread_create_on( &thread[threads], NULL, client_thread, &creq [clientcore] , sizeof(cpus), &cpus);
-		if ( ret ) {
-			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
-			goto cleanup;
-		}
-
-		threads++;
-	}
+	// Create each server/client thread
+	create_servers(&settings);
+	create_clients(&settings);
 
 	// Spin lock until all the threads are ready
 	// TODO change this to use a semaphore
@@ -456,8 +538,11 @@ int main (int argc, char *argv[]) {
 		usleep( 1000 );
 		pthread_mutex_lock( &go_mutex );
 	}
+	// Annonce to everyone to start
 	pthread_cond_broadcast( &go_cond );
 	pthread_mutex_unlock( &go_mutex );
+
+	print_headers( &settings );
 
 	// Pauses for the duration, then sets bRunning to false
 	pause_for_duration( &settings );
@@ -521,6 +606,8 @@ cleanup:
 
 	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );
+
+	pthread_mutex_destroy( & printf_mutex );
 
 	free ( thread );
 

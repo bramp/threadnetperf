@@ -147,7 +147,6 @@ struct client_request_details {
 	struct client_request_details *next;
 };
 
-void *server_thread(void *data);
 void *client_thread(void *data);
 
 int enable_nagle(SOCKET s);
