@@ -5,8 +5,8 @@
 	Creates n client connects to address
 */
 void* client_thread(void *data) {
-	const struct client_request *req = data;
-	const struct client_request * const main_req = req;
+	const struct client_request * const req = data;
+	const struct client_request_details * details = req->details;
 
 	// Make a copy of the global settings
 	const struct settings settings = *req->settings;
@@ -30,7 +30,7 @@ void* client_thread(void *data) {
 	fd_set readFD;
 	fd_set writeFD;
 
-	assert ( req != NULL );
+	assert ( details != NULL );
 
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
@@ -40,17 +40,17 @@ void* client_thread(void *data) {
 		msg_len += sprintf(msg, "Core %d: Started client thread ", req->core);
 
 	// Loop all the client requests for this thread
-	while ( req != NULL ) {
+	while ( details != NULL ) {
 
 		if ( settings.verbose ) {
 			// Print the host/port
-			msg_len += sprintf(msg + msg_len, "%d(", req->n );
-			msg_len += addr_to_ipstr(req->addr, req->addr_len, msg + msg_len, msg_max_len - msg_len);
-			msg_len += sprintf(msg + msg_len, ":%u) ", ntohs( ((struct sockaddr_in *)req->addr)->sin_port) );
+			msg_len += sprintf(msg + msg_len, "%d(", details->n );
+			msg_len += addr_to_ipstr(details->addr, details->addr_len, msg + msg_len, msg_max_len - msg_len);
+			msg_len += sprintf(msg + msg_len, ":%u) ", ntohs( ((struct sockaddr_in *)details->addr)->sin_port) );
 		}
 
 		// Connect all the clients
-		i = req->n;
+		i = details->n;
 		while ( i > 0 ) {
 			int send_socket_size, recv_socket_size;
 			
@@ -89,7 +89,7 @@ void* client_thread(void *data) {
 				}
 			}
 
-			if ( connect( s, req->addr, req->addr_len ) == SOCKET_ERROR ) {
+			if ( connect( s, details->addr, details->addr_len ) == SOCKET_ERROR ) {
 				fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
@@ -107,7 +107,7 @@ void* client_thread(void *data) {
 		}
 
 		// move onto the next client request
-		req = req->next;
+		details = details->next;
 	}
 
 	if ( settings.verbose )
@@ -139,13 +139,13 @@ void* client_thread(void *data) {
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
-	while ( main_req->bRunning && unready_threads > 0 ) {
+	while ( req->bRunning && unready_threads > 0 ) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
 
 	// Now start the main loop
-	while ( main_req->bRunning ) {
+	while ( req->bRunning ) {
 
 		int ret;
 		struct timeval waittime = {1, 0}; // 1 second

@@ -31,7 +31,7 @@ volatile unsigned int unready_threads = 0;
 const unsigned int cores = 8; // TODO get the read number!
 
 struct server_request *sreq = NULL;
-struct client_request **creq = NULL;
+struct client_request *creq = NULL;
 
 // Settings
 
@@ -46,10 +46,7 @@ void stop_all () {
 
 	if ( creq ) { 
 		for (i = 0; i < cores; i++) {
-			struct client_request *c = creq[i];
-			if ( c != NULL ) {
-				c->bRunning = 0;
-			}
+			creq[i].bRunning = 0;
 		}
 	}
 
@@ -391,47 +388,39 @@ int main (int argc, char *argv[]) {
 	for (servercore = 0; servercore < cores; servercore++) {
 		for (clientcore = 0; clientcore < cores; clientcore++) {
 
-			struct client_request *c;
+			struct client_request_details *c;
 
 			// Don't bother if there are zero requests
 			if ( clientserver [ clientcore ] [ servercore ] == 0 )
 				continue;
 
-			// Check if we haven't set up this server yet
-			if ( sreq [ servercore ].port == 0 ) {
+			// Check if we haven't set up this server thread yet
+			if ( sreq [ servercore ].bRunning == 0 ) {
 				sreq [ servercore ].bRunning = 1;
 				sreq [ servercore ].settings = &settings;
 				sreq [ servercore ].port = settings.port + servercore;
 				sreq [ servercore ].stats.duration = settings.duration;
 				sreq [ servercore ].n = 0;
 				sreq [ servercore ].core = servercore;
+
 				unready_threads++;
 			}
-			
-			// Now create the client
-			c = creq [ clientcore ];
 
-			// If this is the first then add a thread
-			if ( c == NULL ) {
+			// Check if we haven't set up this client thread yet
+			if ( creq [ clientcore ].bRunning == 0 ) {
+				creq [ clientcore ].bRunning = 1;
+				creq [ clientcore ].settings = &settings;
+				creq [ clientcore ].core = clientcore;
 				unready_threads++;
-				c = calloc( 1, sizeof(*c) );
-				creq [ clientcore ] = c;
-				
-				// Make sure this client is running
-				c->bRunning = 1;
-				c->settings = &settings;
-			} else {
+			} 
 
-				// Find the last 
-				while ( c->next != NULL )
-					c = c->next;
+			// Malloc the request details
+			c = calloc( 1, sizeof( *c ) );
 
-				// Malloc the new next one
-				c->next = calloc( 1, sizeof( *c ) );
-				c = c->next;
-			}
+			// Add this new details before the other details
+			c->next = creq [ clientcore ].details;
+			creq [ clientcore ].details = c;
 
-			c->core = clientcore;
 			c->n = clientserver [ clientcore ] [ servercore ];
 			sreq [ servercore ].n += c->n;
 
@@ -462,7 +451,7 @@ int main (int argc, char *argv[]) {
 		cpu_set_t cpus;
 
 		// Don't bother if we don't have a server on this core
-		if ( sreq[servercore].port == 0)
+		if ( ! sreq[servercore].bRunning )
 			continue;
 
 		// Set which CPU this thread should be on
@@ -484,13 +473,13 @@ int main (int argc, char *argv[]) {
 	for (clientcore = 0; clientcore < cores; clientcore++) {
 		cpu_set_t cpus;
 
-		if ( creq[clientcore] == NULL)
+		if ( ! creq[clientcore].bRunning )
 			continue;
 
 		CPU_ZERO ( &cpus );
 		CPU_SET ( clientcore, &cpus );
 
-		ret = pthread_create_on( &thread[threads], NULL, client_thread, creq [clientcore] , sizeof(cpus), &cpus);
+		ret = pthread_create_on( &thread[threads], NULL, client_thread, &creq [clientcore] , sizeof(cpus), &cpus);
 		if ( ret ) {
 			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
 			goto cleanup;
@@ -555,13 +544,13 @@ cleanup:
 		free( clientserver );
 	}
 
-	if ( creq ) { 
+	if ( creq ) {
 		for (i = 0; i < cores; i++) {
-			struct client_request *c = creq[i];
+			struct client_request_details *c = creq[i].details;
 			while ( c != NULL ) {
-				struct client_request *nextC = c->next;
+				struct client_request_details *nextC = c->next;
 				free ( c->addr );
-				free( c );
+				free ( c );
 				c = nextC;
 			}
 		}
