@@ -56,6 +56,10 @@ void print_results( const struct settings *settings, int core, struct stats *sta
 	pthread_mutex_unlock( &printf_mutex );
 }
 
+void print_stats(unsigned long long sum,unsigned long long sumsquare,unsigned long long mean,float variance) {
+	printf("sum %llu sumsquare %llu mean %llu variance %f\n",sum, sumsquare, mean, variance);
+}
+
 /*
  * Prints the memory pointed to by @data in hex format for @size bytes
  */

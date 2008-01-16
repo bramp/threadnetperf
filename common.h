@@ -80,12 +80,13 @@ struct stats {
 	
 	// The duration over which these stats were recorded
 	unsigned long long duration;
-
+	
 #ifdef CHECK_TIMES
 	//Temp buffer for the recv time values used to plot a histogram
 	float processing_times[CHECK_TIMES];
 	int processed_something;
 #endif
+
 };
 
 // Settings
@@ -102,6 +103,7 @@ struct settings {
 	int disable_nagles;
 
 	unsigned int confidence_lvl;
+	unsigned int max_iterations;
 	unsigned int message_size;	
 	unsigned int socket_size;
 

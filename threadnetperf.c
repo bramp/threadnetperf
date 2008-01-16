@@ -503,10 +503,12 @@ int main (int argc, char *argv[]) {
 
 	// All the settings we parse
 	struct settings settings;
-
-#ifdef WIN32
-	setup_winsock();
-#endif
+	
+	unsigned long long sum = 0;
+	unsigned long long sumsquare = 0;
+	unsigned long long mean = 0;
+	double variance = 0.0;
+	int current_iterations =0;
 	
 	// Malloc space for a 2D array
 	clientserver = calloc ( cores, sizeof(*clientserver) );
@@ -527,59 +529,73 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	}
 
+#ifdef WIN32
+	setup_winsock();
+#endif
 	// If we are daemon mode start that
 	if (settings.deamon) {
 		start_daemon(&settings);
 		goto cleanup;
 	}
-	// Otherwise just run the test locally
-	
-	threads = 0;
-	unready_threads = 0; // Number of threads not ready
 
-	// Setup all the data for each server and client
-	if ( prepare_servers(&settings) )
-		goto cleanup;
+	//Rerun the tests for a certain number of itterations as specified by the user
+	for(current_iterations = 0; current_iterations < settings.max_iterations; current_iterations++) {
 
-	if ( prepare_clients(&settings) )
-		goto cleanup;
+		// Otherwise just run the test locally
+		threads = 0;
+		unready_threads = 0; // Number of threads not ready
 
-	// A list of threads
-	thread = calloc( unready_threads, sizeof(*thread) );
+		// Setup all the data for each server and client
+		if ( prepare_servers(&settings) )
+			goto cleanup;
 
-	// Create each server/client thread
-	create_servers(&settings);
-	create_clients(&settings);
+		if ( prepare_clients(&settings) )
+			goto cleanup;
 
-	wait_for_threads();
+		// A list of threads
+		thread = calloc( unready_threads, sizeof(*thread) );
 
-	print_headers( &settings );
+		// Create each server/client thread
+		create_servers(&settings);
+		create_clients(&settings);
 
-	// Pauses for the duration, then sets bRunning to false
-	pause_for_duration( &settings );
+		wait_for_threads();
 
-	// Block waiting until all threads die
-	while (threads > 0) {
-		threads--;
-		pthread_join( thread[threads], NULL );
-	}
+		print_headers( &settings );
 
-	// Now sum all the results up
-	i = 0;
-	for (servercore = 0; servercore < cores; servercore++) {
-		if ( sreq[ servercore ].port != 0 ) {
-			total_stats.bytes_received += sreq[ servercore ].stats.bytes_received;
-			total_stats.duration       += sreq[ servercore ].stats.duration;
-			total_stats.pkts_received  += sreq[ servercore ].stats.pkts_received;
-			total_stats.pkts_time  += sreq[ servercore ].stats.pkts_time;
-			i++;
+		// Pauses for the duration, then sets bRunning to false
+		pause_for_duration( &settings );
+
+		// Block waiting until all threads die
+		while (threads > 0) {
+			threads--;
+			pthread_join( thread[threads], NULL );
 		}
+
+		// Now sum all the results up
+		i = 0;
+		for (servercore = 0; servercore < cores; servercore++) {
+			if ( sreq[ servercore ].port != 0 ) {
+				total_stats.bytes_received += sreq[ servercore ].stats.bytes_received;
+				total_stats.duration       += sreq[ servercore ].stats.duration;
+				total_stats.pkts_received  += sreq[ servercore ].stats.pkts_received;
+				total_stats.pkts_time  += sreq[ servercore ].stats.pkts_time;
+				i++;
+			}
+		}
+
+		// Divide the duration by the # of CPUs used
+		total_stats.duration = total_stats.duration / i;
+
+		sum += total_stats.bytes_received;
+		sumsquare += (total_stats.bytes_received * total_stats.bytes_received);
+		mean = sum / (current_iterations+1);
+		variance = sumsquare / (current_iterations+1) - mean * mean;
+	
+		print_stats(sum, sumsquare, mean, variance);
+
+		print_results( &settings, -1, &total_stats );
 	}
-
-	// Divide the duration by the # of CPUs used
-	total_stats.duration = total_stats.duration / i;
-
-	print_results( &settings, -1, &total_stats );
 
 cleanup:
 
