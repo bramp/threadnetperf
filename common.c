@@ -1,7 +1,7 @@
 #include "common.h"
 
+#include <stdio.h>
 #include <ctype.h>
-
 #include <assert.h>
 
 /* Access functions for CPU masks.  */

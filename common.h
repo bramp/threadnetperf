@@ -5,28 +5,17 @@
 
 //Used to turn on the checking of the microseconds 
 //#define CHECK_TIMES 100000
+#include "netlib.h"
+
+#include <pthread.h> // We assume we have a pthread library (even on windows)
+
 #ifdef WIN32
-	#define WIN32_LEAN_AND_MEAN
-
-	#include "winsock2.h"
-	#include "Ws2tcpip.h"
-
 	// Define some dummy structs, currently they do nothing
 	typedef struct {
 		unsigned long int __cpu_mask;
 	} cpu_set_t;
-
-#else
-	#include <sys/socket.h>
-
-	#ifndef SOCKET
-		#define SOCKET int
-		#define INVALID_SOCKET (-1)
-		#define SOCKET_ERROR (-1)
-	#endif
 #endif
 
-#include <pthread.h> // We assume we have a pthread library (even on windows)
 
 struct stats {
 	// The number of bytes received
