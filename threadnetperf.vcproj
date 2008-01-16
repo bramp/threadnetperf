@@ -155,6 +155,9 @@
 				RelativePath=".\global.h">
 			</File>
 			<File
+				RelativePath=".\netlib.h">
+			</File>
+			<File
 				RelativePath=".\print.h">
 			</File>
 			<File

@@ -1,7 +1,9 @@
 #include "server.h"
 #include "global.h"
-
 #include "print.h"
+#include "netlib.h"
+
+#include <assert.h>
 
 // Count of how many threads are not listening
 volatile unsigned int server_listen_unready = 0;

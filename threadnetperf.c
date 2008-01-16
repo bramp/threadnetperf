@@ -13,8 +13,21 @@
 #include "print.h"
 #include "server.h"
 
+#include <signal.h>
 
-#include "signal.h"
+
+#ifdef WIN32
+	#include "getopt.h"
+
+	/* Access functions for CPU masks.  */
+	#define CPU_ZERO(cpusetp)
+	#define CPU_SET(cpu, cpusetp)
+	#define CPU_CLR(cpu, cpusetp)
+	#define CPU_ISSET(cpu, cpusetp)
+
+#else
+	#include <unistd.h>
+#endif
 
 // Condition Variable that is signaled each time a thread is ready
 pthread_cond_t ready_cond = PTHREAD_COND_INITIALIZER;

@@ -5,57 +5,19 @@
 
 //Used to turn on the checking of the microseconds 
 //#define CHECK_TIMES 100000
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <memory.h>
-#include <assert.h>
-#include <malloc.h>
-
-#include <time.h>
-
 #ifdef WIN32
 	#define WIN32_LEAN_AND_MEAN
 
 	#include "winsock2.h"
 	#include "Ws2tcpip.h"
 
-	#include "getopt.h"
-
-	#define ERRNO (WSAGetLastError())
-	#define ECONNRESET WSAECONNRESET
-	#define EWOULDBLOCK WSAEWOULDBLOCK
-
-	#define SHUT_RDWR SD_BOTH
-
 	// Define some dummy structs, currently they do nothing
 	typedef struct {
 		unsigned long int __cpu_mask;
 	} cpu_set_t;
 
-	/* Access functions for CPU masks.  */
-	#define CPU_ZERO(cpusetp)
-	#define CPU_SET(cpu, cpusetp)
-	#define CPU_CLR(cpu, cpusetp)
-	#define CPU_ISSET(cpu, cpusetp)
-
-	#define snprintf _snprintf
-
 #else
-
-	#include <errno.h>
-	#include <sys/time.h>
-	#include <sys/types.h>
 	#include <sys/socket.h>
-	#include <netinet/in.h>
-	#include <netinet/tcp.h> // TCP_NODELAY, TCP_MAXSEG
-	#include <unistd.h> // for getopt
-	#include <arpa/inet.h> // For inet_addr
-	#include <netdb.h> // For NI_NUMERICHOST
-	#include <fcntl.h>
-
-	#define ERRNO errno
-	#define closesocket(s) close(s)
 
 	#ifndef SOCKET
 		#define SOCKET int
@@ -65,8 +27,6 @@
 #endif
 
 #include <pthread.h> // We assume we have a pthread library (even on windows)
-#include <semaphore.h>
-#include <sched.h>
 
 struct stats {
 	// The number of bytes received

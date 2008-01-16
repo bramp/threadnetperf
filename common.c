@@ -1,5 +1,14 @@
 #include "common.h"
- #include <ctype.h>
+
+#include <ctype.h>
+
+#include <assert.h>
+
+/* Access functions for CPU masks.  */
+#define CPU_ZERO(cpusetp)
+#define CPU_SET(cpu, cpusetp)
+#define CPU_CLR(cpu, cpusetp)
+#define CPU_ISSET(cpu, cpusetp)
 
 int enable_nagle(SOCKET s) {
 	int zero = 0;
@@ -97,10 +106,9 @@ unsigned long long get_microseconds() {
 	return microseconds;
 }
 
-struct settings global_settings;
-
 #ifdef WIN32
 	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
+		// TODO Make this set affidenitys on windows
 		return 0;
 	}
 #endif

@@ -1,6 +1,10 @@
 #include "common.h"
 #include "global.h"
 
+#include "netlib.h"
+
+#include <assert.h>
+
 /**
 	Creates n client connects to address
 */

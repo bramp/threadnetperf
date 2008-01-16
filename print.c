@@ -1,7 +1,11 @@
 // Code that prints out to the user
 #include "print.h"
 
- #include <ctype.h>
+#include <ctype.h>
+
+#ifdef WIN32
+	#define snprintf _snprintf
+#endif
 
 // Printf Mutex, to stop printing ontop of each other
 pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
