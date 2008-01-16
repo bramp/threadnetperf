@@ -167,6 +167,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	settings->dirty = 0;
 	settings->timestamp = 0;
 	settings->confidence_lvl = 0;
+	settings->max_iterations = 1;
 
 	settings->type = SOCK_STREAM;
 	settings->protocol = IPPROTO_TCP;
