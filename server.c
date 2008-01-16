@@ -4,6 +4,9 @@
 #include "netlib.h"
 
 #include <assert.h>
+#include <stdio.h>
+#include <malloc.h>
+#include <errno.h>
 
 // Count of how many threads are not listening
 volatile unsigned int server_listen_unready = 0;

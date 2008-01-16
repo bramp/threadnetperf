@@ -4,6 +4,9 @@
 #include "netlib.h"
 
 #include <assert.h>
+#include <stdio.h>
+#include <malloc.h>
+#include <errno.h>
 
 /**
 	Creates n client connects to address

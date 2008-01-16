@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <assert.h>
+#include <string.h>
 
 #ifdef WIN32
 	/* Access functions for CPU masks.  */
