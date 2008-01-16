@@ -103,8 +103,8 @@ void print_usage() {
 
 	fprintf(stderr, "\n" );
 
+	fprintf(stderr, "	-c         Confidence level, must be 95 or 99\n");
 	fprintf(stderr, "	-D         Use deamon mode (wait for incoming tests)\n" );
-
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
 	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );

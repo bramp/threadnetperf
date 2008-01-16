@@ -140,6 +140,28 @@ struct client_request {
 	struct client_request *next;
 };
 
+/*<<<<<<< .mine
+// Settings
+struct settings {
+	unsigned int duration;
+	
+	unsigned short port;
+	
+	int type;
+	int protocol;
+	
+	int verbose;
+	int dirty;
+	int timestamp;
+	int disable_nagles;
+
+	unsigned int confidence_lvl;
+	unsigned int message_size;	
+	unsigned int socket_size;
+};
+
+=======
+>>>>>>> .r2004*/
 void *server_thread(void *data);
 void *client_thread(void *data);
 
