@@ -101,6 +101,7 @@ struct settings {
 	int timestamp;
 	int disable_nagles;
 
+	unsigned int confidence_lvl;
 	unsigned int message_size;	
 	unsigned int socket_size;
 
@@ -146,28 +147,6 @@ struct client_request_details {
 	struct client_request_details *next;
 };
 
-/*<<<<<<< .mine
-// Settings
-struct settings {
-	unsigned int duration;
-	
-	unsigned short port;
-	
-	int type;
-	int protocol;
-	
-	int verbose;
-	int dirty;
-	int timestamp;
-	int disable_nagles;
-
-	unsigned int confidence_lvl;
-	unsigned int message_size;	
-	unsigned int socket_size;
-};
-
-=======
->>>>>>> .r2004*/
 void *server_thread(void *data);
 void *client_thread(void *data);
 
@@ -186,12 +165,6 @@ void move_down ( SOCKET *arr, SOCKET *arr_end );
 unsigned long long get_microseconds();
 
 size_t addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen);
-
-void print_results( const struct settings * settings, int core, struct stats *stats );
-
-void print_headers( const struct settings * settings );
-
-void print_hex(void *data, int size);
 
 void stop_all();
 

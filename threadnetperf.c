@@ -10,6 +10,7 @@
 */
 
 #include "common.h"
+#include "print.h"
 
 // Condition Variable that is signed each time a thread is ready
 pthread_cond_t ready_cond;
@@ -18,8 +19,6 @@ pthread_cond_t ready_cond;
 pthread_cond_t go_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Printf Mutex, to stop printing ontop of each other
-pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Flag to indidcate if we are still running
 volatile int bRunning = 1;
@@ -282,56 +281,6 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	}
 
 	return 0;
-}
-
-void print_headers(const struct settings* settings) {
-
-	pthread_mutex_lock( &printf_mutex );
-
-	printf("Core\tsend\treceived\tnum\ttime\tgoodput%s\n",
-		settings->timestamp ? "\tpacket" : "");
-
-	printf("\tmsg\tbytes\t\trecv()s\t\t(MB/s)\t%s\n",
-		settings->timestamp ? "\tlatency" : "");
-
-	printf("\tsize\t\t\t\t\t\t\n");
-
-	pthread_mutex_unlock( &printf_mutex );
-}
-
-void print_results( const struct settings *settings, int core, struct stats *stats ) {
-	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
-	float duration = (float)stats->duration / (float)1000000;
-//	float pkt_latency = (float)stats->pkts_time /  (float)stats->pkts_received;
-
-	pthread_mutex_lock( &printf_mutex );
-
-#ifdef WIN32 // Work around a silly windows bug in handling %llu
-	printf( "%i\t%u\t%I64u\t%I64u\t%.2fs\t%.2f", 
-#else
-	printf( "%i\t%u\t%llu\t%llu\t%.2fs\t%.2f",
-#endif
-		core, settings->message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
-
-	if ( settings->timestamp )
-		printf( "\t%lluus",stats->pkts_time );
-
-	printf("\n");
-	
-#ifdef CHECK_TIMES 
-{ 	
-	int i;
-	if(stats->processed_something) {
-		for(i=0; i<CHECK_TIMES && i < stats-> pkts_received; i++ ) {
-	
-			printf("%f\n", stats->processing_times[i]);
-		} 
-	}
-}
-	printf("\n");
-#endif
-
-	pthread_mutex_unlock( &printf_mutex );
 }
 
 int main (int argc, char *argv[]) {

@@ -1,7 +1,7 @@
 #include "common.h"
 #include "global.h"
 
-
+#include "print.h"
 
 /**
 	Wait for and accept N connections

@@ -132,6 +132,9 @@
 				RelativePath=".\getopt.c">
 			</File>
 			<File
+				RelativePath=".\print.c">
+			</File>
+			<File
 				RelativePath=".\server.c">
 			</File>
 			<File
@@ -150,6 +153,9 @@
 			</File>
 			<File
 				RelativePath=".\global.h">
+			</File>
+			<File
+				RelativePath=".\print.h">
 			</File>
 		</Filter>
 		<Filter
