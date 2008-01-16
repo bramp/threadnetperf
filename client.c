@@ -245,7 +245,7 @@ void* client_thread(void *data) {
 				}
 
 				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
-					if ( ERRNO != EWOULDBLOCK) {
+					if ( ERRNO != EWOULDBLOCK && ERRNO != EPIPE ) {
 						fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
 						goto cleanup;
 					}
