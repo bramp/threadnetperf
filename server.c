@@ -250,6 +250,12 @@ void *server_thread(void *data) {
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
+	
+	 // Signal we are ready
+	pthread_mutex_lock( &ready_mutex );
+	pthread_cond_signal( &ready_cond );
+	pthread_mutex_unlock( &ready_mutex );
+
 	while ( req->bRunning && unready_threads > 0 ) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}

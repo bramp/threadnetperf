@@ -23,10 +23,6 @@ void* client_thread(void *data) {
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 	int nfds;
 
-	char msg[1024]; // Debug message for each set of connected clients
-	const size_t msg_max_len = sizeof(msg) / sizeof(*msg);
-	size_t msg_len = 0;
-
 	fd_set readFD;
 	fd_set writeFD;
 
@@ -37,16 +33,20 @@ void* client_thread(void *data) {
 		*c = INVALID_SOCKET;
 
 	if ( settings.verbose )
-		msg_len += sprintf(msg, "Core %d: Started client thread ", req->core);
+		printf("Core %d: Started client thread\n", req->core);
 
 	// Loop all the client requests for this thread
 	while ( details != NULL ) {
 
 		if ( settings.verbose ) {
+			char addr[NI_MAXHOST + NI_MAXSERV + 1];
+
 			// Print the host/port
-			msg_len += sprintf(msg + msg_len, "%d(", details->n );
-			msg_len += addr_to_ipstr(details->addr, details->addr_len, msg + msg_len, msg_max_len - msg_len);
-			msg_len += sprintf(msg + msg_len, ":%u) ", ntohs( ((struct sockaddr_in *)details->addr)->sin_port) );
+			addr_to_ipstr(details->addr, details->addr_len, addr, sizeof(addr));
+
+			printf("  Core %d: Connecting %d client%s to %s\n", 
+				req->core, details->n, details->n > 1 ? "s" : "", 
+				addr);
 		}
 
 		// Connect all the clients
@@ -110,9 +110,6 @@ void* client_thread(void *data) {
 		details = details->next;
 	}
 
-	if ( settings.verbose )
-		printf("%s\n", msg);
-
 	buffer = malloc( settings.message_size );
 	memset( buffer, (int)BUFFER_FILL, settings.message_size );
 
@@ -139,6 +136,12 @@ void* client_thread(void *data) {
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
+
+	 // Signal we are ready
+	pthread_mutex_lock( &ready_mutex );
+	pthread_cond_signal( &ready_cond );
+	pthread_mutex_unlock( &ready_mutex );
+
 	while ( req->bRunning && unready_threads > 0 ) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}

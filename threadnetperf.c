@@ -13,8 +13,9 @@
 #include "print.h"
 #include "server.h"
 
-// Condition Variable that is signed each time a thread is ready
-pthread_cond_t ready_cond;
+// Condition Variable that is signaled each time a thread is ready
+pthread_cond_t ready_cond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Condition Variable to indicate when all the threads are connected and ready to go
 pthread_cond_t go_cond = PTHREAD_COND_INITIALIZER;
@@ -22,7 +23,7 @@ pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 // Flag to indidcate if we are still running
-volatile int bRunning = 1;
+int bRunning = 1;
 
 // Count of how many threads are ready
 volatile unsigned int unready_threads = 0;
@@ -473,6 +474,26 @@ int create_servers() {
 	return 0;
 }
 
+void wait_for_threads() {
+	struct timespec waittime = {0, 100000000}; // 100 milliseconds
+
+	// Spin lock until all the threads are ready
+	// TODO change this to use a semaphore
+	pthread_mutex_lock( &go_mutex );
+	while ( bRunning && unready_threads > 0 ) {
+		pthread_mutex_unlock( &go_mutex );
+
+		pthread_mutex_lock( &ready_mutex );
+		pthread_cond_timedwait( &ready_cond, &ready_mutex, &waittime);
+		pthread_mutex_unlock( &ready_mutex );
+
+		pthread_mutex_lock( &go_mutex );
+	}
+	// Annonce to everyone to start
+	pthread_cond_broadcast( &go_cond );
+	pthread_mutex_unlock( &go_mutex );
+}
+
 int main (int argc, char *argv[]) {
 	unsigned int i;
 	unsigned int servercore;
@@ -530,17 +551,7 @@ int main (int argc, char *argv[]) {
 	create_servers(&settings);
 	create_clients(&settings);
 
-	// Spin lock until all the threads are ready
-	// TODO change this to use a semaphore
-	pthread_mutex_lock( &go_mutex );
-	while ( bRunning && unready_threads > 0 ) {
-		pthread_mutex_unlock( &go_mutex );
-		usleep( 1000 );
-		pthread_mutex_lock( &go_mutex );
-	}
-	// Annonce to everyone to start
-	pthread_cond_broadcast( &go_cond );
-	pthread_mutex_unlock( &go_mutex );
+	wait_for_threads();
 
 	print_headers( &settings );
 
@@ -606,6 +617,9 @@ cleanup:
 
 	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );
+
+	pthread_cond_destroy( & ready_cond );
+	pthread_mutex_destroy( & ready_mutex );
 
 	pthread_mutex_destroy( & printf_mutex );
 

@@ -176,19 +176,25 @@ int usleep(unsigned int useconds) {
 /**
 	Turn a addr into an string representing its address
 */
-size_t addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen) { 
-    // Validate parameters
+char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen) { 
+    
+	char port [ NI_MAXSERV ];
+	
+	// Validate parameters
     assert (host != NULL);
 	assert (maxhostlen != 0);
 	assert (addr != 0);
 
-	// Error
-	if ( getnameinfo (addr, addlen, host, maxhostlen, NULL, 0, NI_NUMERICHOST) ) {
+	if ( getnameinfo (addr, addlen, host, maxhostlen, port, sizeof(port), NI_NUMERICHOST | NI_NUMERICSERV ) ) {
 		*host = '\0';
-		return 0;
+		return NULL;
 	}
 
-	return strlen(host);
+	// Add the port #
+	strncat(host, ":", maxhostlen);
+	strncat(host, port, maxhostlen);
+
+	return host;
 }
 
 
