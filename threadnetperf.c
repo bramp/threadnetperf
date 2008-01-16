@@ -155,7 +155,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:")) != -1) {
+	while ((c = getopt(argc, argv, "cDtTeunvhs:d:p:")) != -1) {
 		switch ( c ) {
 			//confidence level, must be either 95 or 99
 			case 'c':
