@@ -197,4 +197,24 @@ char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, 
 	return host;
 }
 
+SOCKET highest_socket(SOCKET *s, size_t len) {
 
+	const SOCKET *s_max = s + len;
+	SOCKET max;
+
+	if ( len == 0 )
+		return SOCKET_ERROR;
+
+	// Update the nfds
+	max = *s;
+
+	// Loop all client sockets
+	for ( ; s < s_max ; s++) {
+		assert ( *s != INVALID_SOCKET );
+
+		if ( *s > max )
+			max = *s;
+	}
+
+	return max;
+}

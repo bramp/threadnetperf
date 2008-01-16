@@ -324,6 +324,10 @@ void *server_thread(void *data) {
 
 					// Move back
 					c--;
+
+					// Update the nfds
+					nfds = (int)highest_socket(client, clients) + 1;
+
 					continue;
 
 				} else {

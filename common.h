@@ -175,9 +175,11 @@ void setup_winsock();
 
 // Sleep for a number of microseconds
 int usleep(unsigned int useconds);
-
 #endif
-	
+
+// Returns the highest socket in the set
+SOCKET highest_socket(SOCKET *s, size_t len);
+
 #define BUFFER_FILL 0x4141414141414141
 
 #endif
