@@ -144,6 +144,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	settings->verbose = 0;
 	settings->dirty = 0;
 	settings->timestamp = 0;
+	settings->confidence level = 0;
 
 	settings->type = SOCK_STREAM;
 	settings->protocol = IPPROTO_TCP;
@@ -156,7 +157,17 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	// Lets parse some command line args
 	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:")) != -1) {
 		switch ( c ) {
-
+			//confidence level, must be either 95 or 99
+			case 'c':
+				settings->confidence level = atio(optarg);
+				
+				if(settings->confidence level != 95 || settings->confidence level != 99) {
+					fprintf(stderr, "Confidence Level must be 95 or 99. Given (%s)\n", optarg);
+					return -1;
+				}
+				
+			
+				break;
 			// Deamon mode (wait for incoming tests)
 			case 'D':
 				settings->deamon = 1;
