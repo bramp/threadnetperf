@@ -22,6 +22,7 @@
 	#include <netinet/tcp.h> // TCP_NODELAY, TCP_MAXSEG
 	#include <arpa/inet.h> // For inet_addr
 	#include <netdb.h> // For NI_NUMERICHOST
+	#include <fcntl.h>
 
 	#define ERRNO errno
 	#define closesocket(s) close(s)
