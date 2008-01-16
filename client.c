@@ -199,6 +199,9 @@ void* client_thread(void *data) {
 						ret--;
 					}
 
+					if ( settings.verbose )
+						printf("  Client: %d Remove client (%d/%d)\n", req->core, i, clients );
+
 					// Unset me from the set
 					FD_CLR( s, &readFD );
 

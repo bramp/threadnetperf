@@ -283,7 +283,7 @@ void *server_thread(void *data) {
 		for (c = client, i = 0 ; c < &client [ clients ]; c++ ) {
 			SOCKET s = *c;
 
-			assert ( s  != INVALID_SOCKET );
+			assert ( s != INVALID_SOCKET );
 
 			if ( ret == 0 ) {
 				FD_SET( s, &readFD);
@@ -313,7 +313,7 @@ void *server_thread(void *data) {
 					}
 
 					if ( settings.verbose )
-						printf("Remove client (%d/%d)\n", i, clients );
+						printf("  Server: %d Remove client (%d/%d)\n", req->core, i, clients );
 
 					FD_CLR( s, &readFD );
 
