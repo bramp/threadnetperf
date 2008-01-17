@@ -79,6 +79,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	// Blank some fields
 	settings->deamon         = 0;
 	settings->confidence_lvl = 0.0;
+	settings->confidence_int = 0.0;
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
 
@@ -93,6 +94,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 	for (x = 0; x < settings->cores; x++) {
 		int *row = settings->clientserver[x];
+		// TODO make this recv int32 not ints
 		ret = recv(s, (char *)row, sizeof(*row) * settings->cores, 0);
 		if ( ret != sizeof(*row) * settings->cores ) {
 			return -1;
@@ -116,7 +118,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	net_settings.duration       = settings->duration;
 	net_settings.type           = settings->type;
 	net_settings.protocol       = settings->protocol;
-	
+
 	net_settings.verbose        = settings->verbose;
 	net_settings.dirty          = settings->dirty;
 	net_settings.timestamp      = settings->timestamp;
@@ -135,6 +137,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 
 	for (x = 0; x < settings->cores; x++) {
 		int *row = settings->clientserver[x];
+		// TODO make this send int32 not ints
 		ret = send(s, (char *)row, sizeof(*row) * settings->cores, 0);
 		if ( ret != sizeof(*row) * settings->cores ) {
 			return -1;
