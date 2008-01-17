@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <assert.h>
+#include <string.h>
 
 #ifdef WIN32
 	#include "getopt.h"
@@ -378,10 +379,18 @@ int prepare_clients(const struct settings * settings) {
 	unsigned int servercore, clientcore;
 
 	assert ( settings != NULL );
-	assert ( creq == NULL );
+	//MF: BUG FIX
+	//This line will fail if we run the test more than once
+	//assert ( creq == NULL );
+	
+	if(creq == NULL ) {
+		// Malloc one space for each core
+		creq = calloc ( cores, sizeof(*creq) );
+	} else {
+		memset(creq, 0, sizeof(*creq));
+	}
 
-	// Malloc one space for each core
-	creq = calloc ( cores, sizeof(*creq) );
+	
 
 	if ( !creq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
@@ -414,7 +423,7 @@ int prepare_clients(const struct settings * settings) {
 				return -1;
 			}
 
-			// Add this new details before the other details
+			// Add this new details before the other detailshttp://www.google.com/search?q=memset&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-GB:official&client=firefox-a
 			c->next = creq [ clientcore ].details;
 			creq [ clientcore ].details = c;
 
@@ -473,10 +482,17 @@ int prepare_servers(const struct settings * settings) {
 	unsigned int servercore, clientcore;
 
 	assert ( settings != NULL );
-	assert ( sreq == NULL );
-
-	// Malloc one space for each core
-	sreq = calloc ( cores, sizeof(*sreq) );
+	//MF: BUG FIX
+	//The following line will fail if we perform more than one run
+	//assert ( sreq == NULL );
+	
+	//So instead we do this
+	if(sreq == NULL) {
+		// Malloc one space for each core
+		sreq = calloc ( cores, sizeof(*sreq) );
+	} else {
+		memset(sreq, 0, sizeof(*sreq));
+	}
 
 	if ( !sreq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
@@ -580,9 +596,14 @@ void run_tests( const struct settings *settings, struct stats *total_stats ) {
 	if ( prepare_clients(settings) )
 		goto cleanup;
 
+	//MF: BUG FIX
 	// A list of threads
-	assert ( thread == NULL );
-	thread = calloc( unready_threads, sizeof(*thread) );
+	//assert ( thread == NULL );
+	if(thread == NULL) {
+		thread = calloc( unready_threads, sizeof(*thread) );
+	} else {
+		memset(thread, 0, sizeof(*thread));
+	}
 
 	// Create each server/client thread
 	create_servers(&settings);
