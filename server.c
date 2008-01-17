@@ -15,7 +15,7 @@ struct server_request *sreq = NULL;
 int prepare_servers(const struct settings * settings) {
 
 	unsigned int servercore, clientcore;
-	const int ** clientserver;
+	int ** clientserver;
 
 	assert ( settings != NULL );
 	assert ( sreq == NULL );

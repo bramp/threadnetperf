@@ -5,7 +5,7 @@ CFLAGS = -g -O0 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
 #CFLAGS = -O2 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT
 LDFLAGS = -pthread -lm
 
-SOURCES =	threadnetperf.c common.c server_thread.c client_thread.c server.c client.c print.c
+SOURCES =	threadnetperf.c common.c server_thread.c client_thread.c server.c client.c print.c daemon.c
 
 OBJECTS=$(SOURCES:.c=.o)
 

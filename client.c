@@ -11,7 +11,7 @@ struct client_request *creq = NULL;
 int prepare_clients(const struct settings * settings) {
 
 	unsigned int servercore, clientcore;
-	const int ** clientserver;
+	int ** clientserver;
 
 	assert ( settings != NULL );
 	assert ( creq == NULL );
