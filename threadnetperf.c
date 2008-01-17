@@ -369,9 +369,11 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 void start_daemon(const struct settings * settings) {
 	//unready_threads = 0; // Number of threads not ready
 
-	SOCKET listen_socket;
-	int one = 1;
+	SOCKET listen_socket = INVALID_SOCKET;
+	SOCKET s = INVALID_SOCKET; // Incoming socket
+
 	struct sockaddr_in addr; // Address to listen on
+	int one = 1;
 
 	assert ( settings != NULL );
 
@@ -410,8 +412,9 @@ void start_daemon(const struct settings * settings) {
 		struct sockaddr_storage addr; // Incoming addr
 		socklen_t addr_len = sizeof(addr);
 
-		SOCKET s = INVALID_SOCKET; // Incoming socket
 		struct settings settings; // Incoming settings
+
+		int ret;
 
 		s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
 		if ( s == INVALID_SOCKET) {
@@ -419,8 +422,9 @@ void start_daemon(const struct settings * settings) {
 			goto cleanup;
 		}
 
-		ret = recv(s, &settings, sizeof(settings));
+		ret = recv(s, (char *)&settings, sizeof(settings), 0);
 		if ( ret != sizeof(settings) || settings.version != SETTINGS_VERSION ) {
+
 			if ( ret > 0 ) {
 				fprintf(stderr, "Invalid setting struct received\n" );
 				goto cleanup;
@@ -434,8 +438,8 @@ void start_daemon(const struct settings * settings) {
 
 cleanup:
 
+	closesocket(listen_socket);
 	closesocket(s);
-
 }
 
 pthread_t *thread = NULL; // Array to handle thread handles
@@ -727,7 +731,7 @@ cleanup:
 	cleanup_servers();
 }
 
-void connect_deamon(const struct settings *settings) {
+void connect_daemon(const struct settings *settings) {
 	SOCKET s;
 	struct sockaddr_in addr; // Address to listen on
 	int ret;
@@ -745,12 +749,12 @@ void connect_deamon(const struct settings *settings) {
 	addr.sin_addr.s_addr = inet_addr( settings->server_host );
 	addr.sin_port = htons( CONTROL_PORT );
 
-	if ( connect(s, &addr, sizeof(addr) ) == SOCKET_ERROR ) {
+	if ( connect(s, (struct sockaddr *)&addr, sizeof(addr) ) == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
-	ret = send(s, settings, sizeof(*settings) );
+	ret = send(s, (const char *)settings, sizeof(*settings), 0 );
 	if ( ret != sizeof(*settings) ) {
 		fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
