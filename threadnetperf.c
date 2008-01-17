@@ -417,7 +417,7 @@ void run_tests( const struct settings *settings, struct stats *total_stats ) {
 		struct stats *stats;
 
 		threads--;
-		pthread_join( thread[threads], &stats );
+		pthread_join( thread[threads], (void **)&stats );
 
 		if ( stats != NULL ) {
 			print_results( settings, stats );
