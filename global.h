@@ -8,6 +8,12 @@ extern pthread_mutex_t ready_mutex;
 extern pthread_cond_t go_cond; // Signal all threads when they are ready to start
 extern pthread_mutex_t go_mutex;
 
-extern volatile unsigned int unready_threads;
+extern const unsigned int cores; // The number of CPU cores this machine has
+extern unsigned int unready_threads; // Count of how many threads are not ready
+
+extern pthread_t *thread; // Array to handle thread handles
+extern unsigned int threads; // Total number of threads
+
+extern volatile int bRunning; // Flag to indidcate if we are still running
 
 #endif

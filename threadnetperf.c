@@ -12,6 +12,8 @@
 #include "common.h"
 #include "print.h"
 #include "server.h"
+#include "client.h"
+#include "daemon.h"
 
 #include <signal.h>
 
@@ -34,9 +36,6 @@
 	#include <unistd.h>
 #endif
 
-// Control port for the deamon, make this a option
-#define CONTROL_PORT 0xABCD
-
 // Condition Variable that is signaled each time a thread is ready
 pthread_cond_t ready_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t ready_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -49,38 +48,27 @@ pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Flag to indidcate if we are still running
 volatile int bRunning = 1;
 
-// Count of how many threads are ready
+// Count of how many threads are not ready
 unsigned int unready_threads = 0;
 
 // The number of cores this machine has
-const unsigned int cores = 8; // TODO get the read number!
+const unsigned int cores = 8; // TODO get the real number!
 
-// Array of all the server requests
-//struct server_request *sreq = NULL;
+ // Array to handle thread handles
+pthread_t *thread = NULL;
 
-// Array of all the client requests
-struct client_request *creq = NULL;
+ // Total number of threads
+unsigned int threads = 0;
 
-// Make a 2D array for each possible to and from connection
-int **clientserver = NULL;
+
 
 // Signals all threads to stop
 void stop_all () {
-	unsigned int i;
 
 	bRunning = 0;
 
-	if ( creq ) { 
-		for (i = 0; i < cores; i++) {
-			creq[i].bRunning = 0;
-		}
-	}
-
-	if ( sreq ) {
-		for (i = 0; i < cores; i++) {
-			sreq[i].bRunning = 0;
-		}
-	}
+	stop_all_clients();
+	stop_all_servers();
 }
 
 /**
@@ -101,8 +89,7 @@ void pause_for_duration(const struct settings *settings) {
 	while ( bRunning ) {
 		long long now = get_microseconds();
 
-		if ( now > end_time ) {
-			stop_all();
+		if ( now >= end_time ) {
 			break;
 		}
 
@@ -323,7 +310,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 	for (x = 0; x < cores; x++) {
 		for (y = 0; y < cores; y++) {
-			clientserver [ x ] [ y ] = 0;
+			settings->clientserver [ x ] [ y ] = 0;
 		}
 	}
 
@@ -348,7 +335,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			return -1;
 		}
 
-		clientserver [ client ] [ server ] += count;
+		settings->clientserver [ client ] [ server ] += count;
 		tests++;
 
 		optind++;
@@ -363,277 +350,6 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	if ( tests != 0 && settings->deamon ) {
 		fprintf(stderr, "Cannot specify tests while running as a deamon\n");
 		return -1;
-	}
-
-	return 0;
-}
-
-// Creates a socket and lists for incoming test requests
-void start_daemon(const struct settings * settings) {
-	//unready_threads = 0; // Number of threads not ready
-
-	SOCKET listen_socket = INVALID_SOCKET;
-	SOCKET s = INVALID_SOCKET; // Incoming socket
-
-	struct sockaddr_in addr; // Address to listen on
-	int one = 1;
-
-	assert ( settings != NULL );
-
-	listen_socket = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
-
-	if ( listen_socket == INVALID_SOCKET ) {
-		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	// SO_REUSEADDR
-	if ( setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons( CONTROL_PORT );
-
-	// Bind
-	if ( bind(listen_socket, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
-		fprintf(stderr, "%s:%d bind() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	// Listen
-	if ( listen(listen_socket, SOMAXCONN) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	if ( settings->verbose ) {
-		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
-
-		// Print the host/port
-		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
-
-		printf("Deamon is listening on %s\n", addr_str);
-	}
-
-	// Now loop accepting incoming tests
-	while ( 1 ) {
-		struct sockaddr_storage addr; // Incoming addr
-		socklen_t addr_len = sizeof(addr);
-
-		struct settings recv_settings; // Incoming settings
-
-		int ret;
-
-		s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
-		if ( s == INVALID_SOCKET) {
-			fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
-
-		if ( settings->verbose ) {
-			char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
-
-			// Print the host/port
-			addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
-
-			printf("Incoming control connection %s\n", addr_str);
-		}
-
-		ret = recv(s, (char *)&recv_settings, sizeof(recv_settings), 0);
-		if ( ret != sizeof(recv_settings) || recv_settings.version != SETTINGS_VERSION ) {
-
-			if ( ret > 0 ) {
-				fprintf(stderr, "Invalid setting struct received\n" );
-				goto cleanup;
-			} 
-
-			fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
-
-		if ( settings->verbose ) {
-			printf("Received tests\n");
-		}
-
-	}
-
-cleanup:
-
-	closesocket(listen_socket);
-	closesocket(s);
-}
-
-pthread_t *thread = NULL; // Array to handle thread handles
-unsigned int threads = 0; // Total number of threads
-
-int prepare_clients(const struct settings * settings) {
-
-	unsigned int servercore, clientcore;
-
-	assert ( settings != NULL );
-	assert ( creq == NULL );
-	
-	// Malloc one space for each core
-	creq = calloc ( cores, sizeof(*creq) );
-
-	if ( !creq ) {
-		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-		return -1;
-	}
-
-	// Loop through clientserver looking for each server we need to create
-	for (servercore = 0; servercore < cores; servercore++) {
-		for (clientcore = 0; clientcore < cores; clientcore++) {
-
-			struct client_request_details *c;
-
-			// Don't bother if there are zero requests
-			if ( clientserver [ clientcore ] [ servercore ] == 0 )
-				continue;
-
-			// Check if we haven't set up this client thread yet
-			if ( creq [ clientcore ].bRunning == 0 ) {
-				creq [ clientcore ].bRunning = 1;
-				creq [ clientcore ].settings = settings;
-				creq [ clientcore ].core = clientcore;
-
-				unready_threads++;
-			} 
-
-			// Malloc the request details
-			c = calloc( 1, sizeof( *c ) );
-			if ( !c ) {
-				fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-				return -1;
-			}
-
-			// Add this new details before the other details
-			c->next = creq [ clientcore ].details;
-			creq [ clientcore ].details = c;
-
-			c->n = clientserver [ clientcore ] [ servercore ];
-			sreq [ servercore ].n += c->n;
-
-			// Create the client dest addr
-			c->addr_len = sizeof ( struct sockaddr_in );
-
-			c->addr = calloc ( 1, c->addr_len ) ;
-			if ( !c->addr ) {
-				fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-				return -1;
-			}
-
-			// Change this to be more address indepentant
-			((struct sockaddr_in *)c->addr)->sin_family = AF_INET;
-			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( settings->server_host );
-			((struct sockaddr_in *)c->addr)->sin_port = htons( settings->port + servercore );
-
-			if ( ((struct sockaddr_in *)c->addr)->sin_addr.s_addr == INADDR_NONE ) {
-				fprintf(stderr, "Invalid host name (%s)\n", settings->server_host );
-				return -1;
-			}
-		}
-	}
-
-	return 0;
-}
-
-int create_clients() {
-	unsigned int clientcore;
-
-	for (clientcore = 0; clientcore < cores; clientcore++) {
-		cpu_set_t cpus;
-
-		if ( ! creq[clientcore].bRunning )
-			continue;
-
-		CPU_ZERO ( &cpus );
-		CPU_SET ( clientcore, &cpus );
-
-		if ( pthread_create_on( &thread[threads], NULL, client_thread, &creq [clientcore] , sizeof(cpus), &cpus) ) {
-			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
-			return -1;
-		}
-
-		threads++;
-	}
-
-	return 0;
-}
-
-int prepare_servers(const struct settings * settings) {
-
-	unsigned int servercore, clientcore;
-
-	assert ( settings != NULL );
-	assert ( sreq == NULL );
-	
-	// Malloc one space for each core
-	sreq = calloc ( cores, sizeof(*sreq) );
-
-	if ( !sreq ) {
-		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-		return -1;
-	}
-
-	// Loop through clientserver looking for each server we need to create
-	for (servercore = 0; servercore < cores; servercore++) {
-		for (clientcore = 0; clientcore < cores; clientcore++) {
-
-			// Don't bother if there are zero requests
-			if ( clientserver [ clientcore ] [ servercore ] == 0 )
-				continue;
-
-			// Check if we haven't set up this server thread yet
-			if ( sreq [ servercore ].bRunning == 0 ) {
-				sreq [ servercore ].bRunning = 1;
-				sreq [ servercore ].settings = settings;
-				sreq [ servercore ].port = settings->port + servercore;
-				sreq [ servercore ].stats.duration = settings->duration;
-				sreq [ servercore ].n = 0;
-				sreq [ servercore ].core = servercore;
-
-				unready_threads++;
-				server_listen_unready++;
-			}
-		}
-	}
-
-
-	return 0;
-}
-
-int create_servers() {
-	unsigned int servercore;
-
-	// Create all the server threads
-	for (servercore = 0; servercore < cores; servercore++) {
-		
-		cpu_set_t cpus;
-
-		// Don't bother if we don't have a server on this core
-		if ( ! sreq[servercore].bRunning )
-			continue;
-
-		// Set which CPU this thread should be on
-		CPU_ZERO ( &cpus );
-		CPU_SET ( servercore, &cpus );
-
-		if ( pthread_create_on( &thread[threads], NULL, server_thread, &sreq[servercore], sizeof(cpus), &cpus) ) {
-			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
-			return -1;
-		}
-
-		threads++;
-	}
-
-	// Wait until all the servers are ready to accept connections
-	while ( bRunning && server_listen_unready > 0 ) {
-		usleep( 1000 );
 	}
 
 	return 0;
@@ -659,34 +375,9 @@ void wait_for_threads() {
 	pthread_mutex_unlock( &go_mutex );
 }
 
-void cleanup_clients() {
-	unsigned int i;
-
-	if ( creq ) {
-		for (i = 0; i < cores; i++) {
-			struct client_request_details *c = creq[i].details;
-			while ( c != NULL ) {
-				struct client_request_details *nextC = c->next;
-				free ( c->addr );
-				free ( c );
-				c = nextC;
-			}
-		}
-
-		free( creq );
-		creq = NULL;
-	}
-}
-
-void cleanup_servers() {
-	free( sreq );
-	sreq = NULL;
-}
-
 void run_tests( const struct settings *settings, struct stats *total_stats ) {
 	
 	unsigned int i;
-	unsigned int servercore;
 
 	assert ( settings != NULL );
 	assert ( total_stats != NULL );
@@ -717,20 +408,26 @@ void run_tests( const struct settings *settings, struct stats *total_stats ) {
 	// Pauses for the duration, then sets bRunning to false
 	pause_for_duration( settings );
 
+	stop_all();
+
+	i = 0;
+
 	// Block waiting until all threads die
 	while (threads > 0) {
-		threads--;
-		pthread_join( thread[threads], NULL );
-	}
+		struct stats *stats;
 
-	// Now sum all the results up
-	i = 0;
-	for (servercore = 0; servercore < cores; servercore++) {
-		if ( sreq[ servercore ].port != 0 ) {
-			total_stats->bytes_received += sreq[ servercore ].stats.bytes_received;
-			total_stats->duration       += sreq[ servercore ].stats.duration;
-			total_stats->pkts_received  += sreq[ servercore ].stats.pkts_received;
-			total_stats->pkts_time  += sreq[ servercore ].stats.pkts_time;
+		threads--;
+		pthread_join( thread[threads], &stats );
+
+		if ( stats != NULL ) {
+			print_results( settings, stats );
+
+			// Now add the values to the total
+			total_stats->bytes_received += stats->bytes_received;
+			total_stats->duration       += stats->duration;
+			total_stats->pkts_received  += stats->pkts_received;
+			total_stats->pkts_time      += stats->pkts_time;
+
 			i++;
 		}
 	}
@@ -756,55 +453,6 @@ cleanup:
 	cleanup_servers();
 }
 
-void connect_daemon(const struct settings *settings) {
-	SOCKET s;
-	struct sockaddr_in addr; // Address to listen on
-	int ret;
-
-	assert ( settings != NULL );
-
-	s = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if ( s == INVALID_SOCKET ) {
-		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = inet_addr( settings->server_host );
-	addr.sin_port = htons( CONTROL_PORT );
-
-	if ( settings->verbose ) {
-		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
-
-		// Print the host/port
-		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
-
-		printf("Connecting to deamon %s\n", addr_str);
-	}
-
-	if ( connect(s, (struct sockaddr *)&addr, sizeof(addr) ) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	if ( settings->verbose )
-		printf("Connect to deamon, sending tests\n");
-
-	ret = send(s, (const char *)settings, sizeof(*settings), 0 );
-	if ( ret != sizeof(*settings) ) {
-		fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	if ( settings->verbose )
-		printf("Sent tests\n");
-
-cleanup:
-
-	closesocket(s);
-}
-
 int main (int argc, char *argv[]) {
 	unsigned int i;
 
@@ -813,6 +461,7 @@ int main (int argc, char *argv[]) {
 
 	// All the settings we parse
 	struct settings settings;
+	int ** clientserver;
 
 	unsigned int iteration = 0;
 	unsigned int interval = 0;
@@ -836,6 +485,8 @@ int main (int argc, char *argv[]) {
 			goto cleanup;
 		}
 	}
+	settings.clientserver = clientserver;
+	settings.cores = cores;
 
 	if ( parse_arguments( argc, argv, &settings ) ) {
 		goto cleanup;
@@ -867,6 +518,7 @@ int main (int argc, char *argv[]) {
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
 
 		memset(&total_stats, 0, sizeof(total_stats));
+		total_stats.core = -1;
 
 		// Start the tests
 		run_tests( &settings, &total_stats );
@@ -886,7 +538,7 @@ int main (int argc, char *argv[]) {
 			//}
 		}
 
-		print_results( &settings, -1, &total_stats );
+		print_results( &settings, &total_stats );
 
 	}
 

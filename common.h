@@ -14,10 +14,19 @@
 	typedef struct {
 		unsigned long int __cpu_mask;
 	} cpu_set_t;
+
+	/* Access functions for CPU masks.  */
+	#define CPU_ZERO(cpusetp)
+	#define CPU_SET(cpu, cpusetp)
+	#define CPU_CLR(cpu, cpusetp)
+	#define CPU_ISSET(cpu, cpusetp)
 #endif
 
 
 struct stats {
+	// The core these stats were recorded from
+	unsigned int core;
+
 	// The number of bytes received
 	unsigned long long bytes_received;
 	
@@ -43,7 +52,7 @@ struct settings {
 
 	// Version of the setting struct, this must be the first element
 	unsigned int version;
-	#define SETTINGS_VERSION 1 // Increment this each time the setting struct changes
+	#define SETTINGS_VERSION 2 // Increment this each time the setting struct changes
 
 	unsigned int duration;
 	
@@ -64,47 +73,11 @@ struct settings {
 
 	const char *server_host;
 	unsigned short port;
+
+	// A 2D array for each possible to and from core (with number of connections)
+	int cores;
+	int **clientserver;
 };
-
-struct server_request {
- 
-	volatile int bRunning; // Flag to indicate if the server should be running
-
-	unsigned short port; // The port the server is listening on
-	unsigned int n; // The number of connections to accept
-
-	unsigned int core; // Which core this server is running on
-
-	const struct settings *settings;
-
-	// Stats
-	struct stats stats;
-};
-
-// Struct to pass to a client thread
-struct client_request {
-
-	volatile int bRunning; // Flag to indicate if the client should be running
-
-	unsigned int core; // Which core this client is running on
-
-	const struct settings *settings;
-	struct client_request_details *details;
-};
-
-// One of these for each destination this client thread connects to
-struct client_request_details {
-
-	// The address to connect to
-	struct sockaddr *addr;
-	int addr_len;
-
-	unsigned int n; // The number of connection to create
-
-	struct client_request_details *next;
-};
-
-void *client_thread(void *data);
 
 int enable_nagle(SOCKET s);
 int disable_nagle(SOCKET s);

@@ -1,4 +1,5 @@
-#include "common.h"
+#include "client.h"
+
 #include "global.h"
 
 #include "netlib.h"
@@ -275,6 +276,6 @@ cleanup:
 		}
 	}
 
-	//pthread_exit( NULL );
+	pthread_exit( NULL );
 	return NULL;
 }

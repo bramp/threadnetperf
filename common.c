@@ -6,15 +6,6 @@
 #include <string.h>
 #include <math.h>
 
-
-#ifdef WIN32
-	/* Access functions for CPU masks.  */
-	#define CPU_ZERO(cpusetp)
-	#define CPU_SET(cpu, cpusetp)
-	#define CPU_CLR(cpu, cpusetp)
-	#define CPU_ISSET(cpu, cpusetp)
-#endif
-
 int enable_nagle(SOCKET s) {
 	int zero = 0;
 

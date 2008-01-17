@@ -31,7 +31,7 @@ void print_headers(const struct settings* settings) {
 	pthread_mutex_unlock( &printf_mutex );
 }
 
-void print_results( const struct settings *settings, int core, struct stats *stats ) {
+void print_results( const struct settings *settings, struct stats *stats ) {
 	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
 	float duration = (float)stats->duration / (float)1000000;
 //	float pkt_latency = (float)stats->pkts_time /  (float)stats->pkts_received;
@@ -46,7 +46,7 @@ void print_results( const struct settings *settings, int core, struct stats *sta
 #else
 	printf( "%i\t%u\t%llu\t%llu\t%.2fs\t%.2f",
 #endif
-		core, settings->message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
+		stats->core, settings->message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
 
 	if ( settings->timestamp )
 		printf( "\t%lluus",stats->pkts_time );

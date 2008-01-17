@@ -1,4 +1,5 @@
 #include "server.h"
+
 #include "global.h"
 #include "print.h"
 #include "netlib.h"
@@ -21,7 +22,7 @@ volatile unsigned int server_listen_unready = 0;
 **/
 int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *clients) {
 
-	struct settings settings = *req->settings; // Make a local copy of the settings
+	const struct settings *settings = req->settings;
 
 	unsigned int n = req->n;
 	int connected = 0;
@@ -72,19 +73,19 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			return 1;
 		}
 
-		send_socket_size = set_socket_send_buffer( s, settings.socket_size );
+		send_socket_size = set_socket_send_buffer( s, settings->socket_size );
 		if ( send_socket_size < 0 ) {
 			fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 			return 1;
 		}
 		
-		recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
+		recv_socket_size = set_socket_recv_buffer( s, settings->socket_size );
 		if ( send_socket_size < 0 ) {
 			fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 			return 1;
 		}
 
-		if ( settings.disable_nagles ) {
+		if ( settings->disable_nagles ) {
 			if ( disable_nagle( s ) == SOCKET_ERROR ) {
 				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 				return 1;
@@ -102,7 +103,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		++clients;
 		connected++;
 
-		if ( settings.verbose )
+		if ( settings->verbose )
 			printf("  Server: %d incoming client %s (%d) socket size: %d/%d\n", 
 				req->core, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
 				send_socket_size, recv_socket_size );
@@ -127,6 +128,8 @@ void *server_thread(void *data) {
 	SOCKET client [ FD_SETSIZE ];
 	SOCKET *c = client;
 	int clients = req->n; // The number of clients
+	
+	int return_stats = 0; // Should we return the stats?
 
 	int i;
 	unsigned long long bytes_recv [ FD_SETSIZE ]; // Bytes received from each socket
@@ -395,7 +398,7 @@ void *server_thread(void *data) {
 		req->stats.pkts_received += pkts_recv [ i ];
 		req->stats.pkts_time += pkts_time [ i ];
 	}
-	print_results( &settings, req->core, &req->stats);
+	return_stats = 1;
 
 cleanup:
 	// Force a stop
@@ -419,6 +422,9 @@ cleanup:
 		}
 	}
 
-	//pthread_exit( NULL );
+	if ( return_stats )
+		pthread_exit( &req->stats );
+	
+	pthread_exit( NULL );
 	return NULL;
 }
