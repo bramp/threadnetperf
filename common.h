@@ -62,6 +62,7 @@ struct settings {
 	int disable_nagles  :1;
 
 	double confidence_lvl;
+	double confidence_int;
 	unsigned int min_iterations;
 	unsigned int max_iterations;
 	unsigned int message_size;	

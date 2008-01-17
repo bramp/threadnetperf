@@ -116,7 +116,7 @@ void print_usage() {
 
 	fprintf(stderr, "\n" );
 
-	fprintf(stderr, "	-c level   Confidence level, must be 95 or 99\n");
+	fprintf(stderr, "	-c level,interval   Confidence level, must be 95 or 99\n");
 	fprintf(stderr, "	-D         Use deamon mode (wait for incoming tests)\n" );
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
 	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
@@ -183,19 +183,23 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:c:i:H:")) != -1) {
 		switch ( c ) {
 
-			case 'c': //confidence level, must be either 95 or 99
-				settings->confidence_lvl = atof(optarg);
-								
-				if(settings->confidence_lvl != 75 && settings->confidence_lvl !=90 &&
-					settings->confidence_lvl != 95 && settings->confidence_lvl != 97.5 &&
-					settings->confidence_lvl != 99 && settings->confidence_lvl != 99.5 &&
-					settings->confidence_lvl != 99.95 ) {
-					fprintf(stderr, "Confidence Level must be {75,90,95,97.5,99,99.5,99.95}. Given (%s)\n", optarg);
-					return -1;
+			case 'c': {
+				float level = 0.0, interval = 0.0;
+				
+				if ( sscanf( optarg, "%f,%f", &level, &interval ) < 2 ) {
+					
+					fprintf(stdout, "Confidence interval defaulted to 5percent\n");
 				}
+				
+				if((level != 75 && level !=90 && level != 95 && level != 97.5 && level != 99 && level != 99.5 && level != 99.95 ) ) {
+						fprintf(stderr, "Confidence Level must be {75,90,95,97.5,99,99.5,99.95}. Given (%s)\n", optarg);
+						return -1;
+					}
 
+				settings->confidence_lvl = (double)level;
+				settings->confidence_int = (double)(interval / 100);
 				break;
-
+			}
 			// Deamon mode (wait for incoming tests)
 			case 'D':
 				settings->deamon = 1;
@@ -217,7 +221,6 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
 					return -1;
 				}
-
 				settings->min_iterations = min;
 				settings->max_iterations = max;
 
@@ -225,9 +228,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			}
 
 			case 'H': { // remote host
-
 				settings->server_host = optarg;
-
 				break;
 			}
 
@@ -245,7 +246,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				}
 				break;
 
-			// Parse the message size
+			// Parse the message size->
 			case 'p':
 				settings->port = atoi( optarg );
 				if ( settings->port == 0 ) {
@@ -305,7 +306,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 	if ( settings->deamon && optind < argc ) {
 		// TODO make this test that other conflicting options haven't been needlessly set
-		fprintf(stderr, "Tests can not be specified on the command line in Deamon mode\n" );
+		fprintf(stderr, "Tests can not be specified on the command line in D->eamon mode\n" );
 		return -1;
 	}
 
@@ -381,7 +382,7 @@ void run_tests( const struct settings *settings, struct stats *total_stats ) {
 	threads = 0;
 	unready_threads = 0; // Number of threads not ready
 
-	// Setup all the data for each server and client
+	// Setup all the data for each server and client->
 	if ( prepare_servers(settings) )
 		goto cleanup;
 
@@ -456,7 +457,6 @@ int main (int argc, char *argv[]) {
 	struct settings settings;
 
 	unsigned int iteration = 0;
-
 	double sum = 0.0;
 	double sumsquare = 0.0;
 
@@ -512,7 +512,7 @@ int main (int argc, char *argv[]) {
 				print_stats(sum, sumsquare, mean, variance);
 
 			confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
-			if ( (confidence_interval < 0.05 * mean) && iteration >= settings.min_iterations) {
+			if ( (confidence_interval < settings.confidence_int * mean) && iteration >= settings.min_iterations) {
 				print_results( &settings, &total_stats );
 				break;
 			}
