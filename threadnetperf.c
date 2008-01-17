@@ -357,8 +357,13 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	}
 
 	// If there are no tests then error
-	if ( tests == 0 ) {
+	if ( tests == 0 && !settings->deamon ) {
 		fprintf(stderr, "No tests were specified\n");
+		return -1;
+	}
+
+	if ( tests != 0 && settings->deamon ) {
+		fprintf(stderr, "Cannot specify tests while running as a deamon\n");
 		return -1;
 	}
 
