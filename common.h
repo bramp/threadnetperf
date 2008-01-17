@@ -65,9 +65,7 @@ struct settings {
 	int timestamp;
 	int disable_nagles;
 
-	//MF: Changed from unsigned in to a float, we can now handle
-	// 99.95 etc -Is this int he right place now? It's not alligned?
-	float confidence_lvl;
+	double confidence_lvl;
 	unsigned int min_iterations;
 	unsigned int max_iterations;
 	unsigned int message_size;	
@@ -101,7 +99,7 @@ void stop_all();
 
 int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset);
 
-float calc_confidence(unsigned int confidence_lvl, float mean, float variance, unsigned int num_samples, int verbose);
+double calc_confidence(double confidence_lvl, double mean, double variance, unsigned int n, int verbose);
 
 #ifdef WIN32
 void cleanup_winsock();

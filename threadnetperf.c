@@ -457,15 +457,15 @@ int main (int argc, char *argv[]) {
 	struct settings settings;
 
 	unsigned int iteration = 0;
-	unsigned int current_confidence_interval = 0;
 
-	float sum = 0;
-	float sumsquare = 0;
-	float mean = 0;
-	float variance = 0.0;
+	double sum = 0.0;
+	double sumsquare = 0.0;
+	double mean = 0.0;
+	double variance = 0.0;
+	double confidence_interval = 0;
 
 	settings.cores = cores;
-	settings.clientserver = malloc_2D(sizeof(int), cores, cores);
+	settings.clientserver = (int **)malloc_2D(sizeof(int), cores, cores);
 
 	if ( parse_arguments( argc, argv, &settings ) ) {
 		goto cleanup;
@@ -511,8 +511,8 @@ int main (int argc, char *argv[]) {
 			if(settings.verbose) 
 				print_stats(sum, sumsquare, mean, variance);
 		
-			current_confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
-			if (current_confidence_interval >= settings.confidence_lvl && iteration >= settings.min_iterations) {
+			confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
+			if (confidence_interval >= settings.confidence_lvl && iteration >= settings.min_iterations) {
 				print_results( &settings, &total_stats );
 				break;
 			}

@@ -6,9 +6,6 @@
 #include <string.h>
 #include <math.h>
 
-#define DOFERR -1
-#define PROBERR -2
-
 int enable_nagle(SOCKET s) {
 	int zero = 0;
 
@@ -303,11 +300,11 @@ void **malloc_2D(size_t element_size, size_t x, size_t y) {
  * of 0.75, 0.9, 0.95, 0.975, 0.99, 0.995, and 0.9995 are provided.
  *
  * If p is not one of the 7 provided values, or if dof is not greater than or
- * equal to 1, tinv() causes the program to exit.
+ * equal to 1, tinv() returns 0.
  */
 
-double tinv(unsigned int p, unsigned int dof)  {
-	int    dofindex,pindex;
+double tinv(double p, unsigned int dof)  {
+	int dofindex, pindex;
 
 	double tinv_array[31][7] = {
 	{1.0000, 3.0777, 6.3138, 12.7062, 31.8207, 63.6574, 636.6192}, /* 1 */
@@ -356,48 +353,53 @@ double tinv(unsigned int p, unsigned int dof)  {
 	else if (dof < 100) dofindex = 29;
 	else if (dof >= 100) dofindex = 30;
 	else {
-		return DOFERR;
+		return 0;
 	}
 	
-	if (p == 75)        pindex = 0;
-	else if (p == 90)    pindex = 1;
-	else if (p == 95)   pindex = 2;
+	if (p == 75.0)       pindex = 0;
+	else if (p == 90.0)  pindex = 1;
+	else if (p == 95.0)  pindex = 2;
 	else if (p == 97.5)  pindex = 3;
-	else if (p == 99)   pindex = 4;
+	else if (p == 99.0)  pindex = 4;
 	else if (p == 99.5)  pindex = 5;
 	else if (p == 99.95) pindex = 6;
 	else	{
-		return PROBERR;
+		return 0;
 	}
 
 	return(tinv_array[dofindex][pindex]);
 }
 
-float calc_confidence(unsigned int confidence_lvl, float mean, float variance, unsigned int num_samples, int verbose) {
-	float bigZ=0;
-	float confidence = 0;
-	float sd_div_samples;
-	float min = 0.0, max = 0.0;
-	
-	if((int)variance == 0) 
+double calc_confidence(double confidence_lvl, double mean, double variance, unsigned int n, int verbose) {
+	double bigZ;
+	double sd_div_samples;
+	double CI;
+	double confidence;
+
+	if(variance == 0.0) 
 		return 0;
 	
-	bigZ = tinv(confidence_lvl, num_samples);
+	bigZ = tinv(confidence_lvl, n);
 	
-	if(bigZ < 0 ) {
-		fprintf(stderr, "Error finding bigZ coe %f\n", bigZ );
-		return -1;
+	if(bigZ == 0.0) {
+		fprintf(stderr, "%s:%d tinv(%d, %d) error\n", __FILE__, __LINE__, confidence_lvl, n );
+		return 0;
 	}
-		
-	sd_div_samples = sqrt(variance / num_samples);
+
+	sd_div_samples = sqrt(variance / n);
+
+	CI = bigZ * sd_div_samples;
 	
-	min = mean -  bigZ * sd_div_samples;
-	max = mean +  bigZ * sd_div_samples;
+	confidence = (1 - ( CI / mean))*100;
+
+	if(verbose) {
+		double min, max;
+
+		min = mean - CI;
+		max = mean + CI;
 	
-	confidence = (1 - ( bigZ * sd_div_samples / mean))*100;
-	
-	if(verbose)
-		printf("min: %.f, max: %.f, cl: %f\n", min, max,confidence );
+		printf("min: %.f, max: %.f, cl: %f\n", min, max, confidence);
+	}
 	
 	return confidence;
 }

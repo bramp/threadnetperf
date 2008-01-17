@@ -69,7 +69,7 @@ void print_results( const struct settings *settings, const struct stats *stats )
 	pthread_mutex_unlock( &printf_mutex );
 }
 
-void print_stats(float sum, float sumsquare, float mean, float variance) {
+void print_stats(double sum, double sumsquare, double mean, double variance) {
 	printf("sum %f sumsquare %f mean %f variance %.f\n",sum, sumsquare, mean, variance);
 }
 
