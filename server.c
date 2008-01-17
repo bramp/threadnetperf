@@ -195,7 +195,7 @@ void *server_thread(void *data) {
 
 	// SO_REUSEADDR
 	if ( setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d setsockopt(SO_REUSEADDR) error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 

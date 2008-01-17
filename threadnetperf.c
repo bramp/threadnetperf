@@ -34,6 +34,9 @@
 	#include <unistd.h>
 #endif
 
+// Control port for the deamon, make this a option
+#define CONTROL_PORT 0xABCD
+
 // Condition Variable that is signaled each time a thread is ready
 pthread_cond_t ready_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t ready_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -170,6 +173,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	assert ( settings != NULL );
 
 	// Default arguments
+	settings->version = SETTINGS_VERSION;
 	settings->deamon = 0;
 	settings->message_size = 1024;
 	settings->socket_size = -1;
@@ -361,15 +365,77 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	return 0;
 }
 
+// Creates a socket and lists for incoming test requests
 void start_daemon(const struct settings * settings) {
 	//unready_threads = 0; // Number of threads not ready
 
+	SOCKET listen_socket;
+	int one = 1;
+	struct sockaddr_in addr; // Address to listen on
+
 	assert ( settings != NULL );
 
-	//start_servers(&settings);
-	//start_clients(&settings);
+	listen_socket = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	//free(sreq); free(creq);
+	if ( listen_socket == INVALID_SOCKET ) {
+		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	// SO_REUSEADDR
+	if ( setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
+		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = INADDR_ANY;
+	addr.sin_port = htons( CONTROL_PORT );
+
+	// Bind
+	if ( bind(listen_socket, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
+		fprintf(stderr, "%s:%d bind() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	// Listen
+	if ( listen(listen_socket, SOMAXCONN) == SOCKET_ERROR ) {
+		fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	// Now loop accepting incoming tests
+	while ( 1 ) {
+		struct sockaddr_storage addr; // Incoming addr
+		socklen_t addr_len = sizeof(addr);
+
+		SOCKET s = INVALID_SOCKET; // Incoming socket
+		struct settings settings; // Incoming settings
+
+		s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
+		if ( s == INVALID_SOCKET) {
+			fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+		}
+
+		ret = recv(s, &settings, sizeof(settings));
+		if ( ret != sizeof(settings) || settings.version != SETTINGS_VERSION ) {
+			if ( ret > 0 ) {
+				fprintf(stderr, "Invalid setting struct received\n" );
+				goto cleanup;
+			} 
+			
+			fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+		}
+
+	}
+
+cleanup:
+
+	closesocket(s);
+
 }
 
 pthread_t *thread = NULL; // Array to handle thread handles
@@ -661,6 +727,42 @@ cleanup:
 	cleanup_servers();
 }
 
+void connect_deamon(const struct settings *settings) {
+	SOCKET s;
+	struct sockaddr_in addr; // Address to listen on
+	int ret;
+
+	assert ( settings != NULL );
+
+	s = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if ( s == INVALID_SOCKET ) {
+		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = inet_addr( settings->server_host );
+	addr.sin_port = htons( CONTROL_PORT );
+
+	if ( connect(s, &addr, sizeof(addr) ) == SOCKET_ERROR ) {
+		fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	ret = send(s, settings, sizeof(*settings) );
+	if ( ret != sizeof(*settings) ) {
+		fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+
+
+cleanup:
+
+	closesocket(s);
+}
+
 int main (int argc, char *argv[]) {
 	unsigned int i;
 
@@ -711,7 +813,14 @@ int main (int argc, char *argv[]) {
 	if (settings.deamon) {
 		start_daemon(&settings);
 		goto cleanup;
-	} // Otherwise just run the test locally
+	} 
+	// Otherwise just run the test locally
+
+	// Some test code to aid in debugging
+	if ( strcmp(settings.server_host, "127.0.0.1") != 0 ) {
+		connect_daemon(&settings);
+		goto cleanup;
+	}
 
 	//Rerun the tests for a certain number of iterations as specified by the user
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
