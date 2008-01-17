@@ -50,10 +50,6 @@ struct stats {
 // Settings
 struct settings {
 
-	// Version of the setting struct, this must be the first element
-	unsigned int version;
-	#define SETTINGS_VERSION 2 // Increment this each time the setting struct changes
-
 	unsigned int duration;
 	
 	int type;

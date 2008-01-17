@@ -157,7 +157,6 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	assert ( settings != NULL );
 
 	// Default arguments
-	settings->version = SETTINGS_VERSION;
 	settings->deamon = 0;
 	settings->message_size = 1024;
 	settings->socket_size = -1;
@@ -524,7 +523,7 @@ int main (int argc, char *argv[]) {
 
 cleanup:
 
-	free_2D(settings.clientserver, cores, cores);
+	free_2D( (void **)settings.clientserver, cores, cores);
 
 	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );

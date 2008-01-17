@@ -4,22 +4,85 @@
 #include <stdio.h>
 #include <malloc.h>
 
+#ifdef WIN32
+	typedef signed char             int8_t;
+	typedef unsigned char           uint8_t;
+	typedef signed int              int16_t;
+	typedef unsigned int            uint16_t;
+	typedef signed long int         int32_t;
+	typedef unsigned long int       uint32_t;
+	typedef signed long long int    int64_t;
+	typedef unsigned long long int  uint64_t;
+#else
+#include <stdint.h>
+#endif
+
+// A version of the settings struct which can be sent over the network
+struct network_settings {
+
+	// Version of the setting struct, this must be the first element
+	unsigned int version;
+	#define SETTINGS_VERSION 3 // Increment this each time the setting struct changes
+
+	uint32_t duration;
+	
+	uint32_t type;
+	uint32_t protocol;
+	
+	uint8_t verbose;
+	uint8_t dirty;
+	uint8_t timestamp;
+	uint8_t disable_nagles;
+
+	uint32_t message_size;	
+	uint32_t socket_size;
+
+	uint16_t port;
+
+	// A 2D array for each possible to and from core (with number of connections)
+	uint32_t cores;
+};
+
 // Reads settings from a socket
 int read_settings( SOCKET s, struct settings * settings ) {
 	int ret;
 	int x;
+	struct network_settings net_settings;
 
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
 
-	ret = recv(s, (char *)settings, sizeof(*settings), 0);
-	if ( ret != sizeof(*settings) || settings->version != SETTINGS_VERSION ) {
-
+	ret = recv(s, (char *)&net_settings, sizeof(net_settings), 0);
+	if ( ret != sizeof(net_settings) || net_settings.version != SETTINGS_VERSION ) {
 		if ( ret > 0 )
 			fprintf(stderr, "Invalid setting struct received\n" );
 
 		return -1;
 	}
+
+	// Set all the fields
+	settings->duration       = net_settings.duration;
+	settings->type           = net_settings.type;
+	settings->protocol       = net_settings.protocol;
+	
+	settings->verbose        = net_settings.verbose;
+	settings->dirty          = net_settings.dirty;
+	settings->timestamp      = net_settings.timestamp;
+	settings->disable_nagles = net_settings.disable_nagles;
+
+	settings->message_size   = net_settings.message_size;
+	settings->socket_size    = net_settings.socket_size;
+
+	settings->port           = net_settings.port;
+	settings->cores          = net_settings.cores;
+	
+	// Blank some fields
+	settings->deamon         = 0;
+	settings->confidence_lvl = 0.0;
+	settings->min_iterations = 1;
+	settings->max_iterations = 1;
+
+	settings->server_host    = NULL;
 
 	// Now construct the clientserver table
 	settings->clientserver = (int **)malloc_2D(sizeof(int), settings->cores, settings->cores);
@@ -43,12 +106,15 @@ int read_settings( SOCKET s, struct settings * settings ) {
 int send_settings( SOCKET s, const struct settings * settings ) {
 	int ret;
 	int x;
+	struct network_settings net_settings;
 
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
 
-	ret = send(s, (char *)settings, sizeof(*settings), 0);
-	if ( ret != sizeof(*settings) ) {
+	// Copy all the settings into a struct which can be sent over the network easily
+
+	ret = send(s, (char *)&net_settings, sizeof(net_settings), 0);
+	if ( ret != sizeof(net_settings) ) {
 		return -1;
 	}
 
