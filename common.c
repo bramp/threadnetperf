@@ -255,7 +255,7 @@ void free_2D(void **data, size_t x, size_t y) {
 
 void **malloc_2D(size_t element_size, size_t x, size_t y) {
 	
-	char **data;
+	void **data;
 	size_t x1;
 
 	if ( x == 0 || y == 0 )
@@ -377,7 +377,7 @@ double calc_confidence(double confidence_lvl, double mean, double variance, unsi
 	bigZ = tinv(confidence_lvl, n);
 	
 	if(bigZ == 0.0) {
-		fprintf(stderr, "%s:%d tinv(%d, %d) error\n", __FILE__, __LINE__, confidence_lvl, n );
+		fprintf(stderr, "%s:%d tinv(%f, %f) error\n", __FILE__, __LINE__, confidence_lvl, n );
 		return 0;
 	}
 
