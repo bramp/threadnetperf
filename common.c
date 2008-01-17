@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
+#include <malloc.h>
 
 int enable_nagle(SOCKET s) {
 	int zero = 0;
@@ -255,7 +256,7 @@ void free_2D(void **data, size_t x, size_t y) {
 void **malloc_2D(size_t element_size, size_t x, size_t y) {
 	
 	char **data;
-	size_t x1, y1;
+	size_t x1;
 
 	if ( x == 0 || y == 0 )
 		return NULL;
@@ -271,21 +272,15 @@ void **malloc_2D(size_t element_size, size_t x, size_t y) {
 		data[x1] = calloc ( y, element_size );
 		if ( data[x1] == NULL ) {
 			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-
-			free_2D ( data, x, y );
-
-			return NULL;
-		}
-	}
-
-	// Set each element to zero
-	for (x1 = 0; x1 < x; x1++) {
-		for (y1 = 0; y1 < y; y1++) {
-			data [ x ] [ y1 ] = 0;
+			goto bail;
 		}
 	}
 
 	return data;
+
+bail:
+	free_2D ( data, x, y );
+	return NULL;
 }
 
 /*

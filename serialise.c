@@ -6,7 +6,6 @@
 
 // Reads settings from a socket
 int read_settings( SOCKET s, struct settings * settings ) {
-
 	int ret;
 	int x;
 
@@ -38,8 +37,24 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 // Sends settings to a socket
 int send_settings( SOCKET s, const struct settings * settings ) {
+	int ret;
+	int x;
+
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
+
+	ret = send(s, (char *)settings, sizeof(*settings), 0);
+	if ( ret != sizeof(*settings) ) {
+		return -1;
+	}
+
+	for (x = 0; x < settings->cores; x++) {
+		int *row = settings->clientserver[x];
+		ret = send(s, (char *)row, sizeof(*row) * settings->cores, 0);
+		if ( ret != sizeof(*row) * settings->cores ) {
+			return -1;
+		}
+	}
 
 	return -1;
 }
