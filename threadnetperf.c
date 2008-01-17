@@ -464,12 +464,12 @@ int main (int argc, char *argv[]) {
 	int ** clientserver;
 
 	unsigned int iteration = 0;
-	unsigned int interval = 0;
+	unsigned int current_confidence_interval = 0;
 
-	unsigned long long sum = 0;
-	unsigned long long sumsquare = 0;
-	unsigned long long mean = 0;
-	double variance = 0.0;
+	float sum = 0;
+	float sumsquare = 0;
+	float mean = 0;
+	float variance = 0.0;
 
 	// Malloc space for a 2D array
 	clientserver = calloc ( cores, sizeof(*clientserver) );
@@ -527,15 +527,16 @@ int main (int argc, char *argv[]) {
 			sum += total_stats.bytes_received;
 			sumsquare += (total_stats.bytes_received * total_stats.bytes_received);
 			mean = sum / (iteration+1);
-			variance = (double) (sumsquare / (iteration+1) - mean * mean);
+			variance = (float) (sumsquare / (iteration+1) - mean * mean);
 	
 			if(settings.verbose) 
 				print_stats(sum, sumsquare, mean, variance);
 		
-			calc_confidence(settings.confidence_lvl, mean, variance, iteration+1);
-			//if (interval >= settings.confidence_lvl && iteration >= settings.min_iterations) {
-			//	break;
-			//}
+			current_confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
+			if (current_confidence_interval >= settings.confidence_lvl && iteration >= settings.min_iterations) {
+				print_results( &settings, &total_stats );
+				break;
+			}
 		}
 
 		print_results( &settings, &total_stats );

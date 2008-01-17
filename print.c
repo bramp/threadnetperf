@@ -69,8 +69,8 @@ void print_results( const struct settings *settings, const struct stats *stats )
 	pthread_mutex_unlock( &printf_mutex );
 }
 
-void print_stats(unsigned long long sum, unsigned long long sumsquare, unsigned long long mean, double variance) {
-	printf("sum %llu sumsquare %llu mean %llu variance %f\n",sum, sumsquare, mean, variance);
+void print_stats(float sum, float sumsquare, float mean, float variance) {
+	printf("sum %f sumsquare %f mean %f variance %.f\n",sum, sumsquare, mean, variance);
 }
 
 /*
