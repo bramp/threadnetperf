@@ -168,6 +168,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	settings->dirty = 0;
 	settings->timestamp = 0;
 	settings->confidence_lvl = 0;
+	settings->confidence_int = 0;
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
 
@@ -184,10 +185,9 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		switch ( c ) {
 
 			case 'c': {
-				float level = 0.0, interval = 0.0;
+				double level = 0.0, interval = 0.0;
 				
-				if ( sscanf( optarg, "%f,%f", &level, &interval ) < 2 ) {
-					
+				if ( sscanf( optarg, "%lf,%lf", &level, &interval ) < 2 ) {
 					fprintf(stdout, "Confidence interval defaulted to 5percent\n");
 				}
 				
@@ -196,8 +196,8 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 						return -1;
 					}
 
-				settings->confidence_lvl = (double)level;
-				settings->confidence_int = (double)(interval / 100);
+				settings->confidence_lvl = level;
+				settings->confidence_int = (interval / 100);
 				break;
 			}
 			// Deamon mode (wait for incoming tests)
