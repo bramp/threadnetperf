@@ -2,6 +2,8 @@
 #include "global.h"
 
 #include <assert.h>
+#include <malloc.h>
+#include <stdio.h>
 
 // Array of all the client requests
 struct client_request *creq = NULL;

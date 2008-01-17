@@ -3,6 +3,11 @@
 
 #include <assert.h>
 #include <malloc.h>
+#include <stdio.h>
+
+#ifndef WIN32
+#include <unistd.h> //usleep
+#endif
 
 // Array of all the server requests
 struct server_request *sreq = NULL;
