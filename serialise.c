@@ -112,6 +112,21 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	assert ( settings != NULL );
 
 	// Copy all the settings into a struct which can be sent over the network easily
+	net_settings.version        = SETTINGS_VERSION;
+	net_settings.duration       = settings->duration;
+	net_settings.type           = settings->type;
+	net_settings.protocol       = settings->protocol;
+	
+	net_settings.verbose        = settings->verbose;
+	net_settings.dirty          = settings->dirty;
+	net_settings.timestamp      = settings->timestamp;
+	net_settings.disable_nagles = settings->disable_nagles;
+
+	net_settings.message_size   = settings->message_size;
+	net_settings.socket_size    = settings->socket_size;
+
+	net_settings.port           = settings->port;
+	net_settings.cores          = settings->cores;
 
 	ret = send(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) ) {
