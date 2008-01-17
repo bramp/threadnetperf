@@ -144,5 +144,5 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 		}
 	}
 
-	return -1;
+	return 0;
 }
