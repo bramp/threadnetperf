@@ -207,21 +207,15 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				break;
 
 			case 'i': {//min,max interations
-				char min[ 32 ];
-				char max[ 32 ];
+				unsigned int min = 0, max = 0;
 
-				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 ) {
+				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 || min == 0 || max == 0 ) {
 					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
 					return -1;
 				}
 
-				settings->min_iterations = atoi( min );
-				settings->max_iterations = atoi( max );
-
-				if ( settings->min_iterations == 0 || settings->max_iterations == 0 ) {
-					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
-					return -1;
-				}
+				settings->min_iterations = min;
+				settings->max_iterations = max;
 
 				break;
 			}
