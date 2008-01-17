@@ -460,9 +460,6 @@ int main (int argc, char *argv[]) {
 
 	double sum = 0.0;
 	double sumsquare = 0.0;
-	double mean = 0.0;
-	double variance = 0.0;
-	double confidence_interval = 0;
 
 	settings.cores = cores;
 	settings.clientserver = (int **)malloc_2D(sizeof(int), cores, cores);
@@ -502,15 +499,19 @@ int main (int argc, char *argv[]) {
 		// Start the tests
 		run_tests( &settings, &total_stats );
 
-		if (settings.confidence_lvl != 0) {
+		if (settings.confidence_lvl != 0.0) {
+			double mean;
+			double variance;
+			double confidence_interval;
+
 			sum += total_stats.bytes_received;
 			sumsquare += (total_stats.bytes_received * total_stats.bytes_received);
 			mean = sum / (iteration+1);
-			variance = (float) (sumsquare / (iteration+1) - mean * mean);
-	
+			variance = (double)(sumsquare / (iteration+1) - mean * mean);
+
 			if(settings.verbose) 
 				print_stats(sum, sumsquare, mean, variance);
-		
+
 			confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
 			if (confidence_interval >= settings.confidence_lvl && iteration >= settings.min_iterations) {
 				print_results( &settings, &total_stats );
@@ -519,7 +520,6 @@ int main (int argc, char *argv[]) {
 		}
 
 		print_results( &settings, &total_stats );
-
 	}
 
 cleanup:
