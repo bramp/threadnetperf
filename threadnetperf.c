@@ -47,7 +47,7 @@ pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 // Flag to indidcate if we are still running
-int bRunning = 1;
+volatile int bRunning = 1;
 
 // Count of how many threads are ready
 unsigned int unready_threads = 0;
@@ -56,12 +56,10 @@ unsigned int unready_threads = 0;
 const unsigned int cores = 8; // TODO get the read number!
 
 // Array of all the server requests
-struct server_request *sreq = NULL;
+//struct server_request *sreq = NULL;
 
 // Array of all the client requests
 struct client_request *creq = NULL;
-
-// Settings
 
 // Make a 2D array for each possible to and from connection
 int **clientserver = NULL;
@@ -452,7 +450,7 @@ void start_daemon(const struct settings * settings) {
 				fprintf(stderr, "Invalid setting struct received\n" );
 				goto cleanup;
 			} 
-			
+
 			fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
@@ -513,7 +511,7 @@ int prepare_clients(const struct settings * settings) {
 				return -1;
 			}
 
-			// Add this new details before the other detailshttp://www.google.com/search?q=memset&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-GB:official&client=firefox-a
+			// Add this new details before the other details
 			c->next = creq [ clientcore ].details;
 			creq [ clientcore ].details = c;
 
