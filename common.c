@@ -15,11 +15,19 @@
 
 int enable_nagle(SOCKET s) {
 	int zero = 0;
+
+	if ( s == INVALID_SOCKET )
+		return -1;
+
 	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&zero, sizeof(zero));
 }
 
 int disable_nagle(SOCKET s) {
 	int one = 1;
+	
+	if ( s == INVALID_SOCKET )
+		return -1;
+
 	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
 }
 
@@ -46,13 +54,14 @@ int set_socket_buffer( SOCKET s, int opt, int size ) {
     int new_size;
     socklen_t new_size_len = sizeof(new_size);
  
-    if (size > 0 && setsockopt(s, SOL_SOCKET, opt, (char *)&size, sizeof(size)) < 0) {
-      return -1;
-    }
-
-	if (getsockopt(s, SOL_SOCKET, opt, (char *)&new_size, &new_size_len) < 0) {
+	if ( s == INVALID_SOCKET )
 		return -1;
- 	}
+
+    if (size > 0 && setsockopt(s, SOL_SOCKET, opt, (char *)&size, sizeof(size)) < 0)
+      return -1;
+
+	if (getsockopt(s, SOL_SOCKET, opt, (char *)&new_size, &new_size_len) < 0)
+		return -1;
 
  	return new_size;
 }
@@ -70,6 +79,9 @@ int set_socket_recv_buffer(SOCKET s, unsigned int socket_size) {
 void move_down ( SOCKET *arr, SOCKET *arr_end ) {
 
 	// Check this socket isn't already invalid
+	assert ( arr != NULL );
+	assert ( arr_end != NULL );
+	assert ( arr < arr_end );
 	assert ( *arr != INVALID_SOCKET );
 
 	*arr = INVALID_SOCKET;
@@ -192,9 +204,12 @@ char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, 
 	char port [ NI_MAXSERV ];
 	
 	// Validate parameters
-    assert (host != NULL);
-	assert (maxhostlen != 0);
-	assert (addr != 0);
+    assert (addr != NULL);
+	assert (addlen > 0 );
+
+	assert (host != NULL);
+	assert (maxhostlen > 0);
+	
 
 	if ( getnameinfo (addr, addlen, host, maxhostlen, port, sizeof(port), NI_NUMERICHOST | NI_NUMERICSERV ) ) {
 		*host = '\0';
@@ -212,6 +227,8 @@ SOCKET highest_socket(SOCKET *s, size_t len) {
 
 	const SOCKET *s_max = s + len;
 	SOCKET max;
+
+	assert ( s != NULL );
 
 	if ( len == 0 )
 		return SOCKET_ERROR;

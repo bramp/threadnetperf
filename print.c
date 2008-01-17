@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <assert.h>
+
 #ifdef WIN32
 	#define snprintf _snprintf
 #endif
@@ -13,6 +15,8 @@
 pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void print_headers(const struct settings* settings) {
+
+	assert ( settings != NULL );
 
 	pthread_mutex_lock( &printf_mutex );
 
@@ -31,6 +35,9 @@ void print_results( const struct settings *settings, int core, struct stats *sta
 	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
 	float duration = (float)stats->duration / (float)1000000;
 //	float pkt_latency = (float)stats->pkts_time /  (float)stats->pkts_received;
+
+	assert ( settings != NULL );
+	assert ( stats != NULL );
 
 	pthread_mutex_lock( &printf_mutex );
 
@@ -77,6 +84,8 @@ void print_hex(void *data, int size){
     char addrstr[10] = {0};
     char hexstr[ 16*3 + 5] = {0};
     char charstr[16*1 + 5] = {0};
+
+	assert ( data != NULL );
 
     for(n=1;n<=size;n++) {
         if (n%16 == 1) {

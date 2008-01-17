@@ -57,8 +57,8 @@ struct settings {
 	unsigned int message_size;	
 	unsigned int socket_size;
 
+	const char *server_host;
 	unsigned short port;
-
 };
 
 struct server_request {

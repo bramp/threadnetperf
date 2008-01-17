@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <assert.h>
 
 #ifdef WIN32
 	#include "getopt.h"
@@ -50,7 +51,10 @@ unsigned int unready_threads = 0;
 // The number of cores this machine has
 const unsigned int cores = 8; // TODO get the read number!
 
+// Array of all the server requests
 struct server_request *sreq = NULL;
+
+// Array of all the client requests
 struct client_request *creq = NULL;
 
 // Settings
@@ -85,6 +89,8 @@ void pause_for_duration(const struct settings *settings) {
 
 	// Make sure duration is in microseconds
 	long long duration = settings->duration * 1000000;
+
+	assert ( settings != NULL );
 
 	// This main thread controls when the test ends
 	end_time = get_microseconds() + duration;
@@ -124,6 +130,8 @@ void print_usage() {
 	fprintf(stderr, "	-D         Use deamon mode (wait for incoming tests)\n" );
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
 	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
+	fprintf(stderr, "	-H host    Set the remote host(and port) to connect to\n");
+	fprintf(stderr, "	-h         Display this help\n");
 	fprintf(stderr, "	-i min,max Set the minimum and maximum iterations\n");	
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
@@ -157,12 +165,15 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	unsigned int x, y;
 	unsigned int tests = 0;
 
+	assert ( settings != NULL );
+
 	// Default arguments
 	settings->deamon = 0;
 	settings->message_size = 1024;
 	settings->socket_size = -1;
 	settings->disable_nagles = 0;
 	settings->duration = 10;
+	settings->server_host = "127.0.0.1";
 	settings->port = 1234;
 	settings->verbose = 0;
 	settings->dirty = 0;
@@ -180,8 +191,9 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:c:i:")) != -1) {
+	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:c:i:H:")) != -1) {
 		switch ( c ) {
+
 			case 'c': //confidence level, must be either 95 or 99
 				settings->confidence_lvl = atoi(optarg);
 				
@@ -206,7 +218,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				}
 				break;
 
-			case 'i': {//min,max interations
+			case 'i': { // min,max interations
 				unsigned int min = 0, max = 0;
 
 				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 || min == 0 || max == 0 ) {
@@ -216,6 +228,13 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 				settings->min_iterations = min;
 				settings->max_iterations = max;
+
+				break;
+			}
+
+			case 'H': { // remote host
+
+				settings->server_host = optarg;
 
 				break;
 			}
@@ -343,6 +362,8 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 void start_daemon(const struct settings * settings) {
 	//unready_threads = 0; // Number of threads not ready
 
+	assert ( settings != NULL );
+
 	//start_servers(&settings);
 	//start_clients(&settings);
 
@@ -355,6 +376,9 @@ unsigned int threads = 0; // Total number of threads
 int prepare_clients(const struct settings * settings) {
 
 	unsigned int servercore, clientcore;
+
+	assert ( settings != NULL );
+	assert ( creq == NULL );
 
 	// Malloc one space for each core
 	creq = calloc ( cores, sizeof(*creq) );
@@ -406,9 +430,15 @@ int prepare_clients(const struct settings * settings) {
 				return -1;
 			}
 
+			// Change this to be more address indepentant
 			((struct sockaddr_in *)c->addr)->sin_family = AF_INET;
-			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( "127.0.0.1" );
+			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( settings->server_host );
 			((struct sockaddr_in *)c->addr)->sin_port = htons( settings->port + servercore );
+
+			if ( ((struct sockaddr_in *)c->addr)->sin_addr.s_addr == INADDR_NONE ) {
+				fprintf(stderr, "Invalid host name (%s)\n", settings->server_host );
+				return -1;
+			}
 		}
 	}
 
@@ -441,6 +471,9 @@ int create_clients() {
 int prepare_servers(const struct settings * settings) {
 
 	unsigned int servercore, clientcore;
+
+	assert ( settings != NULL );
+	assert ( sreq == NULL );
 
 	// Malloc one space for each core
 	sreq = calloc ( cores, sizeof(*sreq) );
@@ -529,12 +562,77 @@ void wait_for_threads() {
 	pthread_mutex_unlock( &go_mutex );
 }
 
-int main (int argc, char *argv[]) {
+void run_tests( const struct settings *settings, struct stats *total_stats ) {
+	
 	unsigned int i;
 	unsigned int servercore;
 
+	assert ( settings != NULL );
+	assert ( total_stats != NULL );
+
+	threads = 0;
+	unready_threads = 0; // Number of threads not ready
+
+	// Setup all the data for each server and client
+	if ( prepare_servers(settings) )
+		goto cleanup;
+
+	if ( prepare_clients(settings) )
+		goto cleanup;
+
+	// A list of threads
+	assert ( thread == NULL );
+	thread = calloc( unready_threads, sizeof(*thread) );
+
+	// Create each server/client thread
+	create_servers(&settings);
+	create_clients(&settings);
+
+	wait_for_threads();
+
+	print_headers( settings );
+
+	// Pauses for the duration, then sets bRunning to false
+	pause_for_duration( settings );
+
+	// Block waiting until all threads die
+	while (threads > 0) {
+		threads--;
+		pthread_join( thread[threads], NULL );
+	}
+
+	// Now sum all the results up
+	i = 0;
+	for (servercore = 0; servercore < cores; servercore++) {
+		if ( sreq[ servercore ].port != 0 ) {
+			total_stats->bytes_received += sreq[ servercore ].stats.bytes_received;
+			total_stats->duration       += sreq[ servercore ].stats.duration;
+			total_stats->pkts_received  += sreq[ servercore ].stats.pkts_received;
+			total_stats->pkts_time  += sreq[ servercore ].stats.pkts_time;
+			i++;
+		}
+	}
+
+	// Divide the duration by the # of CPUs used
+	total_stats->duration /= i;
+
+cleanup:
+
+	// Make sure we are not running anymore
+	stop_all();
+
+	// Block waiting until all threads die
+	while (threads > 0) {
+		threads--;
+		pthread_join( thread[threads], NULL );
+	}
+}
+
+int main (int argc, char *argv[]) {
+	unsigned int i;
+
 	// The sum of all the stats
-	struct stats total_stats = {0,0,0};
+	struct stats total_stats;
 
 	// All the settings we parse
 	struct settings settings;
@@ -572,63 +670,22 @@ int main (int argc, char *argv[]) {
 
 #ifdef WIN32
 	setup_winsock();
-#else
-
 #endif
+
+	memset(&total_stats, 0, sizeof(total_stats));
+
 	// If we are daemon mode start that
 	if (settings.deamon) {
 		start_daemon(&settings);
 		goto cleanup;
-	}
+
+	} // Otherwise just run the test locally
 
 	//Rerun the tests for a certain number of itterations as specified by the user
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
-
-		// Otherwise just run the test locally
-		threads = 0;
-		unready_threads = 0; // Number of threads not ready
-
-		// Setup all the data for each server and client
-		if ( prepare_servers(&settings) )
-			goto cleanup;
-
-		if ( prepare_clients(&settings) )
-			goto cleanup;
-
-		// A list of threads
-		thread = calloc( unready_threads, sizeof(*thread) );
-
-		// Create each server/client thread
-		create_servers(&settings);
-		create_clients(&settings);
-
-		wait_for_threads();
-
-		print_headers( &settings );
-
-		// Pauses for the duration, then sets bRunning to false
-		pause_for_duration( &settings );
-
-		// Block waiting until all threads die
-		while (threads > 0) {
-			threads--;
-			pthread_join( thread[threads], NULL );
-		}
-
-		// Now sum all the results up
-		i = 0;
-		for (servercore = 0; servercore < cores; servercore++) {
-			if ( sreq[ servercore ].port != 0 ) {
-				total_stats.bytes_received += sreq[ servercore ].stats.bytes_received;
-				total_stats.duration       += sreq[ servercore ].stats.duration;
-				total_stats.pkts_received  += sreq[ servercore ].stats.pkts_received;
-				total_stats.pkts_time  += sreq[ servercore ].stats.pkts_time;
-				i++;
-			}
-		}
-
-		// Divide the duration by the # of CPUs used
-		total_stats.duration = total_stats.duration / i;
+		
+		// Start the tests
+		run_tests( &settings, &total_stats );
 
 		if (settings.confidence_lvl != 0) {
 			sum += total_stats.bytes_received;
@@ -648,15 +705,6 @@ int main (int argc, char *argv[]) {
 	}
 
 cleanup:
-
-	// Make sure we are not running anymore
-	stop_all();
-
-	// Block waiting until all threads die
-	while (threads > 0) {
-		threads--;
-		pthread_join( thread[threads], NULL );
-	}
 
 	if ( clientserver ) {
 		for (i = 0; i < cores; ++i)
