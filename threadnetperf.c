@@ -358,7 +358,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 	// If there are no tests then error
 	if ( tests == 0 ) {
-		fprintf(stderr, "Please enter atleast one client/server combination\n");
+		fprintf(stderr, "No tests were specified\n");
 		return -1;
 	}
 
@@ -749,10 +749,22 @@ void connect_daemon(const struct settings *settings) {
 	addr.sin_addr.s_addr = inet_addr( settings->server_host );
 	addr.sin_port = htons( CONTROL_PORT );
 
+	if ( settings->verbose ) {
+		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
+
+		// Print the host/port
+		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
+
+		printf("Connecting to deamon %s\n", addr);
+	}
+
 	if ( connect(s, (struct sockaddr *)&addr, sizeof(addr) ) == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
+
+	if ( settings->verbose )
+		printf("Connect to deamon, sending tests\n");
 
 	ret = send(s, (const char *)settings, sizeof(*settings), 0 );
 	if ( ret != sizeof(*settings) ) {
@@ -760,7 +772,8 @@ void connect_daemon(const struct settings *settings) {
 		goto cleanup;
 	}
 
-
+	if ( settings->verbose )
+		printf("Sent tests\n");
 
 cleanup:
 
