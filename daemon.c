@@ -3,6 +3,8 @@
 #include "common.h"
 
 #include <assert.h>
+#include <stdio.h>
+#include <string.h>
 
 // Creates a socket and lists for incoming test requests
 void start_daemon(const struct settings * settings) {
