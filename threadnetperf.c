@@ -755,7 +755,7 @@ void connect_daemon(const struct settings *settings) {
 		// Print the host/port
 		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
 
-		printf("Connecting to deamon %s\n", addr);
+		printf("Connecting to deamon %s\n", addr_str);
 	}
 
 	if ( connect(s, (struct sockaddr *)&addr, sizeof(addr) ) == SOCKET_ERROR ) {
