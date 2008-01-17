@@ -424,8 +424,7 @@ cleanup:
 	}
 
 	if ( return_stats )
-		pthread_exit( &req->stats );
-	
-	pthread_exit( NULL );
+		return &req->stats;
+
 	return NULL;
 }
