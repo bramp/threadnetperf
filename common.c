@@ -6,6 +6,9 @@
 #include <string.h>
 #include <math.h>
 
+#define DOFERR -1
+#define PROBERR -2
+
 int enable_nagle(SOCKET s) {
 	int zero = 0;
 
@@ -305,8 +308,7 @@ double tinv(unsigned int p, unsigned int dof)  {
 	else if (dof < 100) dofindex = 29;
 	else if (dof >= 100) dofindex = 30;
 	else {
-		printf("tinv: degrees of freedom must be at least 1\n");
-		return 0;
+		return DOFERR;
 	}
 	
 	if (p == 75)        pindex = 0;
@@ -317,8 +319,7 @@ double tinv(unsigned int p, unsigned int dof)  {
 	else if (p == 99.5)  pindex = 5;
 	else if (p == 99.95) pindex = 6;
 	else	{
-		printf("tinv: probability not tabulated\n");
-		return 0;
+		return PROBERR;
 	}
 
 	return(tinv_array[dofindex][pindex]);
@@ -334,6 +335,11 @@ float calc_confidence(unsigned int confidence_lvl, float mean, float variance, u
 		return 0;
 	
 	bigZ = tinv(confidence_lvl, num_samples);
+	
+	if(bigZ < 0 ) {
+		fprintf(stderr, "Error finding bigZ coe %f\n", bigZ );
+		return -1;
+	}
 		
 	sd_div_samples = sqrt(variance / num_samples);
 	
