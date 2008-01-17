@@ -3,7 +3,7 @@
 CC = gcc
 CFLAGS = -g -O0 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
 #CFLAGS = -O2 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT
-LDFLAGS = -pthread
+LDFLAGS = -pthread -lm
 
 SOURCES =	threadnetperf.c common.c server.c client.c print.c
 

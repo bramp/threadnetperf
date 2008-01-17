@@ -203,7 +203,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			case 'c': //confidence level, must be either 95 or 99
 				settings->confidence_lvl = atoi(optarg);
 				
-				if(settings->confidence_lvl != 95 || settings->confidence_lvl != 99) {
+				if(settings->confidence_lvl != 95 && settings->confidence_lvl != 99) {
 					fprintf(stderr, "Confidence Level must be 95 or 99. Given (%s)\n", optarg);
 					return -1;
 				}
@@ -790,6 +790,7 @@ int main (int argc, char *argv[]) {
 	struct settings settings;
 
 	unsigned int iteration = 0;
+	unsigned int interval = 0;
 
 	unsigned long long sum = 0;
 	unsigned long long sumsquare = 0;
@@ -850,12 +851,14 @@ int main (int argc, char *argv[]) {
 			sumsquare += (total_stats.bytes_received * total_stats.bytes_received);
 			mean = sum / (iteration+1);
 			variance = (double) (sumsquare / (iteration+1) - mean * mean);
-
-			print_stats(sum, sumsquare, mean, variance);
-
-			// if (interval < blah && iterations >= settings.min_iterations) {
+	
+			if(settings.verbose) 
+				print_stats(sum, sumsquare, mean, variance);
+		
+			calc_confidence(settings.confidence_lvl, mean, variance, iteration+1);
+			//if (interval >= settings.confidence_lvl && iteration >= settings.min_iterations) {
 			//	break;
-			// }
+			//}
 		}
 
 		print_results( &settings, -1, &total_stats );

@@ -126,6 +126,8 @@ void stop_all();
 
 int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset);
 
+unsigned int calc_confidence(unsigned int confidence_lvl, unsigned long long mean, double variance, unsigned int num_samples);
+
 #ifdef WIN32
 void cleanup_winsock();
 void setup_winsock();

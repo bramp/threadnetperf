@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
+
 
 #ifdef WIN32
 	/* Access functions for CPU masks.  */
@@ -245,4 +247,28 @@ SOCKET highest_socket(SOCKET *s, size_t len) {
 	}
 
 	return max;
+}
+
+unsigned int calc_confidence(unsigned int confidence_lvl, unsigned long long mean, double variance, unsigned int num_samples) {
+	float bigZ=0;
+	//(sd / sqrt(#samples)) 
+	float sd_div_samples;
+	float min = 0.0, max = 0.0;
+	
+	if((int)variance == 0) 
+		return 0;
+	
+	if(confidence_lvl == 95) 
+		bigZ = 1.96;
+	else
+		bigZ = 1.95;
+		
+	sd_div_samples = sqrt(variance) / sqrt(num_samples);
+	
+	min = mean - bigZ * sd_div_samples;
+	max = mean + bigZ * sd_div_samples;
+	
+	printf("%f, %f\n", min, max);
+	
+	return 0;
 }
