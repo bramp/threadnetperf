@@ -85,7 +85,7 @@ void start_daemon(const struct settings * settings) {
 		}
 
 		if ( read_settings ( s, &recv_settings ) ) {
-			fprintf(stderr, "%s:%d recv() read_settings %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d read_settings() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
 
@@ -104,7 +104,6 @@ cleanup:
 void connect_daemon(const struct settings *settings) {
 	SOCKET s;
 	struct sockaddr_in addr; // Address to listen on
-	int ret;
 
 	assert ( settings != NULL );
 
@@ -136,9 +135,9 @@ void connect_daemon(const struct settings *settings) {
 	if ( settings->verbose )
 		printf("Connect to deamon, sending tests\n");
 
-	ret = send(s, (const char *)settings, sizeof(*settings), 0 );
-	if ( ret != sizeof(*settings) ) {
-		fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
+
+	if ( send_settings(s, settings) ) {
+		fprintf(stderr, "%s:%d send_settings() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 

@@ -23,6 +23,10 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 	// Now construct the clientserver table
 	settings->clientserver = (int **)malloc_2D(sizeof(int), settings->cores, settings->cores);
+	if ( settings->clientserver == NULL ) {
+		fprintf(stderr, "%s:%d malloc_2D() error\n", __FILE__, __LINE__);
+		return -1;
+	}
 
 	for (x = 0; x < settings->cores; x++) {
 		int *row = settings->clientserver[x];
