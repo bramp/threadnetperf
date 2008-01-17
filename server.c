@@ -1,7 +1,8 @@
 #include "server.h"
 #include "global.h"
 
-#include "assert.h"
+#include <assert.h>
+#include <malloc.h>
 
 // Array of all the server requests
 struct server_request *sreq = NULL;
