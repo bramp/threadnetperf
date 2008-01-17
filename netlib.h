@@ -23,6 +23,7 @@
 	#include <arpa/inet.h> // For inet_addr
 	#include <netdb.h> // For NI_NUMERICHOST
 	#include <fcntl.h>
+	#include <errno.h> // For errno
 
 	#define ERRNO errno
 	#define closesocket(s) close(s)
