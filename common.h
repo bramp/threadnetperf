@@ -114,6 +114,9 @@ int usleep(unsigned int useconds);
 // Returns the highest socket in the set
 SOCKET highest_socket(SOCKET *s, size_t len);
 
+void **malloc_2D(size_t element_size, size_t x, size_t y);
+void free_2D(void **data, size_t x, size_t y);
+
 #define BUFFER_FILL 0x4141414141414141
 
 #endif

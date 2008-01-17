@@ -243,6 +243,54 @@ SOCKET highest_socket(SOCKET *s, size_t len) {
 	return max;
 }
 
+// TODO make this free_2darray
+void free_2D(void **data, size_t x, size_t y) {
+	if ( data ) {
+		size_t i = 0;
+
+		for (; i < x; ++i)
+			free ( data[i] );
+
+		free( data );
+	}
+}
+
+void **malloc_2D(size_t element_size, size_t x, size_t y) {
+	
+	char **data;
+	size_t x1, y1;
+
+	if ( x == 0 || y == 0 )
+		return NULL;
+
+	// Malloc space for a 2D array
+	data = calloc ( x, sizeof(*data) );
+	if ( data == NULL ) {
+		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		return NULL;
+	}
+
+	for (x1 = 0; x1 < x; x1++) {
+		data[x1] = calloc ( y, element_size );
+		if ( data[x1] == NULL ) {
+			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+
+			free_2D ( data, x, y );
+
+			return NULL;
+		}
+	}
+
+	// Set each element to zero
+	for (x1 = 0; x1 < x; x1++) {
+		for (y1 = 0; y1 < y; y1++) {
+			data [ x ] [ y1 ] = 0;
+		}
+	}
+
+	return data;
+}
+
 /*
  * Code taken from 
  * 

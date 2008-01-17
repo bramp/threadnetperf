@@ -141,6 +141,9 @@
 				RelativePath=".\print.c">
 			</File>
 			<File
+				RelativePath=".\serialise.c">
+			</File>
+			<File
 				RelativePath=".\server.c">
 			</File>
 			<File
@@ -174,6 +177,9 @@
 			</File>
 			<File
 				RelativePath=".\print.h">
+			</File>
+			<File
+				RelativePath=".\serialise.h">
 			</File>
 			<File
 				RelativePath=".\server.h">

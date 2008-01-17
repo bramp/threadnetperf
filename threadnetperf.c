@@ -152,7 +152,6 @@ void print_usage() {
 
 int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	int c;
-	unsigned int x, y;
 	unsigned int tests = 0;
 
 	assert ( settings != NULL );
@@ -311,12 +310,6 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		return -1;
 	}
 
-	for (x = 0; x < cores; x++) {
-		for (y = 0; y < cores; y++) {
-			settings->clientserver [ x ] [ y ] = 0;
-		}
-	}
-
 	// Try and parse anything else left on the end
 	// 1{0-0} 10{1-1} 3{0-1}, 1 connection core 0 to core 0, 10 connections core 1 to core 1, and 3 connections core 0 to core 1
 	while (optind < argc) {
@@ -379,7 +372,7 @@ void wait_for_threads() {
 }
 
 void run_tests( const struct settings *settings, struct stats *total_stats ) {
-	
+
 	unsigned int i;
 
 	assert ( settings != NULL );
@@ -411,11 +404,10 @@ void run_tests( const struct settings *settings, struct stats *total_stats ) {
 
 	stop_all();
 
-	i = 0;
-
 	print_headers( settings );
 
 	// Block waiting until all threads die
+	i = 0;
 	while (threads > 0) {
 		struct stats *stats;
 
@@ -457,14 +449,12 @@ cleanup:
 }
 
 int main (int argc, char *argv[]) {
-	unsigned int i;
 
 	// The sum of all the stats
 	struct stats total_stats;
 
 	// All the settings we parse
 	struct settings settings;
-	int ** clientserver;
 
 	unsigned int iteration = 0;
 	unsigned int current_confidence_interval = 0;
@@ -474,22 +464,8 @@ int main (int argc, char *argv[]) {
 	float mean = 0;
 	float variance = 0.0;
 
-	// Malloc space for a 2D array
-	clientserver = calloc ( cores, sizeof(*clientserver) );
-	if ( clientserver == NULL ) {
-		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-		goto cleanup;
-	}
-
-	for (i = 0; i < cores; i++) {
-		clientserver[i] = calloc ( cores, sizeof(clientserver[i]) );
-		if ( clientserver[i] == NULL ) {
-			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-			goto cleanup;
-		}
-	}
-	settings.clientserver = clientserver;
 	settings.cores = cores;
+	settings.clientserver = malloc_2D(sizeof(int), cores, cores);
 
 	if ( parse_arguments( argc, argv, &settings ) ) {
 		goto cleanup;
@@ -548,12 +524,7 @@ int main (int argc, char *argv[]) {
 
 cleanup:
 
-	if ( clientserver ) {
-		for (i = 0; i < cores; ++i)
-			free ( clientserver[i] );
-
-		free( clientserver );
-	}
+	free_2D(settings.clientserver, cores, cores);
 
 	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );

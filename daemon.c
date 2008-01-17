@@ -1,6 +1,7 @@
 #include "daemon.h"
 
 #include "common.h"
+#include "serialise.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -68,8 +69,6 @@ void start_daemon(const struct settings * settings) {
 
 		struct settings recv_settings; // Incoming settings
 
-		int ret;
-
 		s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
 		if ( s == INVALID_SOCKET) {
 			fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -85,15 +84,8 @@ void start_daemon(const struct settings * settings) {
 			printf("Incoming control connection %s\n", addr_str);
 		}
 
-		ret = recv(s, (char *)&recv_settings, sizeof(recv_settings), 0);
-		if ( ret != sizeof(recv_settings) || recv_settings.version != SETTINGS_VERSION ) {
-
-			if ( ret > 0 ) {
-				fprintf(stderr, "Invalid setting struct received\n" );
-				goto cleanup;
-			} 
-
-			fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
+		if ( read_settings ( s, &recv_settings ) ) {
+			fprintf(stderr, "%s:%d recv() read_settings %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
 
