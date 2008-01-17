@@ -369,8 +369,7 @@ double calc_confidence(double confidence_lvl, double mean, double variance, unsi
 	double bigZ;
 	double sd_div_samples;
 	double CI;
-	double confidence;
-
+	
 	if(variance == 0.0) 
 		return 0;
 	
@@ -385,16 +384,17 @@ double calc_confidence(double confidence_lvl, double mean, double variance, unsi
 
 	CI = bigZ * sd_div_samples;
 	
-	confidence = (1 - ( CI / mean))*100;
+	
 
 	if(verbose) {
 		double min, max;
+		double confidence;
 
 		min = mean - CI;
 		max = mean + CI;
-	
+		confidence = (1 - ( CI / mean))*100;
 		printf("min: %.f, max: %.f, cl: %f\n", min, max, confidence);
 	}
 	
-	return confidence;
+	return CI;
 }

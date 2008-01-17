@@ -513,7 +513,7 @@ int main (int argc, char *argv[]) {
 				print_stats(sum, sumsquare, mean, variance);
 
 			confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
-			if (confidence_interval >= settings.confidence_lvl && iteration >= settings.min_iterations) {
+			if ( (confidence_interval < 0.05 * mean) && iteration >= settings.min_iterations) {
 				print_results( &settings, &total_stats );
 				break;
 			}
