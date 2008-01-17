@@ -186,10 +186,13 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		switch ( c ) {
 
 			case 'c': //confidence level, must be either 95 or 99
-				settings->confidence_lvl = atoi(optarg);
-				
-				if(settings->confidence_lvl != 95 && settings->confidence_lvl != 99) {
-					fprintf(stderr, "Confidence Level must be 95 or 99. Given (%s)\n", optarg);
+				settings->confidence_lvl = atof(optarg);
+								
+				if(settings->confidence_lvl != 75 && settings->confidence_lvl !=90 &&
+					settings->confidence_lvl != 95 && settings->confidence_lvl != 97.5 &&
+					settings->confidence_lvl != 99 && settings->confidence_lvl != 99.5 &&
+					settings->confidence_lvl != 99.95 ) {
+					fprintf(stderr, "Confidence Level must be {75,90,95,97.5,99,99.5,99.95}. Given (%s)\n", optarg);
 					return -1;
 				}
 

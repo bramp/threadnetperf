@@ -241,6 +241,10 @@ SOCKET highest_socket(SOCKET *s, size_t len) {
 }
 
 /*
+ * Code taken from 
+ * 
+ * http://www.owlnet.rice.edu/~elec428/projects/tinv.c
+ * 
  * tinv(p,dof) returns the inverse t-distribution value for probability
  * p and dof degrees of freedom.  It does this by looking up the appropriate
  * value in the array tinv_array.  Only dof between 1 and 20 are exact.
@@ -306,7 +310,7 @@ double tinv(unsigned int p, unsigned int dof)  {
 	}
 	
 	if (p == 75)        pindex = 0;
-	else if (p == 9)    pindex = 1;
+	else if (p == 90)    pindex = 1;
 	else if (p == 95)   pindex = 2;
 	else if (p == 97.5)  pindex = 3;
 	else if (p == 99)   pindex = 4;
@@ -320,10 +324,9 @@ double tinv(unsigned int p, unsigned int dof)  {
 	return(tinv_array[dofindex][pindex]);
 }
 
-unsigned int calc_confidence(unsigned int confidence_lvl, float mean, float variance, unsigned int num_samples, int verbose) {
+float calc_confidence(unsigned int confidence_lvl, float mean, float variance, unsigned int num_samples, int verbose) {
 	float bigZ=0;
-	//(sd / sqrt(#samples)) 
-	unsigned int confidence = 0;
+	float confidence = 0;
 	float sd_div_samples;
 	float min = 0.0, max = 0.0;
 	
@@ -340,7 +343,7 @@ unsigned int calc_confidence(unsigned int confidence_lvl, float mean, float vari
 	confidence = (1 - ( bigZ * sd_div_samples / mean))*100;
 	
 	if(verbose)
-		printf("min: %.f, max: %.f, cl: %u\n", min, max,confidence );
+		printf("min: %.f, max: %.f, cl: %f\n", min, max,confidence );
 	
 	return confidence;
 }
