@@ -390,6 +390,7 @@ void *server_thread(void *data) {
 	end_time = get_microseconds();
 
 	// Add up all the client bytes
+	req->stats.core = req->core;
 	req->stats.duration = end_time - start_time;
 	req->stats.bytes_received = 0;
 	req->stats.pkts_received = 0;
