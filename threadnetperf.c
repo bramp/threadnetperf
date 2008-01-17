@@ -407,12 +407,21 @@ void start_daemon(const struct settings * settings) {
 		goto cleanup;
 	}
 
+	if ( settings->verbose ) {
+		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
+
+		// Print the host/port
+		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
+
+		printf("Deamon is listening on %s\n", addr_str);
+	}
+
 	// Now loop accepting incoming tests
 	while ( 1 ) {
 		struct sockaddr_storage addr; // Incoming addr
 		socklen_t addr_len = sizeof(addr);
 
-		struct settings settings; // Incoming settings
+		struct settings recv_settings; // Incoming settings
 
 		int ret;
 
@@ -422,8 +431,17 @@ void start_daemon(const struct settings * settings) {
 			goto cleanup;
 		}
 
-		ret = recv(s, (char *)&settings, sizeof(settings), 0);
-		if ( ret != sizeof(settings) || settings.version != SETTINGS_VERSION ) {
+		if ( settings->verbose ) {
+			char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
+
+			// Print the host/port
+			addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
+
+			printf("Incoming control connection %s\n", addr_str);
+		}
+
+		ret = recv(s, (char *)&recv_settings, sizeof(recv_settings), 0);
+		if ( ret != sizeof(recv_settings) || recv_settings.version != SETTINGS_VERSION ) {
 
 			if ( ret > 0 ) {
 				fprintf(stderr, "Invalid setting struct received\n" );
@@ -432,6 +450,10 @@ void start_daemon(const struct settings * settings) {
 			
 			fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
+		}
+
+		if ( settings->verbose ) {
+			printf("Received tests\n");
 		}
 
 	}
@@ -825,8 +847,6 @@ int main (int argc, char *argv[]) {
 	setup_winsock();
 #endif
 
-	memset(&total_stats, 0, sizeof(total_stats));
-
 	// If we are daemon mode start that
 	if (settings.deamon) {
 		start_daemon(&settings);
@@ -842,6 +862,8 @@ int main (int argc, char *argv[]) {
 
 	//Rerun the tests for a certain number of iterations as specified by the user
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
+
+		memset(&total_stats, 0, sizeof(total_stats));
 
 		// Start the tests
 		run_tests( &settings, &total_stats );
