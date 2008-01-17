@@ -89,11 +89,12 @@ void pause_for_duration(const struct settings *settings) {
 	long long end_time; // The time we need to end
 
 	// Make sure duration is in microseconds
-	long long duration = settings->duration * 1000000;
+	long long duration;
 
 	assert ( settings != NULL );
 
 	// This main thread controls when the test ends
+	duration = settings->duration * 1000000;
 	end_time = get_microseconds() + duration;
 
 	while ( bRunning ) {
@@ -379,18 +380,10 @@ int prepare_clients(const struct settings * settings) {
 	unsigned int servercore, clientcore;
 
 	assert ( settings != NULL );
-	//MF: BUG FIX
-	//This line will fail if we run the test more than once
-	//assert ( creq == NULL );
+	assert ( creq == NULL );
 	
-	if(creq == NULL ) {
-		// Malloc one space for each core
-		creq = calloc ( cores, sizeof(*creq) );
-	} else {
-		memset(creq, 0, sizeof(*creq));
-	}
-
-	
+	// Malloc one space for each core
+	creq = calloc ( cores, sizeof(*creq) );
 
 	if ( !creq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
@@ -482,17 +475,10 @@ int prepare_servers(const struct settings * settings) {
 	unsigned int servercore, clientcore;
 
 	assert ( settings != NULL );
-	//MF: BUG FIX
-	//The following line will fail if we perform more than one run
-	//assert ( sreq == NULL );
+	assert ( sreq == NULL );
 	
-	//So instead we do this
-	if(sreq == NULL) {
-		// Malloc one space for each core
-		sreq = calloc ( cores, sizeof(*sreq) );
-	} else {
-		memset(sreq, 0, sizeof(*sreq));
-	}
+	// Malloc one space for each core
+	sreq = calloc ( cores, sizeof(*sreq) );
 
 	if ( !sreq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
@@ -578,6 +564,30 @@ void wait_for_threads() {
 	pthread_mutex_unlock( &go_mutex );
 }
 
+void cleanup_clients() {
+	unsigned int i;
+
+	if ( creq ) {
+		for (i = 0; i < cores; i++) {
+			struct client_request_details *c = creq[i].details;
+			while ( c != NULL ) {
+				struct client_request_details *nextC = c->next;
+				free ( c->addr );
+				free ( c );
+				c = nextC;
+			}
+		}
+
+		free( creq );
+		creq = NULL;
+	}
+}
+
+void cleanup_servers() {
+	free( sreq );
+	sreq = NULL;
+}
+
 void run_tests( const struct settings *settings, struct stats *total_stats ) {
 	
 	unsigned int i;
@@ -586,6 +596,7 @@ void run_tests( const struct settings *settings, struct stats *total_stats ) {
 	assert ( settings != NULL );
 	assert ( total_stats != NULL );
 
+	bRunning = 1;
 	threads = 0;
 	unready_threads = 0; // Number of threads not ready
 
@@ -596,14 +607,9 @@ void run_tests( const struct settings *settings, struct stats *total_stats ) {
 	if ( prepare_clients(settings) )
 		goto cleanup;
 
-	//MF: BUG FIX
 	// A list of threads
-	//assert ( thread == NULL );
-	if(thread == NULL) {
-		thread = calloc( unready_threads, sizeof(*thread) );
-	} else {
-		memset(thread, 0, sizeof(*thread));
-	}
+	assert ( thread == NULL );
+	thread = calloc( unready_threads, sizeof(*thread) );
 
 	// Create each server/client thread
 	create_servers(&settings);
@@ -647,6 +653,12 @@ cleanup:
 		threads--;
 		pthread_join( thread[threads], NULL );
 	}
+
+	free(thread);
+	thread = NULL;
+
+	cleanup_clients();
+	cleanup_servers();
 }
 
 int main (int argc, char *argv[]) {
@@ -664,14 +676,14 @@ int main (int argc, char *argv[]) {
 	unsigned long long sumsquare = 0;
 	unsigned long long mean = 0;
 	double variance = 0.0;
-	
+
 	// Malloc space for a 2D array
 	clientserver = calloc ( cores, sizeof(*clientserver) );
 	if ( clientserver == NULL ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-		
+
 	for (i = 0; i < cores; i++) {
 		clientserver[i] = calloc ( cores, sizeof(clientserver[i]) );
 		if ( clientserver[i] == NULL ) {
@@ -699,12 +711,11 @@ int main (int argc, char *argv[]) {
 	if (settings.deamon) {
 		start_daemon(&settings);
 		goto cleanup;
-
 	} // Otherwise just run the test locally
 
 	//Rerun the tests for a certain number of itterations as specified by the user
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
-		
+
 		// Start the tests
 		run_tests( &settings, &total_stats );
 
@@ -719,10 +730,10 @@ int main (int argc, char *argv[]) {
 			// if (interval < blah && iterations >= settings.min_iterations) {
 			//	break;
 			// }
-
 		}
 
 		print_results( &settings, -1, &total_stats );
+
 	}
 
 cleanup:
@@ -734,21 +745,6 @@ cleanup:
 		free( clientserver );
 	}
 
-	if ( creq ) {
-		for (i = 0; i < cores; i++) {
-			struct client_request_details *c = creq[i].details;
-			while ( c != NULL ) {
-				struct client_request_details *nextC = c->next;
-				free ( c->addr );
-				free ( c );
-				c = nextC;
-			}
-		}
-	}
-
-	free( creq );
-	free( sreq );
-
 	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );
 
@@ -756,8 +752,6 @@ cleanup:
 	pthread_mutex_destroy( & ready_mutex );
 
 	pthread_mutex_destroy( & printf_mutex );
-
-	free ( thread );
 
 #ifdef WIN32
 	cleanup_winsock();
