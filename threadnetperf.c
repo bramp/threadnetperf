@@ -120,10 +120,11 @@ void print_usage() {
 
 	fprintf(stderr, "\n" );
 
-	fprintf(stderr, "	-c         Confidence level, must be 95 or 99\n");
+	fprintf(stderr, "	-c level   Confidence level, must be 95 or 99\n");
 	fprintf(stderr, "	-D         Use deamon mode (wait for incoming tests)\n" );
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
 	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
+	fprintf(stderr, "	-i min,max Set the minimum and maximum iterations\n");	
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
@@ -167,6 +168,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	settings->dirty = 0;
 	settings->timestamp = 0;
 	settings->confidence_lvl = 0;
+	settings->min_iterations = 1;
 	settings->max_iterations = 1;
 
 	settings->type = SOCK_STREAM;
@@ -178,19 +180,18 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:")) != -1) {
+	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:c:i:")) != -1) {
 		switch ( c ) {
-			//confidence level, must be either 95 or 99
-			case 'c':
+			case 'c': //confidence level, must be either 95 or 99
 				settings->confidence_lvl = atoi(optarg);
 				
 				if(settings->confidence_lvl != 95 || settings->confidence_lvl != 99) {
 					fprintf(stderr, "Confidence Level must be 95 or 99. Given (%s)\n", optarg);
 					return -1;
 				}
-				
-			
+
 				break;
+
 			// Deamon mode (wait for incoming tests)
 			case 'D':
 				settings->deamon = 1;
@@ -204,6 +205,26 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 					return -1;
 				}
 				break;
+
+			case 'i': {//min,max interations
+				char min[ 32 ];
+				char max[ 32 ];
+
+				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 ) {
+					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
+					return -1;
+				}
+
+				settings->min_iterations = atoi( min );
+				settings->max_iterations = atoi( max );
+
+				if ( settings->min_iterations == 0 || settings->max_iterations == 0 ) {
+					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
+					return -1;
+				}
+
+				break;
+			}
 
 			// Disable nagles algorithm (ie NO delay)
 			case 'n':
@@ -615,12 +636,19 @@ int main (int argc, char *argv[]) {
 		// Divide the duration by the # of CPUs used
 		total_stats.duration = total_stats.duration / i;
 
-		sum += total_stats.bytes_received;
-		sumsquare += (total_stats.bytes_received * total_stats.bytes_received);
-		mean = sum / (iteration+1);
-		variance = (double) (sumsquare / (iteration+1) - mean * mean);
-	
-		print_stats(sum, sumsquare, mean, variance);
+		if (settings.confidence_lvl != 0) {
+			sum += total_stats.bytes_received;
+			sumsquare += (total_stats.bytes_received * total_stats.bytes_received);
+			mean = sum / (iteration+1);
+			variance = (double) (sumsquare / (iteration+1) - mean * mean);
+
+			print_stats(sum, sumsquare, mean, variance);
+
+			// if (interval < blah && iterations >= settings.min_iterations) {
+			//	break;
+			// }
+
+		}
 
 		print_results( &settings, -1, &total_stats );
 	}
