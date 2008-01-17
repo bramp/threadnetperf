@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifndef WIN32
+#include <unistd.h>
+#endif
+
 // Creates a socket and lists for incoming test requests
 void start_daemon(const struct settings * settings) {
 	//unready_threads = 0; // Number of threads not ready
