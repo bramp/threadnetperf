@@ -713,7 +713,7 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	} // Otherwise just run the test locally
 
-	//Rerun the tests for a certain number of itterations as specified by the user
+	//Rerun the tests for a certain number of iterations as specified by the user
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
 
 		// Start the tests
