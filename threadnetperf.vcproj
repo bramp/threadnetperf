@@ -126,7 +126,13 @@
 				RelativePath=".\client.c">
 			</File>
 			<File
+				RelativePath=".\client_thread.c">
+			</File>
+			<File
 				RelativePath=".\common.c">
+			</File>
+			<File
+				RelativePath=".\daemon.c">
 			</File>
 			<File
 				RelativePath=".\getopt.c">
@@ -136,6 +142,9 @@
 			</File>
 			<File
 				RelativePath=".\server.c">
+			</File>
+			<File
+				RelativePath=".\server_thread.c">
 			</File>
 			<File
 				RelativePath=".\threadnetperf.c">
