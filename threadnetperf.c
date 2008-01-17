@@ -403,14 +403,14 @@ void run_tests( const struct settings *settings, struct stats *total_stats ) {
 
 	wait_for_threads();
 
-	print_headers( settings );
-
 	// Pauses for the duration, then sets bRunning to false
 	pause_for_duration( settings );
 
 	stop_all();
 
 	i = 0;
+
+	print_headers( settings );
 
 	// Block waiting until all threads die
 	while (threads > 0) {
