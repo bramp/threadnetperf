@@ -196,8 +196,8 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 						return -1;
 					}
 
-				settings->confidence_lvl = level;
-				settings->confidence_int = (interval / 100);
+				settings->confidence_lvl = level ;
+				settings->confidence_int = interval ;
 				break;
 			}
 			// Deamon mode (wait for incoming tests)
@@ -512,7 +512,7 @@ int main (int argc, char *argv[]) {
 				print_stats(sum, sumsquare, mean, variance);
 
 			confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
-			if ( (confidence_interval < settings.confidence_int * mean) && iteration >= settings.min_iterations) {
+			if ( (confidence_interval < (settings.confidence_int/100) * mean) && iteration >= settings.min_iterations) {
 				print_results( &settings, &total_stats );
 				break;
 			}

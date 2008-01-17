@@ -358,7 +358,7 @@ double tinv(double p, unsigned int dof)  {
 	else if (p == 99.0)  pindex = 4;
 	else if (p == 99.5)  pindex = 5;
 	else if (p == 99.95) pindex = 6;
-	else	{
+	else {
 		return 0;
 	}
 
@@ -384,8 +384,6 @@ double calc_confidence(double confidence_lvl, double mean, double variance, unsi
 
 	CI = bigZ * sd_div_samples;
 	
-	
-
 	if(verbose) {
 		double min, max;
 		double confidence;
