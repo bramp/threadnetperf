@@ -265,7 +265,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			
 			// Increase the verbose level
 			case 'v':
-				settings->verbose++;
+				settings->verbose = 1;
 				break;
 
 			case 'h':

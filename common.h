@@ -55,11 +55,11 @@ struct settings {
 	int type;
 	int protocol;
 	
-	int deamon;
-	int verbose;
-	int dirty;
-	int timestamp;
-	int disable_nagles;
+	int deamon          :1;
+	int verbose         :1;
+	int dirty           :1;
+	int timestamp       :1;
+	int disable_nagles  :1;
 
 	double confidence_lvl;
 	unsigned int min_iterations;
