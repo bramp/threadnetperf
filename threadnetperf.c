@@ -371,7 +371,15 @@ void wait_for_threads() {
 	pthread_mutex_unlock( &go_mutex );
 }
 
-void run_tests( const struct settings *settings, struct stats *total_stats ) {
+// Join all these threads
+void threads_join(const pthread_t *threads, size_t count) {
+	while (count > 0) {
+		count--;
+		pthread_join( threads[count], NULL );
+	}
+}
+
+void local_run_tests( const struct settings *settings, struct stats *total_stats ) {
 
 	unsigned int i;
 
@@ -436,16 +444,35 @@ cleanup:
 	stop_all();
 
 	// Block waiting until all threads die
-	while (threads > 0) {
-		threads--;
-		pthread_join( thread[threads], NULL );
-	}
+	threads_join ( thread, threads );
+	threads = 0;
 
 	free(thread);
 	thread = NULL;
 
 	cleanup_clients();
 	cleanup_servers();
+}
+
+
+void run_deamon(const struct settings *settings) {
+
+	SOCKET listen_socket = INVALID_SOCKET;
+
+	listen_socket = start_daemon(settings);
+
+	// Now loop accepting incoming tests
+	while ( 1 ) {
+		struct settings remote_settings;
+		SOCKET s = INVALID_SOCKET;
+		struct stats total_stats;
+
+		s = accept_test( listen_socket, &remote_settings, settings->verbose );
+
+		run_tests( remote_settings, &total_stats );
+	}
+
+	close_daemon(listen_socket);
 }
 
 int main (int argc, char *argv[]) {
@@ -496,7 +523,7 @@ int main (int argc, char *argv[]) {
 		total_stats.core = -1;
 
 		// Start the tests
-		run_tests( &settings, &total_stats );
+		local_run_tests( &settings, &total_stats );
 
 		if (settings.confidence_lvl != 0.0) {
 			double mean;

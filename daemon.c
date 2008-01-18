@@ -11,12 +11,10 @@
 #include <unistd.h>
 #endif
 
-// Creates a socket and lists for incoming test requests
-void start_daemon(const struct settings * settings) {
-	//unready_threads = 0; // Number of threads not ready
+// Creates a socket
+SOCKET start_daemon(const struct settings * settings) {
 
 	SOCKET listen_socket = INVALID_SOCKET;
-	SOCKET s = INVALID_SOCKET; // Incoming socket
 
 	struct sockaddr_in addr; // Address to listen on
 	int one = 1;
@@ -27,13 +25,13 @@ void start_daemon(const struct settings * settings) {
 
 	if ( listen_socket == INVALID_SOCKET ) {
 		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
+		goto bail;
 	}
 
 	// SO_REUSEADDR
 	if ( setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
+		goto bail;
 	}
 
 	memset(&addr, 0, sizeof(addr));
@@ -44,13 +42,13 @@ void start_daemon(const struct settings * settings) {
 	// Bind
 	if ( bind(listen_socket, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
 		fprintf(stderr, "%s:%d bind() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
+		goto bail;
 	}
 
 	// Listen
 	if ( listen(listen_socket, SOMAXCONN) == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
+		goto bail;
 	}
 
 	if ( settings->verbose ) {
@@ -62,43 +60,52 @@ void start_daemon(const struct settings * settings) {
 		printf("Deamon is listening on %s\n", addr_str);
 	}
 
-	// Now loop accepting incoming tests
-	while ( 1 ) {
-		struct sockaddr_storage addr; // Incoming addr
-		socklen_t addr_len = sizeof(addr);
+	return listen_socket;
 
-		struct settings recv_settings; // Incoming settings
-
-		s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
-		if ( s == INVALID_SOCKET) {
-			fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
-
-		if ( settings->verbose ) {
-			char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
-
-			// Print the host/port
-			addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
-
-			printf("Incoming control connection %s\n", addr_str);
-		}
-
-		if ( read_settings ( s, &recv_settings ) ) {
-			fprintf(stderr, "%s:%d read_settings() error %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
-
-		if ( settings->verbose ) {
-			printf("Received tests\n");
-		}
-
-	}
-
-cleanup:
+bail:
 
 	closesocket(listen_socket);
-	closesocket(s);
+
+	return INVALID_SOCKET;
+}
+
+void close_daemon( SOCKET listen_socket ) {
+	closesocket(listen_socket);
+}
+
+SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int verbose) {
+	SOCKET s = INVALID_SOCKET;
+
+	struct sockaddr_storage addr; // Incoming addr
+	socklen_t addr_len = sizeof(addr);
+
+	s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
+	if ( s == INVALID_SOCKET) {
+		fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	if ( verbose ) {
+		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
+
+		// Print the host/port
+		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
+
+		printf("Incoming control connection %s\n", addr_str);
+	}
+
+	if ( read_settings ( s, recv_settings ) ) {
+		fprintf(stderr, "%s:%d read_settings() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	if ( verbose )
+		printf("Received tests\n");
+
+	return s;
+
+cleanup:
+	return INVALID_SOCKET;
 }
 
 void connect_daemon(const struct settings *settings) {
