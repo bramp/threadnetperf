@@ -22,7 +22,7 @@ struct network_settings {
 
 	// Version of the setting struct, this must be the first element
 	unsigned int version;
-	#define SETTINGS_VERSION 3 // Increment this each time the setting struct changes
+	#define SETTINGS_VERSION 4 // Increment this each time the setting struct changes
 
 	uint32_t duration;
 	
@@ -37,15 +37,14 @@ struct network_settings {
 	uint32_t message_size;	
 	uint32_t socket_size;
 
-	uint16_t port;
-
 	uint32_t cores;
+	uint16_t port;
 };
 
 // Reads settings from a socket
 int read_settings( SOCKET s, struct settings * settings ) {
 	int ret;
-	unsigned int x;
+	unsigned int x, y;
 	struct network_settings net_settings;
 
 	assert ( s != INVALID_SOCKET );
@@ -60,20 +59,20 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	}
 
 	// Set all the fields
-	settings->duration       = net_settings.duration;
-	settings->type           = net_settings.type;
-	settings->protocol       = net_settings.protocol;
+	settings->duration       = ntohl( net_settings.duration );
+	settings->type           = ntohl( net_settings.type );
+	settings->protocol       = ntohl( net_settings.protocol );
 	
 	settings->verbose        = net_settings.verbose;
 	settings->dirty          = net_settings.dirty;
 	settings->timestamp      = net_settings.timestamp;
 	settings->disable_nagles = net_settings.disable_nagles;
 
-	settings->message_size   = net_settings.message_size;
-	settings->socket_size    = net_settings.socket_size;
+	settings->message_size   = ntohl( net_settings.message_size );
+	settings->socket_size    = ntohl( net_settings.socket_size );
 
-	settings->port           = net_settings.port;
-	settings->cores          = net_settings.cores;
+	settings->cores          = ntohl( net_settings.cores );
+	settings->port           = ntohs( net_settings.port );
 	
 	// Blank some fields
 	settings->deamon         = 0;
@@ -92,11 +91,14 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	}
 
 	for (x = 0; x < settings->cores; x++) {
-		unsigned int *row = settings->clientserver[x];
-		// TODO make this recv int32 not ints
-		ret = recv(s, (char *)row, sizeof(*row) * settings->cores, 0);
-		if ( ret != sizeof(*row) * settings->cores ) {
-			return -1;
+		for (y=0; y < settings->cores; y++) {
+			uint32_t i;
+
+			ret = recv(s, (char *)&i, sizeof(i), 0);
+			if ( ret != sizeof(i) ) {
+				return -1;
+			}
+			settings->clientserver[x][y] = ntohl(i);
 		}
 	}
 
@@ -106,7 +108,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 // Sends settings to a socket
 int send_settings( SOCKET s, const struct settings * settings ) {
 	int ret;
-	unsigned int x;
+	unsigned int x, y;
 	struct network_settings net_settings;
 
 	assert ( s != INVALID_SOCKET );
@@ -114,20 +116,20 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 
 	// Copy all the settings into a struct which can be sent over the network easily
 	net_settings.version        = SETTINGS_VERSION;
-	net_settings.duration       = settings->duration;
-	net_settings.type           = settings->type;
-	net_settings.protocol       = settings->protocol;
+	net_settings.duration       = htonl( settings->duration );
+	net_settings.type           = htonl( settings->type );
+	net_settings.protocol       = htonl( settings->protocol );
 
 	net_settings.verbose        = settings->verbose;
 	net_settings.dirty          = settings->dirty;
 	net_settings.timestamp      = settings->timestamp;
 	net_settings.disable_nagles = settings->disable_nagles;
 
-	net_settings.message_size   = settings->message_size;
-	net_settings.socket_size    = settings->socket_size;
+	net_settings.message_size   = htonl( settings->message_size );
+	net_settings.socket_size    = htonl( settings->socket_size );
 
-	net_settings.port           = settings->port;
-	net_settings.cores          = settings->cores;
+	net_settings.cores          = htonl( settings->cores );
+	net_settings.port           = htons( settings->port );
 
 	ret = send(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) ) {
@@ -135,11 +137,13 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	}
 
 	for (x = 0; x < settings->cores; x++) {
-		unsigned int *row = settings->clientserver[x];
-		// TODO make this send int32 not ints
-		ret = send(s, (char *)row, sizeof(*row) * settings->cores, 0);
-		if ( ret != sizeof(*row) * settings->cores ) {
-			return -1;
+		for (y=0; y < settings->cores; y++) {
+			uint32_t i = htonl( settings->clientserver[x][y] );
+
+			ret = send(s, (const char *)&i, sizeof(i), 0);
+			if ( ret != sizeof(i) ) {
+				return -1;
+			}
 		}
 	}
 

@@ -59,7 +59,6 @@ int prepare_servers(const struct settings * settings) {
 		}
 	}
 
-
 	return 0;
 }
 
