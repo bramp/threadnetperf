@@ -22,7 +22,6 @@ int prepare_servers(const struct settings * settings) {
 	
 	// Malloc one space for each core
 	sreq = calloc ( cores, sizeof(*sreq) );
-
 	if ( !sreq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		return -1;
@@ -83,6 +82,7 @@ int create_servers() {
 		threads++;
 	}
 
+	// TODO make this not a spin lock
 	// Wait until all the servers are ready to accept connections
 	while ( bRunning && server_listen_unready > 0 ) {
 		usleep( 1000 );

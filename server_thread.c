@@ -221,6 +221,7 @@ void *server_thread(void *data) {
 		}
 	}
 
+	// We are now listening and waiting
 	pthread_mutex_lock( &go_mutex );
 	server_listen_unready--;
 	pthread_mutex_unlock( &go_mutex );

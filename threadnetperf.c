@@ -58,7 +58,7 @@ const unsigned int cores = 8; // TODO get the real number!
 pthread_t *thread = NULL;
 
  // Total number of threads
-unsigned int threads = 0;
+size_t threads = 0;
 
 
 
@@ -351,11 +351,10 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	return 0;
 }
 
+// Wait until every thread signals a ready
 void wait_for_threads() {
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 
-	// Spin lock until all the threads are ready
-	// TODO change this to use a semaphore
 	pthread_mutex_lock( &go_mutex );
 	while ( bRunning && unready_threads > 0 ) {
 		pthread_mutex_unlock( &go_mutex );
@@ -366,22 +365,55 @@ void wait_for_threads() {
 
 		pthread_mutex_lock( &go_mutex );
 	}
-	// Annonce to everyone to start
+	pthread_mutex_unlock( &go_mutex );
+}
+
+// Annonce to everyone to start
+void start_threads() {
+	pthread_mutex_lock( &go_mutex );
 	pthread_cond_broadcast( &go_cond );
 	pthread_mutex_unlock( &go_mutex );
 }
 
 // Join all these threads
-void threads_join(const pthread_t *threads, size_t count) {
+size_t threads_join(const pthread_t *threads, size_t count) {
 	while (count > 0) {
 		count--;
 		pthread_join( threads[count], NULL );
 	}
+	return count;
 }
 
-void local_run_tests( const struct settings *settings, struct stats *total_stats ) {
+size_t threads_sum_stats(const pthread_t *threads, size_t count, const struct settings *settings, struct stats *total_stats) {
+	unsigned int i = 0;
 
-	unsigned int i;
+	while (count > 0) {
+		struct stats *stats;
+
+		count--;
+		pthread_join( threads[count], (void **)&stats );
+
+		if ( stats != NULL ) {
+			print_results( settings, stats );
+
+			// Now add the values to the total
+			total_stats->bytes_received += stats->bytes_received;
+			total_stats->duration       += stats->duration;
+			total_stats->pkts_received  += stats->pkts_received;
+			total_stats->pkts_time      += stats->pkts_time;
+
+			i++;
+		}
+	}
+
+	// Divide the duration by the # of CPUs used
+	total_stats->duration /= i;
+
+	return count;
+}
+
+// Runs tests locally creating both servers and clients
+void local_run_tests( const struct settings *settings, struct stats *total_stats ) {
 
 	assert ( settings != NULL );
 	assert ( total_stats != NULL );
@@ -400,12 +432,18 @@ void local_run_tests( const struct settings *settings, struct stats *total_stats
 	// A list of threads
 	assert ( thread == NULL );
 	thread = calloc( unready_threads, sizeof(*thread) );
+	if ( !thread ) {
+		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
 
 	// Create each server/client thread
 	create_servers(&settings);
 	create_clients(&settings);
 
+	// Wait and then signal a go!
 	wait_for_threads();
+	start_threads();
 
 	// Pauses for the duration, then sets bRunning to false
 	pause_for_duration( settings );
@@ -414,50 +452,36 @@ void local_run_tests( const struct settings *settings, struct stats *total_stats
 
 	print_headers( settings );
 
-	// Block waiting until all threads die
-	i = 0;
-	while (threads > 0) {
-		struct stats *stats;
+	// Block waiting until all threads die and print out their stats
+	threads = threads_sum_stats(thread, threads, settings, total_stats);
 
-		threads--;
-		pthread_join( thread[threads], (void **)&stats );
-
-		if ( stats != NULL ) {
-			print_results( settings, stats );
-
-			// Now add the values to the total
-			total_stats->bytes_received += stats->bytes_received;
-			total_stats->duration       += stats->duration;
-			total_stats->pkts_received  += stats->pkts_received;
-			total_stats->pkts_time      += stats->pkts_time;
-
-			i++;
-		}
-	}
-
-	// Divide the duration by the # of CPUs used
-	total_stats->duration /= i;
+	free(thread);
+	thread = NULL;
 
 cleanup:
 
 	// Make sure we are not running anymore
 	stop_all();
 
-	// Block waiting until all threads die
-	threads_join ( thread, threads );
-	threads = 0;
-
-	free(thread);
-	thread = NULL;
-
 	cleanup_clients();
 	cleanup_servers();
+}
+
+
+void remote_run_client_tests( const struct settings *settings ) {
+
+}
+
+void remote_run_server_tests( const struct settings *settings, struct stats *total_stats ) {
+
 }
 
 
 void run_deamon(const struct settings *settings) {
 
 	SOCKET listen_socket = INVALID_SOCKET;
+
+	assert ( settings != NULL );
 
 	listen_socket = start_daemon(settings);
 
@@ -467,9 +491,58 @@ void run_deamon(const struct settings *settings) {
 		SOCKET s = INVALID_SOCKET;
 		struct stats total_stats;
 
+		bRunning = 1;
+		threads = 0;
+		unready_threads = 0; // Number of threads not ready
+
+		// Wait for a test to come in
 		s = accept_test( listen_socket, &remote_settings, settings->verbose );
 
-		run_tests( remote_settings, &total_stats );
+		// Setup all the data for each server
+		if ( prepare_servers(settings) )
+			goto cleanup;
+
+		// A list of threads
+		assert ( thread == NULL );
+		thread = calloc( unready_threads, sizeof(*thread) );
+		if ( !thread ) {
+			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+			goto cleanup;
+		}
+
+		// Create each server/client thread
+		create_servers(&settings);
+
+		// Signal the the remote machine that the servers are ready
+
+		// Wait for a go
+		wait_for_threads();
+		
+		// Signal the remote machine that the clients are all connected
+
+		// And now tell our servers to go!
+		start_threads();
+
+		// Pause until the remote end starts to disconnect
+
+		// Stop
+		stop_all();
+
+		// Print the results
+		print_headers( settings );
+
+		// Block waiting until all threads die and print out their stats
+		threads = threads_sum_stats(thread, threads, settings, &total_stats);
+
+		free(thread);
+		thread = NULL;
+
+	cleanup:
+
+		// Make sure we are not running anymore
+		stop_all();
+
+		cleanup_servers();
 	}
 
 	close_daemon(listen_socket);
@@ -505,7 +578,7 @@ int main (int argc, char *argv[]) {
 
 	// If we are daemon mode start that
 	if (settings.deamon) {
-		start_daemon(&settings);
+		run_deamon(&settings);
 		goto cleanup;
 	} 
 	// Otherwise just run the test locally

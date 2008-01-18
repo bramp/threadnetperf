@@ -18,7 +18,6 @@ int prepare_clients(const struct settings * settings) {
 	
 	// Malloc one space for each core
 	creq = calloc ( cores, sizeof(*creq) );
-
 	if ( !creq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		return -1;
