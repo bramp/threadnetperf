@@ -561,7 +561,7 @@ int main (int argc, char *argv[]) {
 	double sumsquare = 0.0;
 
 	settings.cores = max_cores;
-	settings.clientserver = (int **)malloc_2D(sizeof(int), settings.cores, settings.cores);
+	settings.clientserver = (unsigned int **)malloc_2D(sizeof(unsigned int), settings.cores, settings.cores);
 
 	if ( parse_arguments( argc, argv, &settings ) ) {
 		goto cleanup;
