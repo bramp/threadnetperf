@@ -10,7 +10,7 @@ SOCKET start_daemon(const struct settings * settings);
 SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int verbose);
 
 // Sends a test to a daemon
-int send_test( SOCKET socket, struct settings *settings);
+int send_test( SOCKET socket, const struct settings *settings);
 
 // Close the control daemon
 void close_daemon( SOCKET listen_socket );

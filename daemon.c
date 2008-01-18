@@ -112,7 +112,7 @@ void close_daemon( SOCKET listen_socket ) {
 	closesocket(listen_socket);
 }
 
-int send_test( SOCKET s, struct settings *settings) {
+int send_test( SOCKET s, const struct settings *settings) {
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
 
