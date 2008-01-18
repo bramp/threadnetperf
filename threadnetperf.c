@@ -653,7 +653,7 @@ int main (int argc, char *argv[]) {
 
 	// Some test code to aid in debugging
 	if ( strcmp(settings.server_host, "127.0.0.1") != 0 ) {
-		connect_daemon(&settings);
+		run_remote(&settings);
 		goto cleanup;
 	}
 

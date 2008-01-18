@@ -51,7 +51,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	assert ( settings != NULL );
 
 	ret = recv(s, (char *)&net_settings, sizeof(net_settings), 0);
-	if ( ret != sizeof(net_settings) || net_settings.version != SETTINGS_VERSION ) {
+	if ( ret != sizeof(net_settings) || net_settings.version != ntohl(SETTINGS_VERSION) ) {
 		if ( ret > 0 )
 			fprintf(stderr, "Invalid setting struct received\n" );
 
@@ -115,7 +115,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	assert ( settings != NULL );
 
 	// Copy all the settings into a struct which can be sent over the network easily
-	net_settings.version        = SETTINGS_VERSION;
+	net_settings.version        = htonl( SETTINGS_VERSION );
 	net_settings.duration       = htonl( settings->duration );
 	net_settings.type           = htonl( settings->type );
 	net_settings.protocol       = htonl( settings->protocol );
