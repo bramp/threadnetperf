@@ -15,5 +15,6 @@ extern pthread_t *thread; // Array to handle thread handles
 extern unsigned int threads; // Total number of threads
 
 extern volatile int bRunning; // Flag to indidcate if we are still running
+extern volatile int bGo; // Flag to indidcate if we can start the test
 
 #endif

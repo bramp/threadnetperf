@@ -48,6 +48,9 @@ pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 // Flag to indidcate if we are still running
 volatile int bRunning = 1;
 
+// Flag to indidcate if we can start the test
+volatile int bGo = 0;
+
 // Count of how many threads are not ready
 unsigned int unready_threads = 0;
 
@@ -372,6 +375,7 @@ void wait_for_threads() {
 // Annonce to everyone to start
 void start_threads() {
 	pthread_mutex_lock( &go_mutex );
+	bGo = 1;
 	pthread_cond_broadcast( &go_cond );
 	pthread_mutex_unlock( &go_mutex );
 }
@@ -414,11 +418,12 @@ size_t threads_sum_stats(const pthread_t *threads, size_t count, const struct se
 }
 
 // Runs tests locally creating both servers and clients
-void local_run_tests( const struct settings *settings, struct stats *total_stats ) {
+void run_local( const struct settings *settings, struct stats *total_stats ) {
 
 	assert ( settings != NULL );
 	assert ( total_stats != NULL );
 
+	bGo = 0;
 	bRunning = 1;
 	threads = 0;
 	unready_threads = 0; // Number of threads not ready
@@ -473,10 +478,12 @@ cleanup:
 	cleanup_servers();
 }
 
+// Run a experiment on a remote host
 void run_remote(const struct settings *settings) {
 	SOCKET s = INVALID_SOCKET;
 	struct stats total_stats;
 
+	bGo = 0;
 	bRunning = 1;
 	threads = 0;
 	unready_threads = 0; // Number of threads not ready
@@ -499,7 +506,7 @@ void run_remote(const struct settings *settings) {
 		goto cleanup;
 	}
 
-	// Wait for a threads
+	// Wait for the remote to be ready
 	if ( wait_ready(s) )
 		goto cleanup;
 
@@ -507,6 +514,7 @@ void run_remote(const struct settings *settings) {
 	if ( create_clients(&settings) )
 		goto cleanup;
 
+	// Wait for the client threads to be ready
 	wait_for_threads();
 
 	// Wait for a go from the server
@@ -549,6 +557,7 @@ void run_deamon(const struct settings *settings) {
 		SOCKET s = INVALID_SOCKET;
 		struct stats total_stats;
 
+		bGo = 0;
 		bRunning = 1;
 		threads = 0;
 		unready_threads = 0; // Number of threads not ready
@@ -664,7 +673,7 @@ int main (int argc, char *argv[]) {
 		total_stats.core = -1;
 
 		// Start the tests
-		local_run_tests( &settings, &total_stats );
+		run_local( &settings, &total_stats );
 
 		if (settings.confidence_lvl != 0.0) {
 			double mean;

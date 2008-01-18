@@ -156,7 +156,7 @@ void* client_thread(void *data) {
 	pthread_mutex_unlock( &ready_mutex );
 
 	// Wait for the go
-	while ( req->bRunning && unready_threads > 0 ) {
+	while ( req->bRunning && !bGo ) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
