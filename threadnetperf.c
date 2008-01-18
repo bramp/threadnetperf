@@ -435,6 +435,8 @@ void run_local( const struct settings *settings, struct stats *total_stats ) {
 	if ( prepare_clients(settings) )
 		goto cleanup;
 
+	assert ( unready_threads > 0 );
+
 	// A list of threads
 	assert ( thread == NULL );
 	thread = calloc( unready_threads, sizeof(*thread) );
@@ -497,6 +499,8 @@ void run_remote(const struct settings *settings) {
 
 	if ( prepare_clients(settings) )
 		goto cleanup;
+
+	assert ( unready_threads > 0 );
 
 	// A list of threads
 	assert ( thread == NULL );
@@ -572,6 +576,10 @@ void run_deamon(const struct settings *settings) {
 		// Setup all the data for each server
 		if ( prepare_servers(&remote_settings) )
 			goto cleanup;
+
+		if ( unready_threads == 0 ) {
+			goto cleanup;
+		}
 
 		// A list of threads
 		assert ( thread == NULL );
