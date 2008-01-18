@@ -21,7 +21,7 @@ int prepare_servers(const struct settings * settings) {
 	assert ( sreq == NULL );
 	
 	// Malloc one space for each core
-	sreq = calloc ( cores, sizeof(*sreq) );
+	sreq = calloc ( settings->cores, sizeof(*sreq) );
 	if ( !sreq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		return -1;
@@ -31,12 +31,17 @@ int prepare_servers(const struct settings * settings) {
 	assert ( clientserver != NULL );
 
 	// Loop through clientserver looking for each server we need to create
-	for (servercore = 0; servercore < cores; servercore++) {
-		for (clientcore = 0; clientcore < cores; clientcore++) {
+	for (servercore = 0; servercore < settings->cores; servercore++) {
+		for (clientcore = 0; clientcore < settings->cores; clientcore++) {
 
 			// Don't bother if there are zero requests
 			if ( clientserver [ clientcore ] [ servercore ] == 0 )
 				continue;
+
+			if ( clientcore > max_cores || servercore > max_cores ) {
+				fprintf(stderr, "Too many cores! %u > %u\n", clientcore > servercore ? clientcore : servercore, max_cores );
+				return -1;
+			}
 
 			// Check if we haven't set up this server thread yet
 			if ( sreq [ servercore ].bRunning == 0 ) {
@@ -58,11 +63,11 @@ int prepare_servers(const struct settings * settings) {
 	return 0;
 }
 
-int create_servers() {
+int create_servers(const struct settings *settings) {
 	unsigned int servercore;
 
 	// Create all the server threads
-	for (servercore = 0; servercore < cores; servercore++) {
+	for (servercore = 0; servercore < settings->cores; servercore++) {
 		
 		cpu_set_t cpus;
 
@@ -91,10 +96,10 @@ int create_servers() {
 	return 0;
 }
 
-void stop_all_servers() {
+void stop_all_servers(const struct settings *settings) {
 	if ( sreq ) {
 		unsigned int i = 0;
-		for (; i < cores; i++) {
+		for (; i < settings->cores; i++) {
 			sreq[i].bRunning = 0;
 		}
 	}

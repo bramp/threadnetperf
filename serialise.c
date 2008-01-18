@@ -39,14 +39,13 @@ struct network_settings {
 
 	uint16_t port;
 
-	// A 2D array for each possible to and from core (with number of connections)
 	uint32_t cores;
 };
 
 // Reads settings from a socket
 int read_settings( SOCKET s, struct settings * settings ) {
 	int ret;
-	int x;
+	unsigned int x;
 	struct network_settings net_settings;
 
 	assert ( s != INVALID_SOCKET );
@@ -107,7 +106,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 // Sends settings to a socket
 int send_settings( SOCKET s, const struct settings * settings ) {
 	int ret;
-	int x;
+	unsigned int x;
 	struct network_settings net_settings;
 
 	assert ( s != INVALID_SOCKET );

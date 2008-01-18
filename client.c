@@ -17,7 +17,7 @@ int prepare_clients(const struct settings * settings) {
 	assert ( creq == NULL );
 	
 	// Malloc one space for each core
-	creq = calloc ( cores, sizeof(*creq) );
+	creq = calloc ( settings->cores, sizeof(*creq) );
 	if ( !creq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		return -1;
@@ -27,8 +27,8 @@ int prepare_clients(const struct settings * settings) {
 	assert ( clientserver != NULL );
 
 	// Loop through clientserver looking for each server we need to create
-	for (servercore = 0; servercore < cores; servercore++) {
-		for (clientcore = 0; clientcore < cores; clientcore++) {
+	for (servercore = 0; servercore < settings->cores; servercore++) {
+		for (clientcore = 0; clientcore < settings->cores; clientcore++) {
 
 			struct client_request_details *c;
 
@@ -82,10 +82,10 @@ int prepare_clients(const struct settings * settings) {
 	return 0;
 }
 
-int create_clients() {
+int create_clients(const struct settings *settings) {
 	unsigned int clientcore;
 
-	for (clientcore = 0; clientcore < cores; clientcore++) {
+	for (clientcore = 0; clientcore < settings->cores; clientcore++) {
 		cpu_set_t cpus;
 
 		if ( ! creq[clientcore].bRunning )
@@ -105,20 +105,20 @@ int create_clients() {
 	return 0;
 }
 
-void stop_all_clients() {
+void stop_all_clients(const struct settings *settings) {
 	if ( creq ) {
 		unsigned int i = 0;
-		for (; i < cores; i++) {
+		for (; i < settings->cores; i++) {
 			creq[i].bRunning = 0;
 		}
 	}
 }
 
-void cleanup_clients() {
+void cleanup_clients(const struct settings *settings) {
 	unsigned int i;
 
 	if ( creq ) {
-		for (i = 0; i < cores; i++) {
+		for (i = 0; i < settings->cores; i++) {
 			struct client_request_details *c = creq[i].details;
 			while ( c != NULL ) {
 				struct client_request_details *nextC = c->next;

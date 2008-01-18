@@ -72,8 +72,8 @@ struct settings {
 	unsigned short port;
 
 	// A 2D array for each possible to and from core (with number of connections)
-	int cores;
-	int **clientserver;
+	unsigned int cores;
+	unsigned int **clientserver;
 };
 
 int enable_nagle(SOCKET s);

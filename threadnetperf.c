@@ -52,7 +52,7 @@ volatile int bRunning = 1;
 unsigned int unready_threads = 0;
 
 // The number of cores this machine has
-const unsigned int cores = 8; // TODO get the real number!
+const unsigned int max_cores = 8; // TODO get the real number!
 
  // Array to handle thread handles
 pthread_t *thread = NULL;
@@ -326,8 +326,8 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		}
 
 		// Check all the paramters make sense
-		if ( client >= cores || server >= cores ) {
-			fprintf(stderr, "Cores must not be greater than %d (%s)\n", cores, argv[optind] );
+		if ( client >= max_cores || server >= max_cores ) {
+			fprintf(stderr, "Cores must not be greater than %d (%s)\n", max_cores, argv[optind] );
 			return -1;
 		}
 
@@ -560,8 +560,8 @@ int main (int argc, char *argv[]) {
 	double sum = 0.0;
 	double sumsquare = 0.0;
 
-	settings.cores = cores;
-	settings.clientserver = (int **)malloc_2D(sizeof(int), cores, cores);
+	settings.cores = max_cores;
+	settings.clientserver = (int **)malloc_2D(sizeof(int), settings.cores, settings.cores);
 
 	if ( parse_arguments( argc, argv, &settings ) ) {
 		goto cleanup;
@@ -623,7 +623,7 @@ int main (int argc, char *argv[]) {
 
 cleanup:
 
-	free_2D( (void **)settings.clientserver, cores, cores);
+	free_2D( (void **)settings.clientserver, settings.cores, settings.cores);
 
 	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );

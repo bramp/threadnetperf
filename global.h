@@ -8,7 +8,7 @@ extern pthread_mutex_t ready_mutex;
 extern pthread_cond_t go_cond; // Signal all threads when they are ready to start
 extern pthread_mutex_t go_mutex;
 
-extern const unsigned int cores; // The number of CPU cores this machine has
+extern const unsigned int max_cores; // The number of CPU cores this machine has
 extern unsigned int unready_threads; // Count of how many threads are not ready
 
 extern pthread_t *thread; // Array to handle thread handles
