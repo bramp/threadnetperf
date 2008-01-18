@@ -25,13 +25,6 @@
 
 #ifdef WIN32
 	#include "getopt.h"
-
-	/* Access functions for CPU masks.  */
-	#define CPU_ZERO(cpusetp)
-	#define CPU_SET(cpu, cpusetp)
-	#define CPU_CLR(cpu, cpusetp)
-	#define CPU_ISSET(cpu, cpusetp)
-
 #else
 	#include <unistd.h>
 #endif
@@ -515,7 +508,7 @@ void run_remote(const struct settings *settings) {
 		goto cleanup;
 
 	// Now start connecting the clients
-	if ( create_clients(&settings) )
+	if ( create_clients( settings) )
 		goto cleanup;
 
 	// Wait for the client threads to be ready

@@ -16,7 +16,7 @@
 	} cpu_set_t;
 
 	/* Access functions for CPU masks.  */
-	#define CPU_ZERO(cpusetp)
+	#define CPU_ZERO(cpusetp) ((cpusetp)->__cpu_mask = 0)
 	#define CPU_SET(cpu, cpusetp)
 	#define CPU_CLR(cpu, cpusetp)
 	#define CPU_ISSET(cpu, cpusetp)

@@ -40,6 +40,7 @@ void* client_thread(void *data) {
 	fd_set readFD;
 	fd_set writeFD;
 
+	assert ( req != NULL );
 	assert ( details != NULL );
 
 	// Blank client before we start

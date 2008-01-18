@@ -89,6 +89,9 @@ int prepare_clients(const struct settings * settings) {
 int create_clients(const struct settings *settings) {
 	unsigned int clientcore;
 
+	assert ( settings != NULL );
+	assert ( creq != NULL );
+
 	for (clientcore = 0; clientcore < settings->cores; clientcore++) {
 		cpu_set_t cpus;
 
