@@ -326,6 +326,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		}
 
 		// Check all the paramters make sense
+		// TODO check if the server is remote, and then decide if the cores make sense
 		if ( client >= max_cores || server >= max_cores ) {
 			fprintf(stderr, "Cores must not be greater than %d (%s)\n", max_cores, argv[optind] );
 			return -1;
@@ -422,7 +423,7 @@ void local_run_tests( const struct settings *settings, struct stats *total_stats
 	threads = 0;
 	unready_threads = 0; // Number of threads not ready
 
-	// Setup all the data for each server and client->
+	// Setup all the data for each server and client
 	if ( prepare_servers(settings) )
 		goto cleanup;
 
@@ -438,8 +439,11 @@ void local_run_tests( const struct settings *settings, struct stats *total_stats
 	}
 
 	// Create each server/client thread
-	create_servers(&settings);
-	create_clients(&settings);
+	if ( create_servers(&settings) )
+		goto cleanup;
+
+	if ( create_clients(&settings) )
+		goto cleanup;
 
 	// Wait and then signal a go!
 	wait_for_threads();
@@ -455,27 +459,81 @@ void local_run_tests( const struct settings *settings, struct stats *total_stats
 	// Block waiting until all threads die and print out their stats
 	threads = threads_sum_stats(thread, threads, settings, total_stats);
 
-	free(thread);
-	thread = NULL;
-
 cleanup:
 
 	// Make sure we are not running anymore
 	stop_all();
 
+	threads_join(thread, threads);
+
+	free(thread);
+	thread = NULL;
+
 	cleanup_clients();
 	cleanup_servers();
 }
 
+void run_remote(const struct settings *settings) {
+	SOCKET s = INVALID_SOCKET;
+	struct stats total_stats;
 
-void remote_run_client_tests( const struct settings *settings ) {
+	bRunning = 1;
+	threads = 0;
+	unready_threads = 0; // Number of threads not ready
 
+	s = connect_daemon(settings);
+	if ( s == INVALID_SOCKET )
+		goto cleanup;
+
+	if ( send_test( s, settings) )
+		goto cleanup;
+
+	if ( prepare_clients(settings) )
+		goto cleanup;
+
+	// A list of threads
+	assert ( thread == NULL );
+	thread = calloc( unready_threads, sizeof(*thread) );
+	if ( !thread ) {
+		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
+	// Wait for a threads
+	if ( wait_ready(s) )
+		goto cleanup;
+
+	// Now start connecting the clients
+	if ( create_clients(&settings) )
+		goto cleanup;
+
+	wait_for_threads();
+
+	// Wait for a go from the server
+	if ( wait_go(s) )
+		goto cleanup;
+
+	// Now go
+	start_threads();
+
+	// Pauses for the duration, then sets bRunning to false
+	pause_for_duration( settings );
+
+	stop_all();
+
+	// recv results
+
+cleanup:
+	// Make sure we are not running anymore
+	stop_all();
+
+	threads_join(thread, threads);
+
+	free(thread);
+	thread = NULL;
+
+	cleanup_clients();
 }
-
-void remote_run_server_tests( const struct settings *settings, struct stats *total_stats ) {
-
-}
-
 
 void run_deamon(const struct settings *settings) {
 
@@ -497,9 +555,13 @@ void run_deamon(const struct settings *settings) {
 
 		// Wait for a test to come in
 		s = accept_test( listen_socket, &remote_settings, settings->verbose );
+		if ( s == INVALID_SOCKET )
+			goto main_cleanup;
+
+		remote_settings.verbose = 0; // Make sure verbose is off on the server
 
 		// Setup all the data for each server
-		if ( prepare_servers(settings) )
+		if ( prepare_servers(&remote_settings) )
 			goto cleanup;
 
 		// A list of threads
@@ -511,14 +573,19 @@ void run_deamon(const struct settings *settings) {
 		}
 
 		// Create each server/client thread
-		create_servers(&settings);
+		if ( create_servers(&remote_settings) )
+			goto cleanup;
 
 		// Signal the the remote machine that the servers are ready
+		if ( signal_ready ( s ) )
+			goto cleanup;
 
 		// Wait for a go
 		wait_for_threads();
 		
 		// Signal the remote machine that the clients are all connected
+		if ( signal_go ( s ) )
+			goto cleanup;
 
 		// And now tell our servers to go!
 		start_threads();
@@ -528,22 +595,23 @@ void run_deamon(const struct settings *settings) {
 		// Stop
 		stop_all();
 
-		// Print the results
-		print_headers( settings );
-
 		// Block waiting until all threads die and print out their stats
 		threads = threads_sum_stats(thread, threads, settings, &total_stats);
-
-		free(thread);
-		thread = NULL;
 
 	cleanup:
 
 		// Make sure we are not running anymore
 		stop_all();
 
+		threads_join(thread, threads);
+
+		free(thread);
+		thread = NULL;
+
 		cleanup_servers();
 	}
+
+main_cleanup:
 
 	close_daemon(listen_socket);
 }

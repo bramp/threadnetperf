@@ -69,46 +69,7 @@ bail:
 	return INVALID_SOCKET;
 }
 
-void close_daemon( SOCKET listen_socket ) {
-	closesocket(listen_socket);
-}
-
-SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int verbose) {
-	SOCKET s = INVALID_SOCKET;
-
-	struct sockaddr_storage addr; // Incoming addr
-	socklen_t addr_len = sizeof(addr);
-
-	s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
-	if ( s == INVALID_SOCKET) {
-		fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	if ( verbose ) {
-		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
-
-		// Print the host/port
-		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
-
-		printf("Incoming control connection %s\n", addr_str);
-	}
-
-	if ( read_settings ( s, recv_settings ) ) {
-		fprintf(stderr, "%s:%d read_settings() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	if ( verbose )
-		printf("Received tests\n");
-
-	return s;
-
-cleanup:
-	return INVALID_SOCKET;
-}
-
-void connect_daemon(const struct settings *settings) {
+SOCKET connect_daemon(const struct settings *settings) {
 	SOCKET s;
 	struct sockaddr_in addr; // Address to listen on
 
@@ -139,19 +100,99 @@ void connect_daemon(const struct settings *settings) {
 		goto cleanup;
 	}
 
-	if ( settings->verbose )
-		printf("Connect to deamon, sending tests\n");
-
-
-	if ( send_settings(s, settings) ) {
-		fprintf(stderr, "%s:%d send_settings() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	if ( settings->verbose )
-		printf("Sent tests\n");
+	return s;
 
 cleanup:
 
 	closesocket(s);
+	return INVALID_SOCKET;
 }
+
+void close_daemon( SOCKET listen_socket ) {
+	closesocket(listen_socket);
+}
+
+int send_test( SOCKET s, struct settings *settings) {
+	assert ( s != INVALID_SOCKET );
+	assert ( settings != NULL );
+
+	if ( send_settings(s, settings) ) {
+		fprintf(stderr, "%s:%d send_settings() error %d\n", __FILE__, __LINE__, ERRNO );
+		return -1;
+	}
+	
+	return 0;
+}
+
+SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int verbose) {
+	SOCKET s = INVALID_SOCKET;
+
+	struct sockaddr_storage addr; // Incoming addr
+	socklen_t addr_len = sizeof(addr);
+
+	assert ( listen_socket != INVALID_SOCKET );
+	assert ( recv_settings != NULL );
+
+	s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
+	if ( s == INVALID_SOCKET) {
+		fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	if ( verbose ) {
+		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
+
+		// Print the host/port
+		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
+
+		printf("Incoming control connection %s\n", addr_str);
+	}
+
+	if ( read_settings ( s, recv_settings ) ) {
+		fprintf(stderr, "%s:%d read_settings() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	if ( verbose )
+		printf("Received tests\n");
+
+	return s;
+
+cleanup:
+	return INVALID_SOCKET;
+}
+
+#define SIGNAL_READY 1
+#define SIGNAL_GO 2
+
+int signal_remote( SOCKET s, unsigned char code ) {
+	assert ( s != INVALID_SOCKET );
+	return send(s, &code, 1, 0) != 1;
+}
+
+int wait_remote( SOCKET s, unsigned char code ) {
+	unsigned char code2;
+	assert ( s != INVALID_SOCKET );
+
+	if ( recv(s, &code2, 1, 0) != 1 || code2 != code )
+		return -1;
+
+	return 0;
+}
+
+int signal_ready( SOCKET s ) {
+	return signal_remote( s, SIGNAL_READY );
+}
+
+int signal_go( SOCKET s ) {
+	return signal_remote( s, SIGNAL_GO );
+}
+
+int wait_ready( SOCKET s ) {
+	return wait_remote( s, SIGNAL_READY );
+}
+
+int wait_go ( SOCKET s ) {
+	return wait_remote( s, SIGNAL_GO );
+}
+
