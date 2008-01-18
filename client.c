@@ -7,6 +7,7 @@
 
 // Array of all the client requests
 struct client_request *creq = NULL;
+size_t creq_size = 0;
 
 int prepare_clients(const struct settings * settings) {
 
@@ -15,10 +16,13 @@ int prepare_clients(const struct settings * settings) {
 
 	assert ( settings != NULL );
 	assert ( creq == NULL );
-	
+	assert ( creq_size == 0 );
+
 	// Malloc one space for each core
-	creq = calloc ( settings->cores, sizeof(*creq) );
+	creq_size = settings->cores;
+	creq = calloc ( creq_size, sizeof(*creq) );
 	if ( !creq ) {
+		creq_size = 0;
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		return -1;
 	}
@@ -105,20 +109,27 @@ int create_clients(const struct settings *settings) {
 	return 0;
 }
 
-void stop_all_clients(const struct settings *settings) {
+void stop_all_clients() {
 	if ( creq ) {
 		unsigned int i = 0;
-		for (; i < settings->cores; i++) {
+		
+		assert ( creq_size != 0 );
+
+		for (; i < creq_size; i++) {
 			creq[i].bRunning = 0;
 		}
 	}
 }
 
-void cleanup_clients(const struct settings *settings) {
+void cleanup_clients() {
 	unsigned int i;
 
 	if ( creq ) {
-		for (i = 0; i < settings->cores; i++) {
+		assert ( creq_size != 0 );
+
+		for (i = 0; i < creq_size; i++) {
+			
+			// Free the chain of details
 			struct client_request_details *c = creq[i].details;
 			while ( c != NULL ) {
 				struct client_request_details *nextC = c->next;
@@ -130,5 +141,6 @@ void cleanup_clients(const struct settings *settings) {
 
 		free( creq );
 		creq = NULL;
+		creq_size = 0;
 	}
 }

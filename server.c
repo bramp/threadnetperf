@@ -11,6 +11,7 @@
 
 // Array of all the server requests
 struct server_request *sreq = NULL;
+size_t sreq_size = 0;
 
 int prepare_servers(const struct settings * settings) {
 
@@ -19,11 +20,14 @@ int prepare_servers(const struct settings * settings) {
 
 	assert ( settings != NULL );
 	assert ( sreq == NULL );
-	
+	assert ( sreq_size == 0 );
+
 	// Malloc one space for each core
-	sreq = calloc ( settings->cores, sizeof(*sreq) );
+	sreq_size = settings->cores;
+	sreq = calloc (sreq_size , sizeof(*sreq) );
 	if ( !sreq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		sreq_size = 0;
 		return -1;
 	}
 
@@ -65,6 +69,8 @@ int prepare_servers(const struct settings * settings) {
 int create_servers(const struct settings *settings) {
 	unsigned int servercore;
 
+	assert ( sreq_size == settings->cores );
+
 	// Create all the server threads
 	for (servercore = 0; servercore < settings->cores; servercore++) {
 		
@@ -95,10 +101,13 @@ int create_servers(const struct settings *settings) {
 	return 0;
 }
 
-void stop_all_servers(const struct settings *settings) {
+void stop_all_servers() {
 	if ( sreq ) {
 		unsigned int i = 0;
-		for (; i < settings->cores; i++) {
+		
+		assert ( sreq_size != 0 );
+
+		for (; i < sreq_size; i++) {
 			sreq[i].bRunning = 0;
 		}
 	}
@@ -107,4 +116,5 @@ void stop_all_servers(const struct settings *settings) {
 void cleanup_servers() {
 	free( sreq );
 	sreq = NULL;
+	sreq_size = 0;
 }
