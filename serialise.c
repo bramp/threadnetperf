@@ -85,14 +85,14 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->server_host    = NULL;
 
 	// Now construct the clientserver table
-	settings->clientserver = (int **)malloc_2D(sizeof(int), settings->cores, settings->cores);
+	settings->clientserver = (unsigned int **)malloc_2D(sizeof(unsigned int), settings->cores, settings->cores);
 	if ( settings->clientserver == NULL ) {
 		fprintf(stderr, "%s:%d malloc_2D() error\n", __FILE__, __LINE__);
 		return -1;
 	}
 
 	for (x = 0; x < settings->cores; x++) {
-		int *row = settings->clientserver[x];
+		unsigned int *row = settings->clientserver[x];
 		// TODO make this recv int32 not ints
 		ret = recv(s, (char *)row, sizeof(*row) * settings->cores, 0);
 		if ( ret != sizeof(*row) * settings->cores ) {
@@ -135,7 +135,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	}
 
 	for (x = 0; x < settings->cores; x++) {
-		int *row = settings->clientserver[x];
+		unsigned int *row = settings->clientserver[x];
 		// TODO make this send int32 not ints
 		ret = send(s, (char *)row, sizeof(*row) * settings->cores, 0);
 		if ( ret != sizeof(*row) * settings->cores ) {
