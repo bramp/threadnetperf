@@ -3,6 +3,7 @@
 #include "print.h" // for print_results
 
 #include <assert.h>
+#include <malloc.h>
 
  // Array to handle thread handles
 pthread_t *thread = NULL;
@@ -136,7 +137,7 @@ int thread_alloc(size_t count) {
 }
 
 void threads_clear() {
-	free( thread ); 
+	free( thread );
 	thread = NULL;
 	thread_count = 0;
 }

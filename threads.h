@@ -1,6 +1,8 @@
 #ifndef _THREADS_H
 #define _THREADS_H
 
+#include "common.h" // for struct settings
+
 #include <pthread.h> // We assume we have a pthread library (even on windows)
 
 #ifdef WIN32
