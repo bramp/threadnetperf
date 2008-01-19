@@ -173,7 +173,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 	if ( argc == 1 ) {
 		print_usage();
-		return -1;
+		return 1;
 	}
 
 	// Lets parse some command line args
@@ -189,7 +189,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				
 				if((level != 75 && level !=90 && level != 95 && level != 97.5 && level != 99 && level != 99.5 && level != 99.95 ) ) {
 						fprintf(stderr, "Confidence Level must be {75,90,95,97.5,99,99.5,99.95}. Given (%s)\n", optarg);
-						return -1;
+						return 1;
 					}
 
 				settings->confidence_lvl = level ;
@@ -206,7 +206,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				settings->duration = atoi( optarg );
 				if ( settings->duration == 0 ) {
 					fprintf(stderr, "Invalid duration given (%s)\n", optarg );
-					return -1;
+					return 1;
 				}
 				break;
 
@@ -215,7 +215,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 || min == 0 || max == 0 ) {
 					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
-					return -1;
+					return 1;
 				}
 				settings->min_iterations = min;
 				settings->max_iterations = max;
@@ -238,7 +238,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				settings->message_size = atoi( optarg );
 				if ( settings->message_size == 0 ) {
 					fprintf(stderr, "Invalid message size given (%s)\n", optarg );
-					return -1;
+					return 1;
 				}
 				break;
 
@@ -247,7 +247,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				settings->port = atoi( optarg );
 				if ( settings->port == 0 ) {
 					fprintf(stderr, "Invalid port number given (%s)\n", optarg );
-					return -1;
+					return 1;
 				}
 				break;
 
@@ -267,7 +267,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 			case 'h':
 				print_usage();
-				return -1;
+				return 1;
 
 			// TCP/UDP
 			case 't':
@@ -282,28 +282,28 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 			case '?':
 				fprintf(stderr, "Unknown argument (%s)\n", argv[optind-1] );
-				return -1;
+				return 1;
 
 			default:
 				fprintf(stderr, "Argument not implemented (yet) (%c)\n", c );
-				return -1;
+				return 1;
 		}
 	}
 
 	if ( settings->disable_nagles && settings->protocol != IPPROTO_TCP ) {
 		fprintf(stderr, "Must use TCP when disabling Nagles\n" );
-		return -1;
+		return 1;
 	}
 	
 	if( settings->timestamp && settings->message_size < sizeof(unsigned long long) ) {
 		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );
-		return -1;
+		return 1;
 	}
 
 	if ( settings->deamon && optind < argc ) {
 		// TODO make this test that other conflicting options haven't been needlessly set
 		fprintf(stderr, "Tests can not be specified on the command line in D->eamon mode\n" );
-		return -1;
+		return 1;
 	}
 
 	// Try and parse anything else left on the end
@@ -317,7 +317,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			// Check if they are using the wrong brackets
 			if ( sscanf( argv[optind], "%u(%u-%u)", &count, &client, &server ) <3 ) {
 				fprintf(stderr, "Unknown argument (%s)\n", argv[optind] );
-				return -1;
+				return 1;
 			}
 		}
 
@@ -325,7 +325,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		// TODO check if the server is remote, and then decide if the cores make sense
 		if ( client >= max_cores || server >= max_cores ) {
 			fprintf(stderr, "Cores must not be greater than %d (%s)\n", max_cores, argv[optind] );
-			return -1;
+			return 1;
 		}
 
 		settings->clientserver [ client ] [ server ] += count;
@@ -337,12 +337,12 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	// If there are no tests then error
 	if ( tests == 0 && !settings->deamon ) {
 		fprintf(stderr, "No tests were specified\n");
-		return -1;
+		return 1;
 	}
 
 	if ( tests != 0 && settings->deamon ) {
 		fprintf(stderr, "Cannot specify tests while running as a deamon\n");
-		return -1;
+		return 1;
 	}
 
 	return 0;

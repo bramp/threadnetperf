@@ -115,7 +115,7 @@ int getopt(int argc, char *argv[], const char *optstring)
 			optarg = NULL;
 			if (optind < argc)
 				optarg = argv[optind];
-			return -1;
+			return 1;
 		}
 
 		if (strcmp(argv[optind], "--") == 0)
@@ -124,7 +124,7 @@ int getopt(int argc, char *argv[], const char *optstring)
 			optarg = NULL;
 			if (optind < argc)
 				optarg = argv[optind];
-			return -1;
+			return 1;
 		}
 
 		next = argv[optind];

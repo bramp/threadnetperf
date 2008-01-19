@@ -55,7 +55,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 		if ( ret > 0 )
 			fprintf(stderr, "Invalid setting struct received\n" );
 
-		return -1;
+		return 1;
 	}
 
 	// Set all the fields
@@ -87,7 +87,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->clientserver = (unsigned int **)malloc_2D(sizeof(unsigned int), settings->cores, settings->cores);
 	if ( settings->clientserver == NULL ) {
 		fprintf(stderr, "%s:%d malloc_2D() error\n", __FILE__, __LINE__);
-		return -1;
+		return 1;
 	}
 
 	for (x = 0; x < settings->cores; x++) {
@@ -96,7 +96,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 			ret = recv(s, (char *)&i, sizeof(i), 0);
 			if ( ret != sizeof(i) ) {
-				return -1;
+				return 1;
 			}
 			settings->clientserver[x][y] = ntohl(i);
 		}
@@ -133,7 +133,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 
 	ret = send(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) ) {
-		return -1;
+		return 1;
 	}
 
 	for (x = 0; x < settings->cores; x++) {
@@ -142,7 +142,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 
 			ret = send(s, (const char *)&i, sizeof(i), 0);
 			if ( ret != sizeof(i) ) {
-				return -1;
+				return 1;
 			}
 		}
 	}

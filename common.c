@@ -11,7 +11,7 @@ int enable_nagle(SOCKET s) {
 	int zero = 0;
 
 	if ( s == INVALID_SOCKET )
-		return -1;
+		return 1;
 
 	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&zero, sizeof(zero));
 }
@@ -20,7 +20,7 @@ int disable_nagle(SOCKET s) {
 	int one = 1;
 	
 	if ( s == INVALID_SOCKET )
-		return -1;
+		return 1;
 
 	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
 }
@@ -49,13 +49,13 @@ int set_socket_buffer( SOCKET s, int opt, int size ) {
     socklen_t new_size_len = sizeof(new_size);
  
 	if ( s == INVALID_SOCKET )
-		return -1;
+		return 1;
 
     if (size > 0 && setsockopt(s, SOL_SOCKET, opt, (char *)&size, sizeof(size)) < 0)
-      return -1;
+      return 1;
 
 	if (getsockopt(s, SOL_SOCKET, opt, (char *)&new_size, &new_size_len) < 0)
-		return -1;
+		return 1;
 
  	return new_size;
 }

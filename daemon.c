@@ -118,7 +118,7 @@ int send_test( SOCKET s, const struct settings *settings) {
 
 	if ( send_settings(s, settings) ) {
 		fprintf(stderr, "%s:%d send_settings() error %d\n", __FILE__, __LINE__, ERRNO );
-		return -1;
+		return 1;
 	}
 	
 	return 0;
@@ -175,7 +175,7 @@ int wait_remote( SOCKET s, unsigned char code ) {
 	assert ( s != INVALID_SOCKET );
 
 	if ( recv(s, &code2, 1, 0) != 1 || code2 != code )
-		return -1;
+		return 1;
 
 	return 0;
 }

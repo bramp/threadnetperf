@@ -28,7 +28,7 @@ int prepare_servers(const struct settings * settings) {
 	if ( !sreq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		sreq_size = 0;
-		return -1;
+		return 1;
 	}
 
 	clientserver = settings->clientserver;
@@ -44,7 +44,7 @@ int prepare_servers(const struct settings * settings) {
 
 			if ( clientcore > max_cores || servercore > max_cores ) {
 				fprintf(stderr, "Too many cores! %u > %u\n", clientcore > servercore ? clientcore : servercore, max_cores );
-				return -1;
+				return 1;
 			}
 
 			// Check if we haven't set up this server thread yet
@@ -86,7 +86,7 @@ int create_servers(const struct settings *settings) {
 
 		if ( pthread_create_on( &thread[threads], NULL, server_thread, &sreq[servercore], sizeof(cpus), &cpus) ) {
 			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
-			return -1;
+			return 1;
 		}
 
 		threads++;
