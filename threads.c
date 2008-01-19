@@ -132,7 +132,9 @@ int thread_alloc(size_t count) {
 	if ( !thread )
 		return -1;
 
-	thread_count = count;
+	thread_max_count = count;
+	thread_count = 0;
+
 	return 0;
 }
 
@@ -140,4 +142,5 @@ void threads_clear() {
 	free( thread );
 	thread = NULL;
 	thread_count = 0;
+	thread_max_count = 0;
 }
