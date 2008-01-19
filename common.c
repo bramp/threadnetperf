@@ -185,8 +185,8 @@ SOCKET highest_socket(SOCKET *s, size_t len) {
 	return max;
 }
 
-// TODO make this free_2darray
-void free_2D(void **data, size_t x, size_t y) {
+void free_2D(void **data, size_t x) {
+	// TODO make it so we don't need a x or y
 	if ( data ) {
 		size_t i = 0;
 
@@ -223,7 +223,7 @@ void **malloc_2D(size_t element_size, size_t x, size_t y) {
 	return data;
 
 bail:
-	free_2D ( data, x, y );
+	free_2D ( data, x );
 	return NULL;
 }
 

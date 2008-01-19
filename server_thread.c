@@ -131,7 +131,7 @@ void *server_thread(void *data) {
 	
 	int return_stats = 0; // Should we return the stats?
 
-	int i;
+	unsigned int i;
 	unsigned long long bytes_recv [ FD_SETSIZE ]; // Bytes received from each socket
 	unsigned long long pkts_recv [ FD_SETSIZE ]; // Number of recv calls from each socket
 
@@ -346,7 +346,7 @@ void *server_thread(void *data) {
 					continue;
 
 				} else {
-					if (settings.timestamp && len > sizeof(unsigned long long) ) {
+					if (settings.timestamp && len > (int)sizeof(unsigned long long) ) {
 						unsigned long long now = get_microseconds();
 						unsigned long long us = *((unsigned long long *)&buffer[len - sizeof(unsigned long long)]);
 

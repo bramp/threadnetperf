@@ -646,7 +646,7 @@ int main (int argc, char *argv[]) {
 
 cleanup:
 
-	free_2D( (void **)settings.clientserver, settings.cores, settings.cores);
+	free_2D( (void **)settings.clientserver, settings.cores);
 
 	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );
