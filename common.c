@@ -11,7 +11,7 @@ int enable_nagle(SOCKET s) {
 	int zero = 0;
 
 	if ( s == INVALID_SOCKET )
-		return 1;
+		return -1;
 
 	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&zero, sizeof(zero));
 }
@@ -20,7 +20,7 @@ int disable_nagle(SOCKET s) {
 	int one = 1;
 	
 	if ( s == INVALID_SOCKET )
-		return 1;
+		return -1;
 
 	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
 }
@@ -49,13 +49,13 @@ int set_socket_buffer( SOCKET s, int opt, int size ) {
     socklen_t new_size_len = sizeof(new_size);
  
 	if ( s == INVALID_SOCKET )
-		return 1;
+		return -1;
 
     if (size > 0 && setsockopt(s, SOL_SOCKET, opt, (char *)&size, sizeof(size)) < 0)
-      return 1;
+      return -1;
 
 	if (getsockopt(s, SOL_SOCKET, opt, (char *)&new_size, &new_size_len) < 0)
-		return 1;
+		return -1;
 
  	return new_size;
 }
@@ -115,45 +115,6 @@ unsigned long long get_microseconds() {
 	return microseconds;
 }
 
-#ifdef WIN32
-	int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
-		// TODO Make this set affidenitys on windows
-		return 0;
-	}
-#endif
-
-/**
-	Create a thread on a specific core(s)
-*/
-int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
-
-	pthread_attr_t thread_attr;
-	int ret;
-
-	if (attr == NULL) {
-		pthread_attr_init ( &thread_attr );
-		attr = &thread_attr;
-	}
-
-	// Set the CPU
-	ret = pthread_attr_setaffinity_np( attr, cpusetsize, cpuset );
-	if (ret)
-		goto cleanup;
-
-	// Make sure the thread is joinable
-	ret = pthread_attr_setdetachstate( attr, PTHREAD_CREATE_JOINABLE);
-	if (ret)
-		goto cleanup;
-
-	// Now create the thread
-	ret = pthread_create(thread, attr, start_routine, arg);
-
-cleanup:
-	if ( attr == &thread_attr )
-		pthread_attr_destroy ( &thread_attr );
-
-	return ret;
-}
 
 #ifdef WIN32
 /**
@@ -172,23 +133,6 @@ void cleanup_winsock() {
 	WSACleanup();
 }
 #endif
-
-#ifdef WIN32
-// Sleep for a number of microseconds
-int usleep(unsigned int useconds) {
-	struct timespec waittime;
-
-	if ( useconds > 1000000 )
-		return EINVAL;
-
-	waittime.tv_sec = 0;
-	waittime.tv_nsec = useconds * 1000; 
-
-	pthread_delay_np ( &waittime );
-	return 0;
-}
-#endif
-
 
 /**
 	Turn a addr into an string representing its address

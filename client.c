@@ -24,7 +24,7 @@ int prepare_clients(const struct settings * settings) {
 	if ( !creq ) {
 		creq_size = 0;
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-		return 1;
+		return -1;
 	}
 
 	clientserver = settings->clientserver;
@@ -53,7 +53,7 @@ int prepare_clients(const struct settings * settings) {
 			c = calloc( 1, sizeof( *c ) );
 			if ( !c ) {
 				fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-				return 1;
+				return -1;
 			}
 
 			// Add this new details before the other details
@@ -68,7 +68,7 @@ int prepare_clients(const struct settings * settings) {
 			c->addr = calloc ( 1, c->addr_len ) ;
 			if ( !c->addr ) {
 				fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-				return 1;
+				return -1;
 			}
 
 			// Change this to be more address indepentant
@@ -78,7 +78,7 @@ int prepare_clients(const struct settings * settings) {
 
 			if ( ((struct sockaddr_in *)c->addr)->sin_addr.s_addr == INADDR_NONE ) {
 				fprintf(stderr, "Invalid host name (%s)\n", settings->server_host );
-				return 1;
+				return -1;
 			}
 		}
 	}
@@ -101,12 +101,10 @@ int create_clients(const struct settings *settings) {
 		CPU_ZERO ( &cpus );
 		CPU_SET ( clientcore, &cpus );
 
-		if ( pthread_create_on( &thread[threads], NULL, client_thread, &creq [clientcore] , sizeof(cpus), &cpus) ) {
-			fprintf(stderr, "%s:%d pthread_create_on() error\n", __FILE__, __LINE__ );
-			return 1;
+		if ( create_thread( client_thread, &creq [clientcore] , sizeof(cpus), &cpus) ) {
+			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
+			return -1;
 		}
-
-		threads++;
 	}
 
 	return 0;

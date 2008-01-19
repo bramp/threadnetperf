@@ -14,6 +14,7 @@
 #include "server.h"
 #include "client.h"
 #include "daemon.h"
+#include "threads.h"
 
 #include <signal.h>
 
@@ -49,13 +50,6 @@ unsigned int unready_threads = 0;
 
 // The number of cores this machine has
 const unsigned int max_cores = 8; // TODO get the real number!
-
- // Array to handle thread handles
-pthread_t *thread = NULL;
-
- // Total number of threads
-size_t threads = 0;
-
 
 
 // Signals all threads to stop
@@ -155,7 +149,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	// Default arguments
 	settings->deamon = 0;
 	settings->message_size = 1024;
-	settings->socket_size = -1;
+	settings->socket_size = ~0;
 	settings->disable_nagles = 0;
 	settings->duration = 10;
 	settings->server_host = "127.0.0.1";
@@ -173,7 +167,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 	if ( argc == 1 ) {
 		print_usage();
-		return 1;
+		return -1;
 	}
 
 	// Lets parse some command line args
@@ -189,7 +183,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				
 				if((level != 75 && level !=90 && level != 95 && level != 97.5 && level != 99 && level != 99.5 && level != 99.95 ) ) {
 						fprintf(stderr, "Confidence Level must be {75,90,95,97.5,99,99.5,99.95}. Given (%s)\n", optarg);
-						return 1;
+						return -1;
 					}
 
 				settings->confidence_lvl = level ;
@@ -206,7 +200,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				settings->duration = atoi( optarg );
 				if ( settings->duration == 0 ) {
 					fprintf(stderr, "Invalid duration given (%s)\n", optarg );
-					return 1;
+					return -1;
 				}
 				break;
 
@@ -215,7 +209,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 || min == 0 || max == 0 ) {
 					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
-					return 1;
+					return -1;
 				}
 				settings->min_iterations = min;
 				settings->max_iterations = max;
@@ -238,7 +232,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				settings->message_size = atoi( optarg );
 				if ( settings->message_size == 0 ) {
 					fprintf(stderr, "Invalid message size given (%s)\n", optarg );
-					return 1;
+					return -1;
 				}
 				break;
 
@@ -247,7 +241,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				settings->port = atoi( optarg );
 				if ( settings->port == 0 ) {
 					fprintf(stderr, "Invalid port number given (%s)\n", optarg );
-					return 1;
+					return -1;
 				}
 				break;
 
@@ -267,7 +261,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 			case 'h':
 				print_usage();
-				return 1;
+				return -1;
 
 			// TCP/UDP
 			case 't':
@@ -282,28 +276,28 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 			case '?':
 				fprintf(stderr, "Unknown argument (%s)\n", argv[optind-1] );
-				return 1;
+				return -1;
 
 			default:
 				fprintf(stderr, "Argument not implemented (yet) (%c)\n", c );
-				return 1;
+				return -1;
 		}
 	}
 
 	if ( settings->disable_nagles && settings->protocol != IPPROTO_TCP ) {
 		fprintf(stderr, "Must use TCP when disabling Nagles\n" );
-		return 1;
+		return -1;
 	}
 	
 	if( settings->timestamp && settings->message_size < sizeof(unsigned long long) ) {
 		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );
-		return 1;
+		return -1;
 	}
 
 	if ( settings->deamon && optind < argc ) {
 		// TODO make this test that other conflicting options haven't been needlessly set
 		fprintf(stderr, "Tests can not be specified on the command line in D->eamon mode\n" );
-		return 1;
+		return -1;
 	}
 
 	// Try and parse anything else left on the end
@@ -317,7 +311,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			// Check if they are using the wrong brackets
 			if ( sscanf( argv[optind], "%u(%u-%u)", &count, &client, &server ) <3 ) {
 				fprintf(stderr, "Unknown argument (%s)\n", argv[optind] );
-				return 1;
+				return -1;
 			}
 		}
 
@@ -325,7 +319,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		// TODO check if the server is remote, and then decide if the cores make sense
 		if ( client >= max_cores || server >= max_cores ) {
 			fprintf(stderr, "Cores must not be greater than %d (%s)\n", max_cores, argv[optind] );
-			return 1;
+			return -1;
 		}
 
 		settings->clientserver [ client ] [ server ] += count;
@@ -337,12 +331,12 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	// If there are no tests then error
 	if ( tests == 0 && !settings->deamon ) {
 		fprintf(stderr, "No tests were specified\n");
-		return 1;
+		return -1;
 	}
 
 	if ( tests != 0 && settings->deamon ) {
 		fprintf(stderr, "Cannot specify tests while running as a deamon\n");
-		return 1;
+		return -1;
 	}
 
 	return 0;
@@ -373,43 +367,6 @@ void start_threads() {
 	pthread_mutex_unlock( &go_mutex );
 }
 
-// Join all these threads
-size_t threads_join(const pthread_t *threads, size_t count) {
-	while (count > 0) {
-		count--;
-		pthread_join( threads[count], NULL );
-	}
-	return count;
-}
-
-size_t threads_sum_stats(const pthread_t *threads, size_t count, const struct settings *settings, struct stats *total_stats) {
-	unsigned int i = 0;
-
-	while (count > 0) {
-		struct stats *stats;
-
-		count--;
-		pthread_join( threads[count], (void **)&stats );
-
-		if ( stats != NULL ) {
-			print_results( settings, stats );
-
-			// Now add the values to the total
-			total_stats->bytes_received += stats->bytes_received;
-			total_stats->duration       += stats->duration;
-			total_stats->pkts_received  += stats->pkts_received;
-			total_stats->pkts_time      += stats->pkts_time;
-
-			i++;
-		}
-	}
-
-	// Divide the duration by the # of CPUs used
-	total_stats->duration /= i;
-
-	return count;
-}
-
 // Runs tests locally creating both servers and clients
 void run_local( const struct settings *settings, struct stats *total_stats ) {
 
@@ -418,8 +375,8 @@ void run_local( const struct settings *settings, struct stats *total_stats ) {
 
 	bGo = 0;
 	bRunning = 1;
-	threads = 0;
 	unready_threads = 0; // Number of threads not ready
+	threads_clear();
 
 	// Setup all the data for each server and client
 	if ( prepare_servers(settings) )
@@ -431,10 +388,8 @@ void run_local( const struct settings *settings, struct stats *total_stats ) {
 	assert ( unready_threads > 0 );
 
 	// A list of threads
-	assert ( thread == NULL );
-	thread = calloc( unready_threads, sizeof(*thread) );
-	if ( !thread ) {
-		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+	if ( thread_alloc(unready_threads) ) {
+		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
@@ -457,17 +412,15 @@ void run_local( const struct settings *settings, struct stats *total_stats ) {
 	print_headers( settings );
 
 	// Block waiting until all threads die and print out their stats
-	threads = threads_sum_stats(thread, threads, settings, total_stats);
+	thread_sum_stats(settings, total_stats);
 
 cleanup:
 
 	// Make sure we are not running anymore
 	stop_all();
 
-	threads_join(thread, threads);
-
-	free(thread);
-	thread = NULL;
+	thread_join_all();
+	threads_clear();
 
 	cleanup_clients();
 	cleanup_servers();
@@ -480,8 +433,8 @@ void run_remote(const struct settings *settings) {
 
 	bGo = 0;
 	bRunning = 1;
-	threads = 0;
 	unready_threads = 0; // Number of threads not ready
+	threads_clear();
 
 	s = connect_daemon(settings);
 	if ( s == INVALID_SOCKET )
@@ -496,10 +449,8 @@ void run_remote(const struct settings *settings) {
 	assert ( unready_threads > 0 );
 
 	// A list of threads
-	assert ( thread == NULL );
-	thread = calloc( unready_threads, sizeof(*thread) );
-	if ( !thread ) {
-		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+	if ( thread_alloc(unready_threads) ) {
+		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
@@ -532,10 +483,8 @@ cleanup:
 	// Make sure we are not running anymore
 	stop_all();
 
-	threads_join(thread, threads);
-
-	free(thread);
-	thread = NULL;
+	thread_join_all();
+	threads_clear();
 
 	cleanup_clients();
 }
@@ -556,8 +505,8 @@ void run_deamon(const struct settings *settings) {
 
 		bGo = 0;
 		bRunning = 1;
-		threads = 0;
 		unready_threads = 0; // Number of threads not ready
+		threads_clear();
 
 		// Wait for a test to come in
 		s = accept_test( listen_socket, &remote_settings, settings->verbose );
@@ -575,10 +524,8 @@ void run_deamon(const struct settings *settings) {
 		}
 
 		// A list of threads
-		assert ( thread == NULL );
-		thread = calloc( unready_threads, sizeof(*thread) );
-		if ( !thread ) {
-			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		if ( thread_alloc(unready_threads) ) {
+			fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
 			goto cleanup;
 		}
 
@@ -606,17 +553,15 @@ void run_deamon(const struct settings *settings) {
 		stop_all();
 
 		// Block waiting until all threads die and print out their stats
-		threads = threads_sum_stats(thread, threads, settings, &total_stats);
+		thread_sum_stats(settings, &total_stats);
 
 	cleanup:
 
 		// Make sure we are not running anymore
 		stop_all();
 
-		threads_join(thread, threads);
-
-		free(thread);
-		thread = NULL;
+		thread_join_all();
+		threads_clear();
 
 		cleanup_servers();
 	}

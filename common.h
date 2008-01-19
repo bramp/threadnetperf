@@ -7,22 +7,6 @@
 //#define CHECK_TIMES 100000
 #include "netlib.h"
 
-#include <pthread.h> // We assume we have a pthread library (even on windows)
-
-#ifdef WIN32
-	// Define some dummy structs, currently they do nothing
-	typedef struct {
-		unsigned long int __cpu_mask;
-	} cpu_set_t;
-
-	/* Access functions for CPU masks.  */
-	#define CPU_ZERO(cpusetp) ((cpusetp)->__cpu_mask = 0)
-	#define CPU_SET(cpu, cpusetp)
-	#define CPU_CLR(cpu, cpusetp)
-	#define CPU_ISSET(cpu, cpusetp)
-#endif
-
-
 struct stats {
 	// The core these stats were recorded from
 	unsigned int core;
@@ -93,8 +77,6 @@ unsigned long long get_microseconds();
 char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen);
 
 void stop_all();
-
-int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset);
 
 double calc_confidence(double confidence_lvl, double mean, double variance, unsigned int n, int verbose);
 

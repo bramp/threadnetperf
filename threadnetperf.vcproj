@@ -152,6 +152,9 @@
 			<File
 				RelativePath=".\threadnetperf.c">
 			</File>
+			<File
+				RelativePath=".\threads.c">
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -183,6 +186,9 @@
 			</File>
 			<File
 				RelativePath=".\server.h">
+			</File>
+			<File
+				RelativePath=".\threads.h">
 			</File>
 		</Filter>
 		<Filter
