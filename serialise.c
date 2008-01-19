@@ -117,8 +117,8 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	// Copy all the settings into a struct which can be sent over the network easily
 	net_settings.version        = htonl( SETTINGS_VERSION );
 	net_settings.duration       = htonl( settings->duration );
-	net_settings.type           = htonl( settings->type );
-	net_settings.protocol       = htonl( settings->protocol );
+	net_settings.type           = htonl( (unsigned int)settings->type );
+	net_settings.protocol       = htonl( (unsigned int)settings->protocol );
 
 	net_settings.verbose        = settings->verbose;
 	net_settings.dirty          = settings->dirty;

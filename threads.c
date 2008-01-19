@@ -38,7 +38,7 @@ int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const
 /**
 	Create a thread on a specific core(s)
 */
-int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
+int pthread_create_on( pthread_t *t, pthread_attr_t *attr, void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
 
 	pthread_attr_t thread_attr;
 	int ret;
@@ -59,7 +59,7 @@ int pthread_create_on( pthread_t *thread, pthread_attr_t *attr, void *(*start_ro
 		goto cleanup;
 
 	// Now create the thread
-	ret = pthread_create(thread, attr, start_routine, arg);
+	ret = pthread_create(t, attr, start_routine, arg);
 
 cleanup:
 	if ( attr == &thread_attr )
