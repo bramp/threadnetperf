@@ -20,5 +20,9 @@ SOCKET connect_daemon(const struct settings *settings);
 
 int signal_ready( SOCKET s );
 int signal_go( SOCKET s );
+int signal_stop( SOCKET s );
+
 int wait_ready( SOCKET s );
 int wait_go ( SOCKET s );
+int wait_stop ( SOCKET s );
+

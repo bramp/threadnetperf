@@ -16,14 +16,11 @@ size_t thread_max_count = 0;
 
 #ifdef WIN32
 // Sleep for a number of microseconds
-int usleep(unsigned int useconds) {
+int usleep(unsigned int microseconds) {
 	struct timespec waittime;
 
-	if ( useconds > 1000000 )
-		return EINVAL;
-
-	waittime.tv_sec = 0;
-	waittime.tv_nsec = useconds * 1000; 
+	waittime.tv_sec = microseconds / 1000;
+	waittime.tv_nsec = (microseconds % 1000) * 1000; 
 
 	pthread_delay_np ( &waittime );
 	return 0;

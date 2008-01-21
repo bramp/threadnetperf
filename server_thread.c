@@ -320,7 +320,7 @@ void *server_thread(void *data) {
 					}
 
 					if ( settings.verbose )
-						printf("  Server: %d Remove client (%d/%d)\n", req->core, i, clients );
+						printf("  Server: %d Removed client (%d/%d)\n", req->core, i + 1, clients );
 
 					FD_CLR( s, &readFD );
 

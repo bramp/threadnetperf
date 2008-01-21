@@ -484,8 +484,10 @@ void run_remote(const struct settings *settings) {
 	// Now go
 	start_threads();
 
-	// Pauses for the duration, then sets bRunning to false
-	pause_for_duration( settings );
+	if ( wait_stop(s) ) {
+		fprintf(stderr, "%s:%d signal_stop() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
 
 	stop_all();
 
@@ -568,7 +570,13 @@ void run_deamon(const struct settings *settings) {
 		// And now tell our servers to go!
 		start_threads();
 
-		// Pause until the remote end starts to disconnect
+		// Pauses for the duration, then sets bRunning to false
+		pause_for_duration( settings );
+
+		if ( signal_stop(s) ) {
+			fprintf(stderr, "%s:%d signal_stop() error\n", __FILE__, __LINE__ );
+			goto cleanup;
+		}
 
 		// Stop
 		stop_all();

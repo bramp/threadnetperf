@@ -174,6 +174,7 @@ cleanup:
 
 #define SIGNAL_READY 1
 #define SIGNAL_GO 2
+#define SIGNAL_STOP 3
 
 int signal_remote( SOCKET s, unsigned char code ) {
 	assert ( s != INVALID_SOCKET );
@@ -198,6 +199,10 @@ int signal_go( SOCKET s ) {
 	return signal_remote( s, SIGNAL_GO );
 }
 
+int signal_stop( SOCKET s ) {
+	return signal_remote( s, SIGNAL_STOP );
+}
+
 int wait_ready( SOCKET s ) {
 	return wait_remote( s, SIGNAL_READY );
 }
@@ -206,3 +211,6 @@ int wait_go ( SOCKET s ) {
 	return wait_remote( s, SIGNAL_GO );
 }
 
+int wait_stop ( SOCKET s ) {
+	return wait_remote( s, SIGNAL_STOP );
+}
