@@ -438,6 +438,8 @@ void run_remote(const struct settings *settings, struct stats *total_stats) {
 	unready_threads = 0; // Number of threads not ready
 	threads_clear();
 
+	// Pre test
+
 	s = connect_daemon(settings);
 	if ( s == INVALID_SOCKET ) {
 		goto cleanup;
@@ -447,6 +449,8 @@ void run_remote(const struct settings *settings, struct stats *total_stats) {
 		fprintf(stderr, "%s:%d send_test() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
+
+	// Prepare
 
 	if ( prepare_clients(settings) ) {
 		fprintf(stderr, "%s:%d prepare_clients() error\n", __FILE__, __LINE__ );
