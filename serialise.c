@@ -190,7 +190,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	return 0;
 }
 
-int read_stats( SOCKET s, struct stats * stats ) {
+int read_results( SOCKET s, struct stats * stats ) {
 	struct network_stats net_stats;
 	int ret;
 
@@ -212,12 +212,12 @@ int read_stats( SOCKET s, struct stats * stats ) {
 	return 0;
 }
 
-int send_stats( SOCKET s, const struct stats * stats ) {
+int send_results( SOCKET s, const struct stats * stats ) {
 	struct network_stats net_stats;
 	int ret;
 
-	assert ( s != INVALID_SOCKET );
-	assert ( stats != NULL );
+	assert (s != INVALID_SOCKET);
+	assert (stats != NULL );
 
 	// TODO find a 64bit htonl
 	net_stats.core           = htonl(stats->core);

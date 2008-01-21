@@ -132,13 +132,13 @@
 				RelativePath=".\common.c">
 			</File>
 			<File
-				RelativePath=".\daemon.c">
-			</File>
-			<File
 				RelativePath=".\getopt.c">
 			</File>
 			<File
 				RelativePath=".\print.c">
+			</File>
+			<File
+				RelativePath=".\remote.c">
 			</File>
 			<File
 				RelativePath=".\serialise.c">
@@ -167,9 +167,6 @@
 				RelativePath=".\common.h">
 			</File>
 			<File
-				RelativePath=".\daemon.h">
-			</File>
-			<File
 				RelativePath=".\getopt.h">
 			</File>
 			<File
@@ -180,6 +177,9 @@
 			</File>
 			<File
 				RelativePath=".\print.h">
+			</File>
+			<File
+				RelativePath=".\remote.h">
 			</File>
 			<File
 				RelativePath=".\serialise.h">

@@ -31,7 +31,7 @@ void print_headers(const struct settings* settings) {
 	pthread_mutex_unlock( &printf_mutex );
 }
 
-void print_results( const struct settings *settings, const struct stats *stats ) {
+int print_results( const struct settings *settings, const struct stats *stats, void *data ) {
 	float thruput = stats->bytes_received > 0 ? (float)stats->bytes_received / (float)stats->duration : 0;
 	float duration = (float)stats->duration / (float)1000000;
 //	float pkt_latency = (float)stats->pkts_time /  (float)stats->pkts_received;
@@ -67,6 +67,8 @@ void print_results( const struct settings *settings, const struct stats *stats )
 #endif
 
 	pthread_mutex_unlock( &printf_mutex );
+
+	return 0;
 }
 
 void print_stats(double sum, double sumsquare, double mean, double variance) {

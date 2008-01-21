@@ -1,7 +1,6 @@
 #include "threads.h"
 #include "common.h" // for struct settings
-#include "print.h" // for print_results
-#include "serialise.h" // for send_stats
+#include "serialise.h" // for send_results
 
 #include <assert.h>
 #include <malloc.h>
@@ -94,7 +93,7 @@ int thread_join_all() {
 	return 0;
 }
 
-int thread_sum_stats(const struct settings *settings, struct stats *total_stats) {
+int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, struct stats *, void * data), void *data) {
 	unsigned int i = 0;
 
 	assert( settings != NULL );
@@ -107,7 +106,10 @@ int thread_sum_stats(const struct settings *settings, struct stats *total_stats)
 		pthread_join( thread[thread_count], (void **)&stats );
 
 		if ( stats != NULL ) {
-			print_results( settings, stats );
+			if ( print_results(settings, stats, data) ) {
+				fprintf(stderr, "%s:%d print_results() error\n", __FILE__, __LINE__ );
+				return -1;
+			}
 
 			// Now add the values to the total
 			total_stats->bytes_received += stats->bytes_received;
@@ -124,52 +126,6 @@ int thread_sum_stats(const struct settings *settings, struct stats *total_stats)
 		total_stats->duration /= i;
 
 	assert ( thread_count == 0 );
-
-	return 0;
-}
-
-int thread_send_and_sum_stats(const struct settings *settings, SOCKET s) {
-	unsigned int i = 0;
-	struct stats total_stats;
-
-	assert( settings != NULL );
-	assert( s != INVALID_SOCKET );
-
-	memset(&total_stats, 0, sizeof(total_stats));
-	total_stats.core = -1;
-
-	while (thread_count > 0) {
-		struct stats *stats;
-
-		thread_count--;
-		pthread_join( thread[thread_count], (void **)&stats );
-
-		if ( stats != NULL ) {
-			if ( send_stats(s, stats ) ) {
-				fprintf(stderr, "%s:%d send_stats() error\n", __FILE__, __LINE__ );
-				return -1;
-			}
-
-			// Now add the values to the total
-			total_stats.bytes_received += stats->bytes_received;
-			total_stats.duration       += stats->duration;
-			total_stats.pkts_received  += stats->pkts_received;
-			total_stats.pkts_time      += stats->pkts_time;
-
-			i++;
-		}
-	}
-
-	assert ( thread_count == 0 );
-
-	// Divide the duration by the # of CPUs used
-	if ( i > 1 )
-		total_stats.duration /= i;
-
-	if ( send_stats(s, &total_stats ) ) {
-		fprintf(stderr, "%s:%d send_stats() error\n", __FILE__, __LINE__ );
-		return -1;
-	}
 
 	return 0;
 }

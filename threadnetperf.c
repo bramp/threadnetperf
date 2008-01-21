@@ -12,7 +12,7 @@
 #include "print.h"
 #include "server.h"
 #include "client.h"
-#include "daemon.h"
+#include "remote.h"
 #include "threads.h"
 #include "serialise.h"
 
@@ -54,49 +54,48 @@ const unsigned int max_cores = 8; // TODO get the real number!
 int null_func(const struct settings *settings, void * data) { return 0; };
 int null_func2(const struct settings *settings, void ** data) { return 0; };
 
-int remote_collect_results(const struct settings *settings, struct stats *total_stats, void *data);
-int remote_connect(const struct settings *settings, void** data);
-int remote_cleanup(const struct settings *settings, void* data);
-
 // List of functions which run() uses
 struct run_functions {
 	int (*setup)(const struct settings *, void ** data);
 
-	int (*prepare_servers)(const struct settings *, void * data);
-	int (*prepare_clients)(const struct settings *, void * data);
+	int (*prepare_servers)(const struct settings *, void *);
+	int (*prepare_clients)(const struct settings *, void *);
 
-	int (*create_servers)(const struct settings *, void * data);
-	int (*create_clients)(const struct settings *, void * data);
+	int (*create_servers)(const struct settings *, void *);
+	int (*create_clients)(const struct settings *, void *);
 
-	int (*wait_for_go)(const struct settings *, void * data);
+	int (*wait_for_go)(const struct settings *, void *);
 
-	int (*collect_results)(const struct settings *, struct stats *, void * data);
+	int (*collect_results)(const struct settings *, struct stats *, int (*printer)(const struct settings *, struct stats *, void *), void *);
+	int (*print_results)(const struct settings *, struct stats *, void *);
 
-	int (*cleanup)(const struct settings *, void * data);
+	int (*cleanup)(const struct settings *, void *);
 };
 
 // The run sequence for a local test
 struct run_functions local_funcs = {
-	null_func2,       //setup
-	prepare_servers,  //prepare_servers
-	prepare_clients,  //prepare_clients
-	create_servers,   //create_servers
-	create_clients,   //create_clients
-	null_func,        //wait_for_go
-	thread_sum_stats, //collect_results
-	null_func, 
+	null_func2,            //setup
+	prepare_servers,       //prepare_servers
+	prepare_clients,       //prepare_clients
+	create_servers,        //create_servers
+	create_clients,        //create_clients
+	null_func,             //wait_for_go
+	thread_collect_results,//collect_results
+	print_results,         //print_results
+	null_func,             //cleanup
 };
 
 // The run sequence for a remote server
 struct run_functions remote_server_funcs = {
-	null_func2,                //setup
-	prepare_servers,           //prepare_servers
-	null_func,                 //prepare_clients
-	create_servers,            //create_servers
-	signal_ready,              //create_clients
-	signal_go,                 //wait_for_go
-	thread_send_and_sum_stats, //collect_results
-	remote_cleanup             //cleanup
+	null_func2,            //setup
+	prepare_servers,       //prepare_servers
+	null_func,             //prepare_clients
+	create_servers,        //create_servers
+	signal_ready,          //create_clients
+	signal_go,             //wait_for_go
+	thread_collect_results,//collect_results
+	remote_send_results,   //print_results
+	remote_cleanup         //cleanup
 };
 
 // The run sequence for a client (connecting to a remote server)
@@ -108,6 +107,7 @@ struct run_functions remote_client_funcs = {
 	create_clients,            //create_clients
 	wait_go,                   //wait_for_go
 	remote_collect_results,    //collect_results
+	print_results,             //print_results
 	remote_cleanup             //cleanup
 };
 
@@ -491,7 +491,7 @@ void run( const struct run_functions * funcs, const struct settings *settings, s
 
 	print_headers( settings );
 
-	if ( funcs->collect_results ( settings, total_stats, data) ) {
+	if ( funcs->collect_results ( settings, total_stats, funcs->print_results, data) ) {
 		fprintf(stderr, "%s:%d collect_results() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
@@ -509,64 +509,6 @@ cleanup:
 
 	funcs->cleanup( settings, data );
 }
-
-// Connect to a remote daemon and send the test
-int remote_connect(const struct settings *settings, void** data) {
-	SOCKET s;
-
-	assert ( settings != NULL );
-
-	s = connect_daemon(settings);
-	if ( s == INVALID_SOCKET ) {
-		return -1;
-	}
-
-	if ( send_test( s, settings) ) {
-		fprintf(stderr, "%s:%d send_test() error\n", __FILE__, __LINE__ );
-		return -1;
-	}
-
-	*data = (void *)s;
-
-	return 0;
-}
-
-int remote_cleanup(const struct settings *settings, void* data) {
-	assert ( settings != NULL );
-
-	closesocket ( (SOCKET)data );
-
-	return 0;
-}
-
-// Receive the results from the remote daemon
-int remote_collect_results(const struct settings *settings, struct stats *total_stats, void *data) {
-	unsigned int core = 0;
-	SOCKET s = (SOCKET)data;
-
-	assert ( data != NULL );
-	assert ( s != INVALID_SOCKET );
-
-	for ( ; core < settings->cores + 1; core++ ) {
-		struct stats stats;
-
-		if ( read_stats( s, &stats ) ) {
-			fprintf(stderr, "%s:%d read_stats() error\n", __FILE__, __LINE__ );
-			return -1;
-		}
-
-		print_results(settings, &stats);
-
-		// Quit looking for more results if this is the total
-		if ( stats.core == -1 ) {
-			*total_stats = stats;
-			break;
-		}
-	}
-
-	return 0;
-}
-
 
 void run_deamon(const struct settings *settings) {
 
@@ -746,11 +688,11 @@ int main (int argc, char *argv[]) {
 
 			confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
 			if ( (confidence_interval < (settings.confidence_int/100) * mean) && iteration >= settings.min_iterations) {
-				print_results( &settings, &total_stats );
+				funcs->print_results( &settings, &total_stats, NULL );
 				break;
 			}
 		} else {
-			print_results( &settings, &total_stats );
+			funcs->print_results( &settings, &total_stats, NULL );
 		}
 
 	}

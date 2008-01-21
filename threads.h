@@ -18,8 +18,7 @@
 	#define CPU_ISSET(cpu, cpusetp)
 #endif
 
-int thread_sum_stats(const struct settings *settings, struct stats *total_stats, void * data);
-int thread_send_and_sum_stats(const struct settings *settings, struct stats *stats, void * data);
+int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, struct stats *, void * data), void *data);
 
 int thread_join_all ();
 int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset );

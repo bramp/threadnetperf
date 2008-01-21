@@ -1,7 +1,8 @@
-#include "daemon.h"
+#include "remote.h"
 
 #include "common.h"
 #include "serialise.h"
+#include "print.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -172,6 +173,90 @@ cleanup:
 	return INVALID_SOCKET;
 }
 
+struct remote_data {
+	SOCKET s;
+};
+
+// Connect to a remote daemon and send the test
+int remote_connect(const struct settings *settings, void** data) {
+	SOCKET s = INVALID_SOCKET;
+	struct remote_data *remote_data = NULL;
+
+	assert ( settings != NULL );
+
+	s = connect_daemon(settings);
+	if ( s == INVALID_SOCKET ) {
+		return -1;
+	}
+
+	if ( send_test( s, settings) ) {
+		fprintf(stderr, "%s:%d send_test() error\n", __FILE__, __LINE__ );
+		closesocket(s);
+		return -1;
+	}
+
+	// Malloc some space for the new data
+	remote_data = malloc( sizeof( *remote_data) );
+	*data = remote_data;
+
+	if ( remote_data == NULL ) {
+		closesocket(s);
+		return -1;
+	}
+
+	remote_data->s = s;
+
+	return 0;
+}
+
+int remote_cleanup(const struct settings *settings, void* data) {
+	struct remote_data *remote_data = NULL;
+
+	assert ( settings != NULL );
+
+	closesocket ( ((struct remote_data*)data)->s );
+	free ( data );
+
+	return 0;
+}
+
+// Receive the results from the remote daemon
+int remote_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, struct stats *, void * data), void *data) {
+	unsigned int core = 0;
+	SOCKET s = ((struct remote_data*)data)->s;
+
+	assert ( data != NULL );
+	assert ( s != INVALID_SOCKET );
+
+	for ( ; core < settings->cores + 1; core++ ) {
+		struct stats stats;
+
+		if ( read_results( s, &stats ) ) {
+			fprintf(stderr, "%s:%d read_stats() error\n", __FILE__, __LINE__ );
+			return -1;
+		}
+
+		print_results(settings, &stats, data);
+
+		// Quit looking for more results if this is the total
+		if ( stats.core == -1 ) {
+			*total_stats = stats;
+			break;
+		}
+	}
+
+	return 0;
+}
+
+int remote_send_results (const struct settings *settings, struct stats *stats, void * data) {
+	SOCKET s = ((struct remote_data*)data)->s;
+
+	assert ( data != NULL );
+	assert ( s != INVALID_SOCKET );
+
+	return send_results(s, stats);
+}
+
 #define SIGNAL_READY 1
 #define SIGNAL_GO 2
 #define SIGNAL_STOP 3
@@ -192,28 +277,28 @@ int wait_remote( SOCKET s, unsigned char code ) {
 }
 
 int signal_ready( const struct settings *settings, void *data ) {
-	SOCKET s = (SOCKET)data;
+	SOCKET s = ((struct remote_data*)data)->s;
 	assert ( data != NULL && s != INVALID_SOCKET );
-
+	
 	return signal_remote( s, SIGNAL_READY );
 }
 
 int signal_go( const struct settings *settings, void *data ) {
-	SOCKET s = (SOCKET)data;
+	SOCKET s = ((struct remote_data*)data)->s;
 	assert ( data != NULL && s != INVALID_SOCKET );
 
 	return signal_remote( s, SIGNAL_GO );
 }
 
 int wait_ready( const struct settings *settings, void *data ) {
-	SOCKET s = (SOCKET)data;
+	SOCKET s = ((struct remote_data*)data)->s;
 	assert ( data != NULL && s != INVALID_SOCKET );
 
 	return wait_remote( s, SIGNAL_READY );
 }
 
 int wait_go ( const struct settings *settings, void *data ) {
-	SOCKET s = (SOCKET)data;
+	SOCKET s = ((struct remote_data*)data)->s;
 	assert ( data != NULL && s != INVALID_SOCKET );
 	
 	return wait_remote( s, SIGNAL_GO );
