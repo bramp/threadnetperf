@@ -46,6 +46,8 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	int ret;
 	unsigned int x, y;
 	struct network_settings net_settings;
+	uint32_t *buffer = NULL;
+	unsigned int buffer_len = 0;
 
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
@@ -82,25 +84,36 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->max_iterations = 1;
 
 	settings->server_host    = NULL;
+	settings->clientserver   = NULL;
+
+	// Create a buffer to read all the values
+	buffer_len = settings->cores * settings->cores * sizeof( uint32_t );
+	buffer = malloc( buffer_len );
+	if ( buffer == NULL ) {
+		fprintf(stderr, "%s:%d malloc() error\n", __FILE__, __LINE__);
+		return -1;
+	}
+
+	ret = recv(s, (char *)buffer, buffer_len, 0);
+	if ( ret != buffer_len ) {
+		return -1;
+	}
 
 	// Now construct the clientserver table
 	settings->clientserver = (unsigned int **)malloc_2D(sizeof(unsigned int), settings->cores, settings->cores);
 	if ( settings->clientserver == NULL ) {
 		fprintf(stderr, "%s:%d malloc_2D() error\n", __FILE__, __LINE__);
+		free(buffer);
 		return -1;
 	}
 
 	for (x = 0; x < settings->cores; x++) {
 		for (y=0; y < settings->cores; y++) {
-			uint32_t i;
-
-			ret = recv(s, (char *)&i, sizeof(i), 0);
-			if ( ret != sizeof(i) ) {
-				return -1;
-			}
-			settings->clientserver[x][y] = ntohl(i);
+			settings->clientserver[x][y] = buffer [ x * settings->cores + y ] = htonl( settings->clientserver[x][y] );
 		}
 	}
+
+	free(buffer);
 
 	return 0;
 }
@@ -110,6 +123,8 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	int ret;
 	unsigned int x, y;
 	struct network_settings net_settings;
+	uint32_t *buffer = NULL;
+	unsigned int buffer_len = 0;
 
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
@@ -136,15 +151,23 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 		return -1;
 	}
 
+	// Build a buffer with all the client/server combinations
+	buffer_len = settings->cores * settings->cores * sizeof( uint32_t );
+	buffer = malloc( buffer_len );
+	if ( buffer == NULL )
+		return -1;
+
 	for (x = 0; x < settings->cores; x++) {
 		for (y=0; y < settings->cores; y++) {
-			uint32_t i = htonl( settings->clientserver[x][y] );
-
-			ret = send(s, (const char *)&i, sizeof(i), 0);
-			if ( ret != sizeof(i) ) {
-				return -1;
-			}
+			buffer [ x * settings->cores + y ] = htonl( settings->clientserver[x][y] );
 		}
+	}
+
+	ret = send(s, (const char *)buffer, buffer_len, 0);
+	free (buffer);
+
+	if ( ret != buffer_len ) {
+		return -1;
 	}
 
 	return 0;

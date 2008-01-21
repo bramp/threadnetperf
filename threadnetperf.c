@@ -513,7 +513,7 @@ void run_deamon(const struct settings *settings) {
 		if ( s == INVALID_SOCKET )
 			goto main_cleanup;
 
-		remote_settings.verbose = 0; // Make sure verbose is off on the server
+		//remote_settings.verbose = 0; // Make sure verbose is off on the server
 
 		// Setup all the data for each server
 		if ( prepare_servers(&remote_settings) )
