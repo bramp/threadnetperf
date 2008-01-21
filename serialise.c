@@ -59,6 +59,7 @@ struct network_stats {
 };
 
 // Reads settings from a socket
+// TODO add extra check
 int read_settings( SOCKET s, struct settings * settings ) {
 	int ret;
 	unsigned int x, y;
