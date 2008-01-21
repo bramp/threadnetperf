@@ -93,7 +93,7 @@ int thread_join_all() {
 	return 0;
 }
 
-int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, struct stats *, void * data), void *data) {
+int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void * data), void *data) {
 	unsigned int i = 0;
 
 	assert( settings != NULL );

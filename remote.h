@@ -27,6 +27,6 @@ int wait_go   ( const struct settings *settings, void *data );
 int remote_connect(const struct settings *settings, void** data);
 int remote_cleanup(const struct settings *settings, void* data);
 
-int remote_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, struct stats *, void * data), void *data);
+int remote_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void * data), void *data);
 int remote_send_results (const struct settings *settings, const struct stats *stats, void * data);
 

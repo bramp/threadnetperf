@@ -221,7 +221,7 @@ int remote_cleanup(const struct settings *settings, void* data) {
 }
 
 // Receive the results from the remote daemon
-int remote_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, struct stats *, void * data), void *data) {
+int remote_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void * data), void *data) {
 	unsigned int core = 0;
 	SOCKET s = ((struct remote_data*)data)->s;
 
