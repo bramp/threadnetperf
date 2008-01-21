@@ -36,7 +36,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 	// Wait for all connections
 	while ( req->bRunning && n > 0 ) {
-		struct timeval waittime = {1, 0}; // 1 second
+		struct timeval waittime = {CONTROL_TIMEOUT / 1000, 0};
 		int ret;
 		struct sockaddr_storage addr;
 		socklen_t addr_len = sizeof(addr);
@@ -46,17 +46,9 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		FD_SET( listen, &readFD);
 
 		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
-		if ( ret == SOCKET_ERROR ) {
+		if ( ret <= 0 ) {
 			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			return 1;
-		}
-
-		if ( ret == 0 ) {
-			#ifdef _DEBUG
-			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
-			#endif
-
-			continue;
 		}
 
 		// Did the listen socket fire?

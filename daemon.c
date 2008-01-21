@@ -81,7 +81,7 @@ SOCKET connect_daemon(const struct settings *settings) {
 		goto cleanup;
 	}
 
-	if ( set_socket_timeout(s, 5000) ) {
+	if ( set_socket_timeout(s, CONTROL_TIMEOUT) ) {
 		fprintf(stderr, "%s:%d set_socket_timeout() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
@@ -144,7 +144,7 @@ SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int ve
 		goto cleanup;
 	}
 
-	if ( set_socket_timeout(s, 5000) ) {
+	if ( set_socket_timeout(s, CONTROL_TIMEOUT) ) {
 		fprintf(stderr, "%s:%d set_socket_timeout() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
