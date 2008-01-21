@@ -14,46 +14,18 @@
 #include <unistd.h>
 #endif
 
+SOCKET client [ FD_SETSIZE ];
+int clients = 0; // The number of clients
 
-/**
-	Creates n client connects to address
-*/
-void* client_thread(void *data) {
-	const struct client_request * const req = data;
+int connect_connections(const struct settings *settings, const struct client_request * req) {
+
 	const struct client_request_details * details = req->details;
-
-	// Make a copy of the global settings
-	const struct settings settings = *req->settings;
-	
-	//Const pointer to the end of the buffer
-	unsigned long long* end_buffer = NULL ;
-	
-	SOCKET client [ FD_SETSIZE ];
-	SOCKET *c = client;
-	SOCKET s;
-	int clients = 0; // The number of clients
-	int i;
-	char *buffer = NULL;
-	struct timespec waittime = {0, 100000000}; // 100 milliseconds
-	int nfds;
-
-	fd_set readFD;
-	fd_set writeFD;
-
-	assert ( req != NULL );
-	assert ( details != NULL );
-
-	// Blank client before we start
-	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
-		*c = INVALID_SOCKET;
-
-	if ( settings.verbose )
-		printf("Core %d: Started client thread\n", req->core);
 
 	// Loop all the client requests for this thread
 	while ( details != NULL ) {
+		unsigned int i;
 
-		if ( settings.verbose ) {
+		if ( settings->verbose ) {
 			char addr[NI_MAXHOST + NI_MAXSERV + 1];
 
 			// Print the host/port
@@ -68,40 +40,46 @@ void* client_thread(void *data) {
 		i = details->n;
 		while ( i > 0 ) {
 			int send_socket_size, recv_socket_size;
-			
+			SOCKET s;
+
 			if ( clients >= sizeof(client) / sizeof(*client) ) {
 				fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
-				goto cleanup;
+				return -1;
 			}
 
-			s = socket( AF_INET, settings.type, settings.protocol);
+			s = socket( AF_INET, settings->type, settings->protocol);
 			if ( s == INVALID_SOCKET ) {
 				fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
-				goto cleanup;
+				return -1;
 			}
 
-	 		send_socket_size = set_socket_send_buffer( s, settings.socket_size );
+	 		send_socket_size = set_socket_send_buffer( s, settings->socket_size );
 			if ( send_socket_size < 0 ) {
 				fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
 			
-	 		recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
+	 		recv_socket_size = set_socket_recv_buffer( s, settings->socket_size );
 			if ( send_socket_size < 0 ) {
 				fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
 			
-			if ( settings.verbose ) {
+			if ( settings->verbose ) {
 				// TODO tidy this
 				printf("client socket size: %d/%d\n", send_socket_size, recv_socket_size );
 			}
 
-			if ( settings.disable_nagles ) {
+			if ( settings->disable_nagles ) {
 				if ( disable_nagle( s ) == SOCKET_ERROR ) {
 					fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
 				}
+			}
+
+			if ( set_socket_timeout(s, CONTROL_TIMEOUT) ) {
+				fprintf(stderr, "%s:%d set_socket_timeout() error %d\n", __FILE__, __LINE__, ERRNO );
+				goto cleanup;
 			}
 
 			if ( connect( s, details->addr, details->addr_len ) == SOCKET_ERROR ) {
@@ -119,10 +97,56 @@ void* client_thread(void *data) {
 			clients++;
 
 			i--;
+			continue;
+
+		cleanup:
+			closesocket(s);
+			return -1;
 		}
 
 		// move onto the next client request
 		details = details->next;
+	}
+
+	return 0;
+}
+
+/**
+	Creates n client connects to address
+*/
+void* client_thread(void *data) {
+	const struct client_request * const req = data;
+	const struct client_request_details * details = req->details;
+
+	// Make a copy of the global settings
+	const struct settings settings = *req->settings;
+	
+	// Pointer to the end of the buffer
+	unsigned long long* end_buffer = NULL ;
+	
+	SOCKET *c = NULL;
+
+	char *buffer = NULL;
+	struct timespec waittime = {0, 100000000}; // 100 milliseconds
+	int nfds;
+
+	fd_set readFD;
+	fd_set writeFD;
+
+	assert ( req != NULL );
+	assert ( details != NULL );
+
+	clients = 0;
+
+	// Blank client before we start
+	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
+		*c = INVALID_SOCKET;
+
+	if ( settings.verbose )
+		printf("Core %d: Started client thread\n", req->core);
+
+	if ( connect_connections(&settings, req) ) {
+		goto cleanup;
 	}
 
 	buffer = malloc( settings.message_size );
@@ -215,7 +239,7 @@ void* client_thread(void *data) {
 					}
 
 					if ( settings.verbose )
-						printf("  Client: %d Remove client (%d/%d)\n", req->core, i, clients );
+						printf("  Client: %d Remove client (%d/%d)\n", req->core, c - client, clients );
 
 					// Unset me from the set
 					FD_CLR( s, &readFD );
