@@ -239,7 +239,7 @@ void* client_thread(void *data) {
 					}
 
 					if ( settings.verbose )
-						printf("  Client: %d Remove client (%d/%d)\n", req->core, c - client, clients );
+						printf("  Client: %d Remove client (%d/%d)\n", req->core, (int)((c - client) / sizeof(*c)), clients );
 
 					// Unset me from the set
 					FD_CLR( s, &readFD );
