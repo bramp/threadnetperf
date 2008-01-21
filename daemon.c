@@ -212,5 +212,9 @@ int wait_go ( SOCKET s ) {
 }
 
 int wait_stop ( SOCKET s ) {
+	// We can be waiting quite some time, so best to remove any SO_RCVTIMEO
+	if ( set_socket_timeout(s, 0) )
+		return -1;
+
 	return wait_remote( s, SIGNAL_STOP );
 }
