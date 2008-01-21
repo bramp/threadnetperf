@@ -211,8 +211,7 @@ int remote_connect(const struct settings *settings, void** data) {
 }
 
 int remote_cleanup(const struct settings *settings, void* data) {
-	struct remote_data *remote_data = NULL;
-
+	assert ( data != NULL );
 	assert ( settings != NULL );
 
 	closesocket ( ((struct remote_data*)data)->s );
@@ -249,7 +248,7 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 	return 0;
 }
 
-int remote_send_results (const struct settings *settings, struct stats *stats, void * data) {
+int remote_send_results (const struct settings *settings, const struct stats *stats, void * data) {
 	SOCKET s = ((struct remote_data*)data)->s;
 
 	assert ( data != NULL );
