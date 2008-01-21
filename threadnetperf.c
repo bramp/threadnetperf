@@ -66,7 +66,7 @@ struct run_functions {
 
 	int (*wait_for_go)(const struct settings *, void *);
 
-	int (*collect_results)(const struct settings *, struct stats *, int (*printer)(const struct settings *, struct stats *, void *), void *);
+	int (*collect_results)(const struct settings *, struct stats *, int (*printer)(const struct settings *, const struct stats *, void *), void *);
 	int (*print_results)(const struct settings *, const struct stats *, void *);
 
 	int (*cleanup)(const struct settings *, void *);
