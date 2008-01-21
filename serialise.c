@@ -109,7 +109,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 	for (x = 0; x < settings->cores; x++) {
 		for (y=0; y < settings->cores; y++) {
-			settings->clientserver[x][y] = buffer [ x * settings->cores + y ] = htonl( settings->clientserver[x][y] );
+			settings->clientserver[x][y] = ntohl( buffer [ x * settings->cores + y ] );
 		}
 	}
 

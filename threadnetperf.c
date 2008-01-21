@@ -437,14 +437,20 @@ void run_remote(const struct settings *settings) {
 	threads_clear();
 
 	s = connect_daemon(settings);
-	if ( s == INVALID_SOCKET )
+	if ( s == INVALID_SOCKET ) {
+		fprintf(stderr, "%s:%d s==INVALID_SOCKET error\n", __FILE__, __LINE__ );
 		goto cleanup;
+	}
 
-	if ( send_test( s, settings) )
+	if ( send_test( s, settings) ) {
+		fprintf(stderr, "%s:%d send_test() error\n", __FILE__, __LINE__ );
 		goto cleanup;
+	}
 
-	if ( prepare_clients(settings) )
+	if ( prepare_clients(settings) ) {
+		fprintf(stderr, "%s:%d prepare_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
+	}
 
 	assert ( unready_threads > 0 );
 
@@ -455,19 +461,25 @@ void run_remote(const struct settings *settings) {
 	}
 
 	// Wait for the remote to be ready
-	if ( wait_ready(s) )
+	if ( wait_ready(s) ) {
+		fprintf(stderr, "%s:%d wait_ready() error\n", __FILE__, __LINE__ );
 		goto cleanup;
+	}
 
 	// Now start connecting the clients
-	if ( create_clients( settings) )
+	if ( create_clients( settings) ) {
+		fprintf(stderr, "%s:%d create_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
+	}
 
 	// Wait for the client threads to be ready
 	wait_for_threads();
 
 	// Wait for a go from the server
-	if ( wait_go(s) )
+	if ( wait_go(s) ) {
+		fprintf(stderr, "%s:%d wait_go() error\n", __FILE__, __LINE__ );
 		goto cleanup;
+	}
 
 	// Now go
 	start_threads();
@@ -516,10 +528,13 @@ void run_deamon(const struct settings *settings) {
 		//remote_settings.verbose = 0; // Make sure verbose is off on the server
 
 		// Setup all the data for each server
-		if ( prepare_servers(&remote_settings) )
+		if ( prepare_servers(&remote_settings) ) {
+			fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
 			goto cleanup;
+		}
 
 		if ( unready_threads == 0 ) {
+			fprintf(stderr, "%s:%d unready_threads==0 error\n", __FILE__, __LINE__ );
 			goto cleanup;
 		}
 
@@ -530,19 +545,25 @@ void run_deamon(const struct settings *settings) {
 		}
 
 		// Create each server/client thread
-		if ( create_servers(&remote_settings) )
+		if ( create_servers(&remote_settings) ) {
+			fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
 			goto cleanup;
+		}
 
 		// Signal the the remote machine that the servers are ready
-		if ( signal_ready ( s ) )
+		if ( signal_ready ( s ) ) {
+			fprintf(stderr, "%s:%d signal_ready() error\n", __FILE__, __LINE__ );
 			goto cleanup;
+		}
 
 		// Wait for a go
 		wait_for_threads();
 		
 		// Signal the remote machine that the clients are all connected
-		if ( signal_go ( s ) )
+		if ( signal_go ( s ) ) {
+			fprintf(stderr, "%s:%d signal_go() error\n", __FILE__, __LINE__ );
 			goto cleanup;
+		}
 
 		// And now tell our servers to go!
 		start_threads();
