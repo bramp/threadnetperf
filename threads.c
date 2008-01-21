@@ -97,6 +97,9 @@ int thread_join_all() {
 int thread_sum_stats(const struct settings *settings, struct stats *total_stats) {
 	unsigned int i = 0;
 
+	assert( settings != NULL );
+	assert( total_stats != NULL );
+
 	while (thread_count > 0) {
 		struct stats *stats;
 
@@ -117,7 +120,8 @@ int thread_sum_stats(const struct settings *settings, struct stats *total_stats)
 	}
 
 	// Divide the duration by the # of CPUs used
-	total_stats->duration /= i;
+	if ( i > 1 )
+		total_stats->duration /= i;
 
 	assert ( thread_count == 0 );
 
@@ -146,7 +150,6 @@ int thread_send_and_sum_stats(const struct settings *settings, SOCKET s) {
 				return -1;
 			}
 
-
 			// Now add the values to the total
 			total_stats.bytes_received += stats->bytes_received;
 			total_stats.duration       += stats->duration;
@@ -160,7 +163,8 @@ int thread_send_and_sum_stats(const struct settings *settings, SOCKET s) {
 	assert ( thread_count == 0 );
 
 	// Divide the duration by the # of CPUs used
-	total_stats.duration /= i;
+	if ( i > 1 )
+		total_stats.duration /= i;
 
 	if ( send_stats(s, &total_stats ) ) {
 		fprintf(stderr, "%s:%d send_stats() error\n", __FILE__, __LINE__ );

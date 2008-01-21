@@ -498,11 +498,19 @@ void run_remote(const struct settings *settings) {
 		}
 
 		print_results(settings, &stats);
+
+		// Quit looking for more results if this is the total
+		if ( stats.core == -1 )
+			break;
 	}
 
 cleanup:
+
 	// Make sure we are not running anymore
 	stop_all();
+
+	if ( s != INVALID_SOCKET )
+		closesocket(s);
 
 	thread_join_all();
 	threads_clear();
@@ -590,6 +598,9 @@ void run_deamon(const struct settings *settings) {
 
 		// Make sure we are not running anymore
 		stop_all();
+
+		if ( s != INVALID_SOCKET )
+			closesocket(s);
 
 		thread_join_all();
 		threads_clear();
