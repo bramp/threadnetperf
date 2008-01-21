@@ -69,6 +69,25 @@ int set_socket_recv_buffer(SOCKET s, unsigned int socket_size) {
 	return set_socket_buffer(s, SO_RCVBUF, socket_size);
 }
 
+// Sets the socket's send/recv timeout
+int set_socket_timeout(SOCKET s, unsigned int milliseconds) {
+	struct timeval tv;
+
+	if ( s == INVALID_SOCKET )
+		return -1;
+
+	tv.tv_sec = milliseconds / 1000;
+	tv.tv_usec = milliseconds % 1000 * 1000;
+
+    if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)))
+      return -1;
+
+    if (setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv)))
+      return -1;
+
+	return 0;
+}
+
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end ) {
 

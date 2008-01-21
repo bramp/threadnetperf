@@ -81,6 +81,11 @@ SOCKET connect_daemon(const struct settings *settings) {
 		goto cleanup;
 	}
 
+	if ( set_socket_timeout(s, 5000) ) {
+		fprintf(stderr, "%s:%d set_socket_timeout() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = inet_addr( settings->server_host );
@@ -136,6 +141,11 @@ SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int ve
 	s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
 	if ( s == INVALID_SOCKET) {
 		fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
+	if ( set_socket_timeout(s, 5000) ) {
+		fprintf(stderr, "%s:%d set_socket_timeout() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 

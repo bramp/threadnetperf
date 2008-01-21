@@ -69,6 +69,8 @@ int disable_blocking(SOCKET s);
 int set_socket_send_buffer(SOCKET s, unsigned int socket_size);
 int set_socket_recv_buffer(SOCKET s, unsigned int socket_size);
 
+int set_socket_timeout(SOCKET s, unsigned int milliseconds);
+
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end );
 
