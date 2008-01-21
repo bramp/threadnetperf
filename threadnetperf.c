@@ -488,6 +488,8 @@ void run_remote(const struct settings *settings) {
 
 	stop_all();
 
+	print_headers(settings);
+
 	// recv results
 	for ( core = 0; core < settings->cores + 1; core++ ) {
 		struct stats stats;
