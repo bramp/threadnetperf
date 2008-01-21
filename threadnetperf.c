@@ -414,6 +414,8 @@ void run_local( const struct settings *settings, struct stats *total_stats ) {
 	// Block waiting until all threads die and print out their stats
 	thread_sum_stats(settings, total_stats);
 
+	print_results( settings, stats );
+
 cleanup:
 
 	// Make sure we are not running anymore
@@ -427,7 +429,7 @@ cleanup:
 }
 
 // Run a experiment on a remote host
-void run_remote(const struct settings *settings) {
+void run_remote(const struct settings *settings, struct stats *total_stats) {
 	SOCKET s = INVALID_SOCKET;
 	unsigned int core;
 
@@ -502,8 +504,10 @@ void run_remote(const struct settings *settings) {
 		print_results(settings, &stats);
 
 		// Quit looking for more results if this is the total
-		if ( stats.core == -1 )
+		if ( stats.core == -1 ) {
+			*total_stats = stats;
 			break;
+		}
 	}
 
 cleanup:
@@ -648,13 +652,6 @@ int main (int argc, char *argv[]) {
 		run_deamon(&settings);
 		goto cleanup;
 	} 
-	// Otherwise just run the test locally
-
-	// Some test code to aid in debugging
-	if ( strcmp(settings.server_host, "127.0.0.1") != 0 ) {
-		run_remote(&settings);
-		goto cleanup;
-	}
 
 	//Rerun the tests for a certain number of iterations as specified by the user
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
@@ -663,7 +660,11 @@ int main (int argc, char *argv[]) {
 		total_stats.core = -1;
 
 		// Start the tests
-		run_local( &settings, &total_stats );
+		if ( strcmp(settings.server_host, "127.0.0.1") != 0 ) {
+			run_remote(&settings, &total_stats );
+		} else {
+			run_local (&settings, &total_stats );
+		}
 
 		if (settings.confidence_lvl != 0.0) {
 			double mean;
@@ -684,8 +685,6 @@ int main (int argc, char *argv[]) {
 				break;
 			}
 		}
-
-		print_results( &settings, &total_stats );
 	}
 
 cleanup:
