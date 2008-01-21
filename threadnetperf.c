@@ -4,9 +4,8 @@
 
 	Note, this app is very rough, and needs cleaning up, but it works!
 	TODO Allow the app to work across networks
-	TODO Implement optomisations
 	TODO Add flag to output bandwidth at set intervals during the experiment
-	TODO Add flag to allow iteration until a confidence interval is meant
+	TODO make the code more generic by using function pointers (etc) so it doesn't matter where the code is run
 */
 
 #include "common.h"
@@ -15,6 +14,7 @@
 #include "client.h"
 #include "daemon.h"
 #include "threads.h"
+#include "serialise.h"
 
 #include <signal.h>
 
@@ -404,7 +404,7 @@ void run_local( const struct settings *settings, struct stats *total_stats ) {
 	wait_for_threads();
 	start_threads();
 
-	// Pauses for the duration, then sets bRunning to false
+	// Pauses for the duration
 	pause_for_duration( settings );
 
 	stop_all();
@@ -429,7 +429,7 @@ cleanup:
 // Run a experiment on a remote host
 void run_remote(const struct settings *settings) {
 	SOCKET s = INVALID_SOCKET;
-	struct stats total_stats;
+	unsigned int core;
 
 	bGo = 0;
 	bRunning = 1;
@@ -438,7 +438,6 @@ void run_remote(const struct settings *settings) {
 
 	s = connect_daemon(settings);
 	if ( s == INVALID_SOCKET ) {
-		fprintf(stderr, "%s:%d s==INVALID_SOCKET error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
@@ -484,14 +483,22 @@ void run_remote(const struct settings *settings) {
 	// Now go
 	start_threads();
 
-	if ( wait_stop(s) ) {
-		fprintf(stderr, "%s:%d signal_stop() error\n", __FILE__, __LINE__ );
-		goto cleanup;
-	}
+	// Pauses for the duration
+	pause_for_duration( settings );
 
 	stop_all();
 
 	// recv results
+	for ( core = 0; core < settings->cores + 1; core++ ) {
+		struct stats stats;
+
+		if ( read_stats( s, &stats ) ) {
+			fprintf(stderr, "%s:%d read_stats() error\n", __FILE__, __LINE__ );
+			goto cleanup;
+		}
+
+		print_results(settings, &stats);
+	}
 
 cleanup:
 	// Make sure we are not running anymore
@@ -502,6 +509,7 @@ cleanup:
 
 	cleanup_clients();
 }
+
 
 void run_deamon(const struct settings *settings) {
 
@@ -515,7 +523,6 @@ void run_deamon(const struct settings *settings) {
 	while ( 1 ) {
 		struct settings remote_settings;
 		SOCKET s = INVALID_SOCKET;
-		struct stats total_stats;
 
 		bGo = 0;
 		bRunning = 1;
@@ -570,19 +577,14 @@ void run_deamon(const struct settings *settings) {
 		// And now tell our servers to go!
 		start_threads();
 
-		// Pauses for the duration, then sets bRunning to false
-		pause_for_duration( settings );
-
-		if ( signal_stop(s) ) {
-			fprintf(stderr, "%s:%d signal_stop() error\n", __FILE__, __LINE__ );
-			goto cleanup;
-		}
+		// Pauses for the duration
+		pause_for_duration( &remote_settings );
 
 		// Stop
 		stop_all();
 
 		// Block waiting until all threads die and print out their stats
-		thread_sum_stats(settings, &total_stats);
+		thread_send_and_sum_stats( &remote_settings, s);
 
 	cleanup:
 

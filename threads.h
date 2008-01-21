@@ -19,6 +19,8 @@
 #endif
 
 int thread_sum_stats(const struct settings *settings, struct stats *total_stats);
+int thread_send_and_sum_stats(const struct settings *settings, SOCKET s);
+
 int thread_join_all ();
 int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset );
 

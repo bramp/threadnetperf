@@ -41,6 +41,23 @@ struct network_settings {
 	uint16_t port;
 };
 
+struct network_stats {
+	// The core these stats were recorded from
+	uint32_t core;
+
+	// The number of bytes received
+	uint64_t bytes_received;
+	
+	// The number of recv() handled
+	uint64_t pkts_received;
+
+	// The duration packets were inside the network
+	uint64_t pkts_time;	
+	
+	// The duration over which these stats were recorded
+	uint64_t duration;
+};
+
 // Reads settings from a socket
 int read_settings( SOCKET s, struct settings * settings ) {
 	int ret;
@@ -167,6 +184,50 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	free (buffer);
 
 	if ( ret != buffer_len ) {
+		return -1;
+	}
+
+	return 0;
+}
+
+int read_stats( SOCKET s, struct stats * stats ) {
+	struct network_stats net_stats;
+	int ret;
+
+	assert ( s != INVALID_SOCKET );
+	assert ( stats != NULL );
+
+	ret = recv(s, (char *)&net_stats, sizeof(net_stats), 0);
+	if ( ret != sizeof(net_stats) ) {
+		return -1;
+	}
+
+	// TODO find a 64bit ntohl
+	stats->core           = ntohl(net_stats.core);
+	stats->bytes_received = (net_stats.bytes_received);
+	stats->pkts_received  = (net_stats.pkts_received);
+	stats->pkts_time	  = (net_stats.pkts_time);	
+	stats->duration       = (net_stats.duration);
+
+	return 0;
+}
+
+int send_stats( SOCKET s, const struct stats * stats ) {
+	struct network_stats net_stats;
+	int ret;
+
+	assert ( s != INVALID_SOCKET );
+	assert ( stats != NULL );
+
+	// TODO find a 64bit htonl
+	net_stats.core           = htonl(stats->core);
+	net_stats.bytes_received = (stats->bytes_received);
+	net_stats.pkts_received  = (stats->pkts_received);
+	net_stats.pkts_time	     = (stats->pkts_time);	
+	net_stats.duration       = (stats->duration);
+
+	ret = send(s, (char *)&net_stats, sizeof(net_stats), 0);
+	if ( ret != sizeof(net_stats) ) {
 		return -1;
 	}
 
