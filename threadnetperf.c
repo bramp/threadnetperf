@@ -51,10 +51,68 @@ unsigned int unready_threads = 0;
 // The number of cores this machine has
 const unsigned int max_cores = 8; // TODO get the real number!
 
+int null_func(const struct settings *settings, void * data) { return 0; };
+int null_func2(const struct settings *settings, void ** data) { return 0; };
+
+int remote_collect_results(const struct settings *settings, struct stats *total_stats, void *data);
+int remote_connect(const struct settings *settings, void** data);
+int remote_cleanup(const struct settings *settings, void* data);
+
+// List of functions which run() uses
+struct run_functions {
+	int (*setup)(const struct settings *, void ** data);
+
+	int (*prepare_servers)(const struct settings *, void * data);
+	int (*prepare_clients)(const struct settings *, void * data);
+
+	int (*create_servers)(const struct settings *, void * data);
+	int (*create_clients)(const struct settings *, void * data);
+
+	int (*wait_for_go)(const struct settings *, void * data);
+
+	int (*collect_results)(const struct settings *, struct stats *, void * data);
+
+	int (*cleanup)(const struct settings *, void * data);
+};
+
+// The run sequence for a local test
+struct run_functions local_funcs = {
+	null_func2,       //setup
+	prepare_servers,  //prepare_servers
+	prepare_clients,  //prepare_clients
+	create_servers,   //create_servers
+	create_clients,   //create_clients
+	null_func,        //wait_for_go
+	thread_sum_stats, //collect_results
+	null_func, 
+};
+
+// The run sequence for a remote server
+struct run_functions remote_server_funcs = {
+	null_func2,                //setup
+	prepare_servers,           //prepare_servers
+	null_func,                 //prepare_clients
+	create_servers,            //create_servers
+	signal_ready,              //create_clients
+	signal_go,                 //wait_for_go
+	thread_send_and_sum_stats, //collect_results
+	remote_cleanup             //cleanup
+};
+
+// The run sequence for a client (connecting to a remote server)
+struct run_functions remote_client_funcs = {
+	remote_connect,            //setup
+	null_func,                 //prepare_servers
+	prepare_clients,           //prepare_clients
+	wait_ready,                //create_servers
+	create_clients,            //create_clients
+	wait_go,                   //wait_for_go
+	remote_collect_results,    //collect_results
+	remote_cleanup             //cleanup
+};
 
 // Signals all threads to stop
 void stop_all () {
-
 	bRunning = 0;
 
 	stop_all_clients();
@@ -367,9 +425,11 @@ void start_threads() {
 	pthread_mutex_unlock( &go_mutex );
 }
 
-// Runs tests locally creating both servers and clients
-void run_local( const struct settings *settings, struct stats *total_stats ) {
-
+void run( const struct run_functions * funcs, const struct settings *settings, struct stats *total_stats ) {
+	
+	void *data = NULL;
+	
+	assert ( funcs != NULL );
 	assert ( settings != NULL );
 	assert ( total_stats != NULL );
 
@@ -378,81 +438,18 @@ void run_local( const struct settings *settings, struct stats *total_stats ) {
 	unready_threads = 0; // Number of threads not ready
 	threads_clear();
 
+	if ( funcs->setup ( settings, &data ) ) {
+		fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
 	// Setup all the data for each server and client
-	if ( prepare_servers(settings) )
-		goto cleanup;
-
-	if ( prepare_clients(settings) )
-		goto cleanup;
-
-	assert ( unready_threads > 0 );
-
-	// A list of threads
-	if ( thread_alloc(unready_threads) ) {
-		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
+	if ( funcs->prepare_servers(settings, data) ) {
+		fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
-	// Create each server/client thread
-	if ( create_servers(&settings) )
-		goto cleanup;
-
-	if ( create_clients(&settings) )
-		goto cleanup;
-
-	// Wait and then signal a go!
-	wait_for_threads();
-	start_threads();
-
-	// Pauses for the duration
-	pause_for_duration( settings );
-
-	stop_all();
-
-	print_headers( settings );
-
-	// Block waiting until all threads die and print out their stats
-	thread_sum_stats(settings, total_stats);
-
-	print_results( settings, stats );
-
-cleanup:
-
-	// Make sure we are not running anymore
-	stop_all();
-
-	thread_join_all();
-	threads_clear();
-
-	cleanup_clients();
-	cleanup_servers();
-}
-
-// Run a experiment on a remote host
-void run_remote(const struct settings *settings, struct stats *total_stats) {
-	SOCKET s = INVALID_SOCKET;
-	unsigned int core;
-
-	bGo = 0;
-	bRunning = 1;
-	unready_threads = 0; // Number of threads not ready
-	threads_clear();
-
-	// Pre test
-
-	s = connect_daemon(settings);
-	if ( s == INVALID_SOCKET ) {
-		goto cleanup;
-	}
-
-	if ( send_test( s, settings) ) {
-		fprintf(stderr, "%s:%d send_test() error\n", __FILE__, __LINE__ );
-		goto cleanup;
-	}
-
-	// Prepare
-
-	if ( prepare_clients(settings) ) {
+	if ( funcs->prepare_clients(settings, data) ) {
 		fprintf(stderr, "%s:%d prepare_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
@@ -465,28 +462,26 @@ void run_remote(const struct settings *settings, struct stats *total_stats) {
 		goto cleanup;
 	}
 
-	// Wait for the remote to be ready
-	if ( wait_ready(s) ) {
-		fprintf(stderr, "%s:%d wait_ready() error\n", __FILE__, __LINE__ );
+	// Create each server/client thread
+	if ( funcs->create_servers(settings, data) ) {
+		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
-	// Now start connecting the clients
-	if ( create_clients( settings) ) {
+	if ( funcs->create_clients(settings, data) ) {
 		fprintf(stderr, "%s:%d create_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
-	// Wait for the client threads to be ready
+	// Wait for our threads to be created
 	wait_for_threads();
 
-	// Wait for a go from the server
-	if ( wait_go(s) ) {
-		fprintf(stderr, "%s:%d wait_go() error\n", __FILE__, __LINE__ );
+	if ( funcs->wait_for_go(settings, data) ) {
+		fprintf(stderr, "%s:%d wait_for_go() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
-	// Now go
+	// Wait and then signal a go!
 	start_threads();
 
 	// Pauses for the duration
@@ -494,15 +489,70 @@ void run_remote(const struct settings *settings, struct stats *total_stats) {
 
 	stop_all();
 
-	print_headers(settings);
+	print_headers( settings );
 
-	// recv results
-	for ( core = 0; core < settings->cores + 1; core++ ) {
+	if ( funcs->collect_results ( settings, total_stats, data) ) {
+		fprintf(stderr, "%s:%d collect_results() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
+cleanup:
+
+	// Make sure we are not running anymore
+	stop_all();
+
+	thread_join_all();
+	threads_clear();
+
+	cleanup_clients();
+	cleanup_servers();
+
+	funcs->cleanup( settings, data );
+}
+
+// Connect to a remote daemon and send the test
+int remote_connect(const struct settings *settings, void** data) {
+	SOCKET s;
+
+	assert ( settings != NULL );
+
+	s = connect_daemon(settings);
+	if ( s == INVALID_SOCKET ) {
+		return -1;
+	}
+
+	if ( send_test( s, settings) ) {
+		fprintf(stderr, "%s:%d send_test() error\n", __FILE__, __LINE__ );
+		return -1;
+	}
+
+	*data = (void *)s;
+
+	return 0;
+}
+
+int remote_cleanup(const struct settings *settings, void* data) {
+	assert ( settings != NULL );
+
+	closesocket ( (SOCKET)data );
+
+	return 0;
+}
+
+// Receive the results from the remote daemon
+int remote_collect_results(const struct settings *settings, struct stats *total_stats, void *data) {
+	unsigned int core = 0;
+	SOCKET s = (SOCKET)data;
+
+	assert ( data != NULL );
+	assert ( s != INVALID_SOCKET );
+
+	for ( ; core < settings->cores + 1; core++ ) {
 		struct stats stats;
 
 		if ( read_stats( s, &stats ) ) {
 			fprintf(stderr, "%s:%d read_stats() error\n", __FILE__, __LINE__ );
-			goto cleanup;
+			return -1;
 		}
 
 		print_results(settings, &stats);
@@ -514,18 +564,7 @@ void run_remote(const struct settings *settings, struct stats *total_stats) {
 		}
 	}
 
-cleanup:
-
-	// Make sure we are not running anymore
-	stop_all();
-
-	if ( s != INVALID_SOCKET )
-		closesocket(s);
-
-	thread_join_all();
-	threads_clear();
-
-	cleanup_clients();
+	return 0;
 }
 
 
@@ -540,8 +579,25 @@ void run_deamon(const struct settings *settings) {
 	// Now loop accepting incoming tests
 	while ( 1 ) {
 		struct settings remote_settings;
+		struct stats total_stats;
+
 		SOCKET s = INVALID_SOCKET;
 
+		if ( settings->verbose ) {
+			printf("Waiting for test...\n");
+		}
+
+		// Wait for a test to come in
+		s = accept_test( listen_socket, &remote_settings, settings->verbose );
+		if ( s == INVALID_SOCKET )
+			goto main_cleanup;
+
+		run( &remote_server_funcs, settings, &total_stats );
+
+		closesocket(s);
+
+	}
+/*
 		bGo = 0;
 		bRunning = 1;
 		unready_threads = 0; // Number of threads not ready
@@ -617,6 +673,7 @@ void run_deamon(const struct settings *settings) {
 
 		cleanup_servers();
 	}
+*/
 
 main_cleanup:
 
@@ -630,6 +687,7 @@ int main (int argc, char *argv[]) {
 
 	// All the settings we parse
 	struct settings settings;
+	struct run_functions *funcs = NULL;
 
 	unsigned int iteration = 0;
 	double sum = 0.0;
@@ -655,7 +713,14 @@ int main (int argc, char *argv[]) {
 	if (settings.deamon) {
 		run_deamon(&settings);
 		goto cleanup;
-	} 
+	}
+
+	// Decide what kind of test this is
+	if ( strcmp(settings.server_host, "127.0.0.1") != 0 ) {
+		funcs = &remote_client_funcs;
+	} else {
+		funcs = &local_funcs;
+	}
 
 	//Rerun the tests for a certain number of iterations as specified by the user
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
@@ -664,11 +729,7 @@ int main (int argc, char *argv[]) {
 		total_stats.core = -1;
 
 		// Start the tests
-		if ( strcmp(settings.server_host, "127.0.0.1") != 0 ) {
-			run_remote(&settings, &total_stats );
-		} else {
-			run_local (&settings, &total_stats );
-		}
+		run ( funcs, &settings, &total_stats );
 
 		if (settings.confidence_lvl != 0.0) {
 			double mean;
@@ -688,7 +749,10 @@ int main (int argc, char *argv[]) {
 				print_results( &settings, &total_stats );
 				break;
 			}
+		} else {
+			print_results( &settings, &total_stats );
 		}
+
 	}
 
 cleanup:

@@ -27,8 +27,8 @@ struct client_request_details {
 
 void *client_thread(void *data);
 
-int prepare_clients(const struct settings * settings);
-int create_clients();
+int prepare_clients(const struct settings * settings, void * data);
+int create_clients(const struct settings * settings, void * data);
 
 void stop_all_clients();
 void cleanup_clients();

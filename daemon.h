@@ -18,11 +18,9 @@ void close_daemon( SOCKET listen_socket );
 // Connect to a control daemon and send these settings
 SOCKET connect_daemon(const struct settings *settings);
 
-int signal_ready( SOCKET s );
-int signal_go( SOCKET s );
-int signal_stop( SOCKET s );
+int signal_ready( const struct settings *settings, void *data );
+int signal_go   ( const struct settings *settings, void *data );
 
-int wait_ready( SOCKET s );
-int wait_go ( SOCKET s );
-int wait_stop ( SOCKET s );
+int wait_ready( const struct settings *settings, void *data );
+int wait_go   ( const struct settings *settings, void *data );
 

@@ -3,7 +3,7 @@
 extern volatile unsigned int server_listen_unready;
 
 struct server_request {
- 
+
 	volatile int bRunning; // Flag to indicate if the server should be running
 
 	unsigned short port; // The port the server is listening on
@@ -19,8 +19,9 @@ struct server_request {
 
 void *server_thread(void *data);
 
-int prepare_servers(const struct settings * settings);
-int create_servers();
+int prepare_servers(const struct settings * settings, void * data);
+int create_servers(const struct settings * settings, void * data);
+
 void stop_all_servers();
 void cleanup_servers();
 

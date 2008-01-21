@@ -9,7 +9,7 @@
 struct client_request *creq = NULL;
 size_t creq_size = 0;
 
-int prepare_clients(const struct settings * settings) {
+int prepare_clients(const struct settings * settings, void *data) {
 
 	unsigned int servercore, clientcore;
 	unsigned int ** clientserver;
@@ -86,7 +86,7 @@ int prepare_clients(const struct settings * settings) {
 	return 0;
 }
 
-int create_clients(const struct settings *settings) {
+int create_clients(const struct settings *settings, void *data) {
 	unsigned int clientcore;
 
 	assert ( settings != NULL );

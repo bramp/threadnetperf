@@ -191,30 +191,31 @@ int wait_remote( SOCKET s, unsigned char code ) {
 	return 0;
 }
 
-int signal_ready( SOCKET s ) {
+int signal_ready( const struct settings *settings, void *data ) {
+	SOCKET s = (SOCKET)data;
+	assert ( data != NULL && s != INVALID_SOCKET );
+
 	return signal_remote( s, SIGNAL_READY );
 }
 
-int signal_go( SOCKET s ) {
+int signal_go( const struct settings *settings, void *data ) {
+	SOCKET s = (SOCKET)data;
+	assert ( data != NULL && s != INVALID_SOCKET );
+
 	return signal_remote( s, SIGNAL_GO );
 }
 
-int signal_stop( SOCKET s ) {
-	return signal_remote( s, SIGNAL_STOP );
-}
+int wait_ready( const struct settings *settings, void *data ) {
+	SOCKET s = (SOCKET)data;
+	assert ( data != NULL && s != INVALID_SOCKET );
 
-int wait_ready( SOCKET s ) {
 	return wait_remote( s, SIGNAL_READY );
 }
 
-int wait_go ( SOCKET s ) {
+int wait_go ( const struct settings *settings, void *data ) {
+	SOCKET s = (SOCKET)data;
+	assert ( data != NULL && s != INVALID_SOCKET );
+	
 	return wait_remote( s, SIGNAL_GO );
 }
 
-int wait_stop ( SOCKET s ) {
-	// We can be waiting quite some time, so best to remove any SO_RCVTIMEO
-	if ( set_socket_timeout(s, 0) )
-		return -1;
-
-	return wait_remote( s, SIGNAL_STOP );
-}

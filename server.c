@@ -13,7 +13,7 @@
 struct server_request *sreq = NULL;
 size_t sreq_size = 0;
 
-int prepare_servers(const struct settings * settings) {
+int prepare_servers(const struct settings * settings, void *data) {
 
 	unsigned int servercore, clientcore;
 	unsigned int ** clientserver;
@@ -66,7 +66,7 @@ int prepare_servers(const struct settings * settings) {
 	return 0;
 }
 
-int create_servers(const struct settings *settings) {
+int create_servers(const struct settings *settings, void *data) {
 	unsigned int servercore;
 
 	assert ( sreq_size == settings->cores );
