@@ -5,6 +5,8 @@
 
 #include <assert.h>
 #include <malloc.h>
+#include <string.h> // for malloc
+#include <stdio.h> // for printf
 
  // Array to handle thread handles
 pthread_t *thread = NULL;
