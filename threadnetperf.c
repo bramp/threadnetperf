@@ -534,8 +534,6 @@ void run_deamon(const struct settings *settings) {
 		}
 
 		run( &remote_server_funcs, &remote_settings, &total_stats );
-
-		remote_server_funcs.print_results(&remote_settings, &total_stats, NULL);
 	}
 
 	close_daemon();
