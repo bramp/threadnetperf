@@ -202,7 +202,6 @@ int remote_setup_data(void** data, SOCKET s) {
 
 int remote_accept(struct settings *settings, void **data) {
 	SOCKET s = INVALID_SOCKET;
-	struct remote_data *remote_data = NULL;
 
 	// Wait for a test to come in
 	s = accept_test( listen_socket, settings );
@@ -220,7 +219,6 @@ int remote_accept(struct settings *settings, void **data) {
 // Connect to a remote daemon and send the test
 int remote_connect(struct settings *settings, void** data) {
 	SOCKET s = INVALID_SOCKET;
-	struct remote_data *remote_data = NULL;
 
 	assert ( settings != NULL );
 

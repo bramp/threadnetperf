@@ -529,14 +529,13 @@ void run_deamon(const struct settings *settings) {
 		struct settings remote_settings;
 		struct stats total_stats;
 
-		SOCKET s = INVALID_SOCKET;
-
 		if ( settings->verbose ) {
 			printf("Waiting for test...\n");
 		}
 
 		run( &remote_server_funcs, &remote_settings, &total_stats );
 
+		remote_server_funcs.print_results(&remote_settings, &total_stats, NULL);
 	}
 
 	close_daemon();
