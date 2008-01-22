@@ -120,10 +120,10 @@ void* client_thread(void *data) {
 
 	// Make a copy of the global settings
 	const struct settings settings = *req->settings;
-	
+
 	// Pointer to the end of the buffer
 	unsigned long long* end_buffer = NULL ;
-	
+
 	SOCKET *c = NULL;
 
 	char *buffer = NULL;

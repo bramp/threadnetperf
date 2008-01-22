@@ -4,16 +4,16 @@
 #define CONTROL_PORT 0xABCD
 
 // Starts a control daemon
-SOCKET start_daemon(const struct settings * settings);
+int start_daemon(const struct settings * settings);
 
 // Accept a incoming connection
-SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int verbose);
+SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings);
 
 // Sends a test to a daemon
 int send_test( SOCKET socket, const struct settings *settings);
 
 // Close the control daemon
-void close_daemon( SOCKET listen_socket );
+void close_daemon( );
 
 // Connect to a control daemon and send these settings
 SOCKET connect_daemon(const struct settings *settings);
@@ -24,7 +24,8 @@ int signal_go   ( const struct settings *settings, void *data );
 int wait_ready( const struct settings *settings, void *data );
 int wait_go   ( const struct settings *settings, void *data );
 
-int remote_connect(const struct settings *settings, void** data);
+int remote_accept(struct settings *settings, void **data);
+int remote_connect(struct settings *settings, void** data);
 int remote_cleanup(const struct settings *settings, void* data);
 
 int remote_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void * data), void *data);

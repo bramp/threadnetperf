@@ -13,15 +13,16 @@
 #include <unistd.h>
 #endif
 
-// Creates a socket
-SOCKET start_daemon(const struct settings * settings) {
+SOCKET listen_socket = INVALID_SOCKET;
 
-	SOCKET listen_socket = INVALID_SOCKET;
+// Creates a socket
+int start_daemon(const struct settings * settings) {
 
 	struct sockaddr_in addr; // Address to listen on
 	int one = 1;
 
 	assert ( settings != NULL );
+	assert ( listen_socket == INVALID_SOCKET );
 
 	listen_socket = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
@@ -62,13 +63,14 @@ SOCKET start_daemon(const struct settings * settings) {
 		printf("Deamon is listening on %s\n", addr_str);
 	}
 
-	return listen_socket;
+	return 0;
 
 bail:
 
 	closesocket(listen_socket);
+	listen_socket = INVALID_SOCKET;
 
-	return INVALID_SOCKET;
+	return -1;
 }
 
 SOCKET connect_daemon(const struct settings *settings) {
@@ -115,8 +117,9 @@ cleanup:
 	return INVALID_SOCKET;
 }
 
-void close_daemon( SOCKET listen_socket ) {
+void close_daemon( ) {
 	closesocket(listen_socket);
+	listen_socket = INVALID_SOCKET;
 }
 
 int send_test( SOCKET s, const struct settings *settings) {
@@ -131,7 +134,7 @@ int send_test( SOCKET s, const struct settings *settings) {
 	return 0;
 }
 
-SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int verbose) {
+SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings) {
 	SOCKET s = INVALID_SOCKET;
 
 	struct sockaddr_storage addr; // Incoming addr
@@ -151,7 +154,7 @@ SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int ve
 		goto cleanup;
 	}
 
-	if ( verbose ) {
+	if ( recv_settings->verbose ) {
 		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
 
 		// Print the host/port
@@ -165,7 +168,7 @@ SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings, int ve
 		goto cleanup;
 	}
 
-	if ( verbose )
+	if ( recv_settings->verbose )
 		printf("Received tests\n");
 
 	return s;
@@ -178,8 +181,44 @@ struct remote_data {
 	SOCKET s;
 };
 
+int remote_setup_data(void** data, SOCKET s) {
+
+	struct remote_data *remote_data;
+
+	assert ( data != NULL );
+	assert ( s != INVALID_SOCKET );
+
+	// Malloc some space for the new data
+	remote_data = malloc( sizeof( *remote_data) );
+	*data = remote_data;
+
+	if ( remote_data == NULL ) {
+		return -1;
+	}
+
+	remote_data->s = s;
+	return 0;
+}
+
+int remote_accept(struct settings *settings, void **data) {
+	SOCKET s = INVALID_SOCKET;
+	struct remote_data *remote_data = NULL;
+
+	// Wait for a test to come in
+	s = accept_test( listen_socket, settings );
+	if ( s == INVALID_SOCKET )
+		return -1;
+
+	if ( remote_setup_data(data, s) ) {
+		closesocket(s);
+		return -1;
+	}
+
+	return 0;
+}
+
 // Connect to a remote daemon and send the test
-int remote_connect(const struct settings *settings, void** data) {
+int remote_connect(struct settings *settings, void** data) {
 	SOCKET s = INVALID_SOCKET;
 	struct remote_data *remote_data = NULL;
 
@@ -196,16 +235,10 @@ int remote_connect(const struct settings *settings, void** data) {
 		return -1;
 	}
 
-	// Malloc some space for the new data
-	remote_data = malloc( sizeof( *remote_data) );
-	*data = remote_data;
-
-	if ( remote_data == NULL ) {
+	if ( remote_setup_data(data, s) ) {
 		closesocket(s);
 		return -1;
 	}
-
-	remote_data->s = s;
 
 	return 0;
 }

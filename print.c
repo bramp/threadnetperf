@@ -14,7 +14,7 @@
 // Printf Mutex, to stop printing ontop of each other
 pthread_mutex_t printf_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void print_headers(const struct settings* settings) {
+int print_headers(const struct settings* settings, void*data) {
 
 	assert ( settings != NULL );
 
@@ -29,6 +29,8 @@ void print_headers(const struct settings* settings) {
 	printf("\tsize\t\t\t\t\t\t\n");
 
 	pthread_mutex_unlock( &printf_mutex );
+
+	return 0;
 }
 
 int print_results( const struct settings *settings, const struct stats *stats, void *data ) {
