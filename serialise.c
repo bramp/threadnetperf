@@ -177,8 +177,10 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 
 	for (x = 0; x < settings->cores; x++) {
 		for (y=0; y < settings->cores; y++) {
+			printf("%d ", settings->clientserver[x][y]);
 			buffer [ x * settings->cores + y ] = htonl( settings->clientserver[x][y] );
 		}
+		printf("\n");
 	}
 
 	ret = send(s, (const char *)buffer, buffer_len, 0);
