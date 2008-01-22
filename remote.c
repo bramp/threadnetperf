@@ -277,30 +277,38 @@ int wait_remote( SOCKET s, unsigned char code ) {
 }
 
 int signal_ready( const struct settings *settings, void *data ) {
-	SOCKET s = ((struct remote_data*)data)->s;
-	assert ( data != NULL && s != INVALID_SOCKET );
-	
+	SOCKET s;
+	assert ( data != NULL );
+	s = ((struct remote_data*)data)->s;
+	assert ( s != INVALID_SOCKET );
+
 	return signal_remote( s, SIGNAL_READY );
 }
 
 int signal_go( const struct settings *settings, void *data ) {
-	SOCKET s = ((struct remote_data*)data)->s;
-	assert ( data != NULL && s != INVALID_SOCKET );
+	SOCKET s;
+	assert ( data != NULL );
+	s = ((struct remote_data*)data)->s;
+	assert ( s != INVALID_SOCKET );
 
 	return signal_remote( s, SIGNAL_GO );
 }
 
 int wait_ready( const struct settings *settings, void *data ) {
-	SOCKET s = ((struct remote_data*)data)->s;
-	assert ( data != NULL && s != INVALID_SOCKET );
+	SOCKET s;
+	assert ( data != NULL );
+	s = ((struct remote_data*)data)->s;
+	assert ( s != INVALID_SOCKET );
 
 	return wait_remote( s, SIGNAL_READY );
 }
 
 int wait_go ( const struct settings *settings, void *data ) {
-	SOCKET s = ((struct remote_data*)data)->s;
-	assert ( data != NULL && s != INVALID_SOCKET );
-	
+	SOCKET s;
+	assert ( data != NULL );
+	s = ((struct remote_data*)data)->s;
+	assert ( s != INVALID_SOCKET );
+
 	return wait_remote( s, SIGNAL_GO );
 }
 

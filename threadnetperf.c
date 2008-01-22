@@ -534,7 +534,7 @@ void run_deamon(const struct settings *settings) {
 		if ( s == INVALID_SOCKET )
 			goto main_cleanup;
 
-		run( &remote_server_funcs, settings, &total_stats );
+		run( &remote_server_funcs, &remote_settings, &total_stats );
 
 		closesocket(s);
 
