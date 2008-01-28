@@ -63,6 +63,9 @@ int prepare_servers(const struct settings * settings, void *data) {
 		}
 	}
 
+	// Double check we made the correct number of servers
+	assert ( server_listen_unready == count_server_cores(settings->clientserver, settings->cores) );
+
 	return 0;
 }
 

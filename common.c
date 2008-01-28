@@ -7,6 +7,51 @@
 #include <math.h>
 #include <malloc.h>
 
+
+// Works out how many cores the client will use
+int count_client_cores( unsigned int **clientserver, unsigned int cores ) {
+
+	int count = 0;
+	int servercore = 0;
+
+	assert (clientserver != NULL);
+	assert (cores > 0);
+
+	for (; servercore < cores; servercore++) {
+		int clientcore =0;
+		for (; clientcore < cores; clientcore++) {
+			if ( clientserver [ clientcore ] [ servercore ] > 0 ) {
+				count++;
+				break;
+			}
+		}
+	}
+
+	return count;
+}
+
+// Works out how many cores the server will use
+int count_server_cores( unsigned int **clientserver, unsigned int cores ) {
+
+	int count = 0;
+	int clientcore =0;
+
+	assert (clientserver != NULL);
+	assert (cores > 0);
+
+	for (; clientcore < cores; clientcore++) {
+		int servercore = 0;
+		for (; servercore < cores; servercore++) {
+			if ( clientserver [ clientcore ] [ servercore ] > 0 ) {
+				count++;
+				break;
+			}
+		}
+	}
+
+	return count;
+}
+
 int enable_nagle(SOCKET s) {
 	int zero = 0;
 

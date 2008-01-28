@@ -11,6 +11,7 @@ size_t creq_size = 0;
 
 int prepare_clients(const struct settings * settings, void *data) {
 
+	unsigned int clientthreads = 0;
 	unsigned int servercore, clientcore;
 	unsigned int ** clientserver;
 
@@ -47,6 +48,7 @@ int prepare_clients(const struct settings * settings, void *data) {
 				creq [ clientcore ].core = clientcore;
 
 				unready_threads++;
+				clientthreads++;
 			} 
 
 			// Malloc the request details
@@ -82,6 +84,9 @@ int prepare_clients(const struct settings * settings, void *data) {
 			}
 		}
 	}
+
+	// Double check we made the correct number of servers
+	assert ( clientthreads == count_client_cores(settings->clientserver, settings->cores) );
 
 	return 0;
 }

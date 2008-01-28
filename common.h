@@ -60,6 +60,12 @@ struct settings {
 	unsigned int **clientserver;
 };
 
+// Works out how many cores the client will use
+int count_client_cores( unsigned int **clientserver, unsigned int cores );
+
+// Works out how many cores the server will use
+int count_server_cores( unsigned int **clientserver, unsigned int cores );
+
 int enable_nagle(SOCKET s);
 int disable_nagle(SOCKET s);
 
@@ -93,6 +99,7 @@ int usleep(unsigned int useconds);
 // Returns the highest socket in the set
 SOCKET highest_socket(SOCKET *s, size_t len);
 
+// Malloc a 2D array
 void **malloc_2D(size_t element_size, size_t x, size_t y);
 void free_2D(void **data, size_t x);
 
