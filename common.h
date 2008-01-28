@@ -61,10 +61,12 @@ struct settings {
 };
 
 // Works out how many cores the client will use
-int count_client_cores( unsigned int **clientserver, unsigned int cores );
+unsigned int count_client_cores( unsigned int **clientserver, unsigned int cores );
 
 // Works out how many cores the server will use
-int count_server_cores( unsigned int **clientserver, unsigned int cores );
+unsigned int count_server_cores( unsigned int **clientserver, unsigned int cores );
+
+void stats_add(struct stats *dest, const struct stats *src);
 
 int enable_nagle(SOCKET s);
 int disable_nagle(SOCKET s);

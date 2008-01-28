@@ -9,17 +9,17 @@
 
 
 // Works out how many cores the client will use
-int count_client_cores( unsigned int **clientserver, unsigned int cores ) {
+unsigned int count_client_cores( unsigned int **clientserver, unsigned int cores ) {
 
-	int count = 0;
-	int servercore = 0;
+	unsigned int count = 0;
+	unsigned int clientcore = 0;
 
 	assert (clientserver != NULL);
 	assert (cores > 0);
 
-	for (; servercore < cores; servercore++) {
-		int clientcore =0;
-		for (; clientcore < cores; clientcore++) {
+	for (; clientcore < cores; clientcore++) {
+		unsigned int servercore =0;
+		for (; servercore < cores; servercore++) {
 			if ( clientserver [ clientcore ] [ servercore ] > 0 ) {
 				count++;
 				break;
@@ -31,17 +31,17 @@ int count_client_cores( unsigned int **clientserver, unsigned int cores ) {
 }
 
 // Works out how many cores the server will use
-int count_server_cores( unsigned int **clientserver, unsigned int cores ) {
+unsigned int count_server_cores( unsigned int **clientserver, unsigned int cores ) {
 
-	int count = 0;
-	int clientcore =0;
-
+	unsigned int count = 0;
+	unsigned int servercore = 0;
+		
 	assert (clientserver != NULL);
 	assert (cores > 0);
 
-	for (; clientcore < cores; clientcore++) {
-		int servercore = 0;
-		for (; servercore < cores; servercore++) {
+	for (; servercore < cores; servercore++) {
+		unsigned int clientcore =0;
+		for (; clientcore < cores; clientcore++) {
 			if ( clientserver [ clientcore ] [ servercore ] > 0 ) {
 				count++;
 				break;
@@ -50,6 +50,17 @@ int count_server_cores( unsigned int **clientserver, unsigned int cores ) {
 	}
 
 	return count;
+}
+
+void stats_add(struct stats *dest, const struct stats *src) {
+	assert( dest != NULL );
+	assert( src != NULL );
+
+	dest->bytes_received += src->bytes_received;
+	dest->duration       += src->duration;
+	dest->pkts_received  += src->pkts_received;
+	dest->pkts_time      += src->pkts_time;
+
 }
 
 int enable_nagle(SOCKET s) {

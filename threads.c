@@ -112,10 +112,7 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 			}
 
 			// Now add the values to the total
-			total_stats->bytes_received += stats->bytes_received;
-			total_stats->duration       += stats->duration;
-			total_stats->pkts_received  += stats->pkts_received;
-			total_stats->pkts_time      += stats->pkts_time;
+			stats_add( total_stats, stats );
 
 			i++;
 		}

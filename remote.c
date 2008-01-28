@@ -270,6 +270,9 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 	assert ( total_stats != NULL );
 	assert ( data != NULL );
 
+	// Currently the duration might get screwed up if not zero
+	assert ( total_stats->duration == 0 );
+
 	s = ((struct remote_data*)data)->s;
 	assert ( s != INVALID_SOCKET );
 
@@ -285,8 +288,10 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 
 		print_results(settings, &stats, data);
 
-		// TODO add to total
+		stats_add( total_stats, &stats );
 	}
+
+	total_stats->duration  /= cores;
 
 	return 0;
 }
