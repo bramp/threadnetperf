@@ -186,6 +186,7 @@ int remote_setup_data(void** data, SOCKET s) {
 	struct remote_data *remote_data;
 
 	assert ( data != NULL );
+	assert ( *data == NULL );
 	assert ( s != INVALID_SOCKET );
 
 	// Malloc some space for the new data
@@ -246,7 +247,13 @@ int remote_cleanup(const struct settings *settings, void* data) {
 	assert ( settings != NULL );
 	
 	if (data) {
-		closesocket ( ((struct remote_data*)data)->s );
+		SOCKET s = ((struct remote_data*)data)->s;
+		
+		if ( s != INVALID_SOCKET ) {
+			// Gracefully shut down to make sure any remaining stats get sent
+			shutdown ( s, SD_BOTH );
+			closesocket ( s );
+		}
 		free ( data );
 	}
 

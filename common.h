@@ -99,6 +99,6 @@ void free_2D(void **data, size_t x);
 #define BUFFER_FILL 0x4141414141414141
 
 // How long do control sockets wait for connections
-#define CONTROL_TIMEOUT 10000
+#define CONTROL_TIMEOUT 30000
 
 #endif

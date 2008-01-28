@@ -52,7 +52,7 @@ unsigned int unready_threads = 0;
 const unsigned int max_cores = 8; // TODO get the real number!
 
 int null_func(const struct settings *settings, void * data) { return 0; };
-int null_func2(const struct settings *settings, void ** data) { return 0; };
+int null_func2(struct settings *settings, void ** data) { return 0; };
 
 // List of functions which run() uses
 struct run_functions {

@@ -47,7 +47,8 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
 		if ( ret <= 0 ) {
-			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
+			if (ERRNO != 0)
+				fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			return 1;
 		}
 
