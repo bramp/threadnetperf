@@ -251,7 +251,7 @@ int remote_cleanup(const struct settings *settings, void* data) {
 		
 		if ( s != INVALID_SOCKET ) {
 			// Gracefully shut down to make sure any remaining stats get sent
-			shutdown ( s, SD_BOTH );
+			shutdown ( s, SHUT_RDWR );
 			closesocket ( s );
 		}
 		free ( data );
