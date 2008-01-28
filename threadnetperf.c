@@ -585,7 +585,7 @@ int main (int argc, char *argv[]) {
 	for(iteration = 0; iteration < settings.max_iterations; iteration++) {
 
 		memset(&total_stats, 0, sizeof(total_stats));
-		total_stats.core = -1;
+		total_stats.core = ~0;
 
 		// Start the tests
 		run ( funcs, &settings, &total_stats );

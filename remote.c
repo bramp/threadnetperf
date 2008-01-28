@@ -242,11 +242,13 @@ int remote_connect(struct settings *settings, void** data) {
 }
 
 int remote_cleanup(const struct settings *settings, void* data) {
-	assert ( data != NULL );
-	assert ( settings != NULL );
 
-	closesocket ( ((struct remote_data*)data)->s );
-	free ( data );
+	assert ( settings != NULL );
+	
+	if (data) {
+		closesocket ( ((struct remote_data*)data)->s );
+		free ( data );
+	}
 
 	return 0;
 }
@@ -263,14 +265,14 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 		struct stats stats;
 
 		if ( read_results( s, &stats ) ) {
-			fprintf(stderr, "%s:%d read_stats() error\n", __FILE__, __LINE__ );
+			fprintf(stderr, "%s:%d read_results() error %d\n", __FILE__, __LINE__, ERRNO );
 			return -1;
 		}
 
 		print_results(settings, &stats, data);
 
 		// Quit looking for more results if this is the total
-		if ( stats.core == -1 ) {
+		if ( stats.core == ~0 ) {
 			*total_stats = stats;
 			break;
 		}
