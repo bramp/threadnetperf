@@ -345,9 +345,14 @@ void *server_thread(void *data) {
 
 						if(us != BUFFER_FILL ) {
 							unsigned long long t = now - us;
-
-							pkts_time[ i ] += t;
-
+							
+							if(us <= now) {
+								pkts_time[ i ] += t;
+							} else {
+								req->stats.time_err++;
+							}
+							
+//							printf("%llu - %llu = %llu\n", now, us, t);
 							#ifdef CHECK_TIMES
 								if(pkts_recv [ i ] < CHECK_TIMES ) {
 									req->stats.processed_something = 1;

@@ -23,6 +23,8 @@ struct stats {
 	// The duration over which these stats were recorded
 	unsigned long long duration;
 	
+	unsigned int time_err;
+	
 #ifdef CHECK_TIMES
 	//Temp buffer for the recv time values used to plot a histogram
 	float processing_times[CHECK_TIMES];
