@@ -283,7 +283,7 @@ void *server_thread(void *data) {
 		}
 
 		#ifdef _DEBUG
-		if ( ret == 0 )
+		if ( ret == 0 && !req->bRunning )
 			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 		#endif
 
