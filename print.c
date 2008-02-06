@@ -24,7 +24,7 @@ int print_headers(const struct settings* settings, void*data) {
 		settings->timestamp ? "\tpacket\ttimed" : "");
 
 	printf("\tmsg\tbytes\t\trecv()s\t\t(MB/s)\t%s\n",
-		settings->timestamp ? "\tlatency\terrors" : "");
+		settings->timestamp ? "latency\terrors" : "");
 
 	printf("\tsize\t\t\t\t\t\t\t\n");
 
