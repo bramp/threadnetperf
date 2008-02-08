@@ -7,6 +7,7 @@
 #include <math.h>
 #include <malloc.h>
 
+#include <sys/ioctl.h>
 
 // Works out how many cores the client will use
 unsigned int count_client_cores( unsigned int **clientserver, unsigned int cores ) {
@@ -142,6 +143,21 @@ int set_socket_timeout(SOCKET s, unsigned int milliseconds) {
       return -1;
 
 	return 0;
+}
+
+unsigned long long get_packet_timestamp(SOCKET s) {
+#ifdef WIN32
+	return 0;
+#else
+	struct timeval tv = {0,0};
+	//unsigned long flags = 1;
+	//setsockopt(s, SOL_SOCKET, SO_TIMESTAMP, (char *)&flags, sizeof(flags) );
+	if ( ioctl(s, SIOCGSTAMP, &tv) )
+		return 0;
+
+	printf("AAAA %ld %ld\n", tv.tv_sec, tv.tv_usec);
+	return tv.tv_sec * 1000000 + tv.tv_usec;
+#endif
 }
 
 // Move all the elements after arr down one

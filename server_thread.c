@@ -339,29 +339,6 @@ void *server_thread(void *data) {
 					continue;
 
 				} else {
-					if (settings.timestamp && len > (int)sizeof(unsigned long long) ) {
-						unsigned long long now = get_microseconds();
-						unsigned long long us = *((unsigned long long *)&buffer[len - sizeof(unsigned long long)]);
-
-						if(us != BUFFER_FILL ) {
-							unsigned long long t = now - us;
-							
-							if(us <= now) {
-								pkts_time[ i ] += t;
-							} else {
-								req->stats.time_err++;
-							}
-							
-//							printf("%llu - %llu = %llu\n", now, us, t);
-							#ifdef CHECK_TIMES
-								if(pkts_recv [ i ] < CHECK_TIMES ) {
-									req->stats.processed_something = 1;
-									req->stats.processing_times[pkts_recv [ i ]] = t;
-								}
-							#endif
-						} 
-					}
-
 					// We could dirty the buffer
 					if (settings.dirty) {
 						int *d;
@@ -372,6 +349,28 @@ void *server_thread(void *data) {
 						// Read temp to avoid this code being otomised out
 						if ( temp )
 							temp = 0;
+					}
+				
+					
+					if ( settings.timestamp ) {
+						const unsigned long long now = get_microseconds();
+						const unsigned long long us = get_packet_timestamp(s);
+						const unsigned long long t = now - us;
+						
+						if(us <= now) {
+							pkts_time[ i ] += t;
+						} else {
+							req->stats.time_err++;
+						}
+
+						printf("%llu - %llu = %llu\n", now, us, t);
+						#ifdef CHECK_TIMES
+							if(pkts_recv [ i ] < CHECK_TIMES ) {
+								req->stats.processed_something = 1;
+								req->stats.processing_times[pkts_recv [ i ]] = t;
+							}
+						#endif
+
 					}
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;

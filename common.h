@@ -81,6 +81,8 @@ int set_socket_recv_buffer(SOCKET s, unsigned int socket_size);
 
 int set_socket_timeout(SOCKET s, unsigned int milliseconds);
 
+unsigned long long get_packet_timestamp(SOCKET s);
+
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end );
 
