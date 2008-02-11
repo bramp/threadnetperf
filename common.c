@@ -155,7 +155,7 @@ unsigned long long get_packet_timestamp(SOCKET s) {
 	if ( ioctl(s, SIOCGSTAMP, &tv) )
 		return 0;
 
-	printf("AAAA %ld %ld\n", tv.tv_sec, tv.tv_usec);
+	//printf("AAAA %ld %ld\n", tv.tv_sec, tv.tv_usec);
 	return tv.tv_sec * 1000000 + tv.tv_usec;
 #endif
 }
