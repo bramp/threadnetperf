@@ -363,7 +363,7 @@ void *server_thread(void *data) {
 							req->stats.time_err++;
 						}
 
-						printf("%llu - %llu = %llu\n", now, us, t);
+//						printf("%llu - %llu = %llu\n", now, us, t);
 						#ifdef CHECK_TIMES
 							if(pkts_recv [ i ] < CHECK_TIMES ) {
 								req->stats.processed_something = 1;

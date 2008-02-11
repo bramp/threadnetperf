@@ -352,10 +352,10 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		return -1;
 	}
 	
-	if( settings->timestamp && settings->message_size < sizeof(unsigned long long) ) {
-		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );
-		return -1;
-	}
+//	if( settings->timestamp && settings->message_size < sizeof(unsigned long long) ) {
+//		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );
+//		return -1;
+//	}
 
 	if ( settings->deamon && optind < argc ) {
 		// TODO make this test that other conflicting options haven't been needlessly set
