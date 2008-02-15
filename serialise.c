@@ -56,6 +56,10 @@ struct network_stats {
 	
 	// The duration over which these stats were recorded
 	uint64_t duration;
+	
+	//Total number of timestamp errors
+	uint32_t time_err;
+	
 };
 
 // Reads settings from a socket
@@ -207,8 +211,9 @@ int read_results( SOCKET s, struct stats * stats ) {
 	stats->core           = ntohl(net_stats.core);
 	stats->bytes_received = (net_stats.bytes_received);
 	stats->pkts_received  = (net_stats.pkts_received);
-	stats->pkts_time	  = (net_stats.pkts_time);	
+	stats->pkts_time	    = (net_stats.pkts_time);	
 	stats->duration       = (net_stats.duration);
+	stats->time_err      = (net_stats.time_err);
 
 	return 0;
 }
@@ -224,8 +229,9 @@ int send_results( SOCKET s, const struct stats * stats ) {
 	net_stats.core           = htonl(stats->core);
 	net_stats.bytes_received = (stats->bytes_received);
 	net_stats.pkts_received  = (stats->pkts_received);
-	net_stats.pkts_time	     = (stats->pkts_time);	
+	net_stats.pkts_time	    = (stats->pkts_time);	
 	net_stats.duration       = (stats->duration);
+	net_stats.time_err      = (stats->time_err);
 
 	ret = send(s, (char *)&net_stats, sizeof(net_stats), 0);
 	if ( ret != sizeof(net_stats) ) {

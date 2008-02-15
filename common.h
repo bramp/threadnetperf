@@ -23,6 +23,7 @@ struct stats {
 	// The duration over which these stats were recorded
 	unsigned long long duration;
 	
+	// Number of errors when using timestampe	
 	unsigned int time_err;
 	
 #ifdef CHECK_TIMES

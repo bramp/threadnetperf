@@ -100,10 +100,13 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 	assert( total_stats != NULL );
 
 	while (thread_count > 0) {
-		struct stats *stats;
+		struct stats *stats = NULL;
+		void * stats_void = NULL;
 
 		thread_count--;
-		pthread_join( thread[thread_count], (void **)&stats );
+		pthread_join( thread[thread_count], &stats_void );
+
+		stats = (struct stats *) stats_void;
 
 		if ( stats != NULL ) {
 			if ( print_results(settings, stats, data) ) {
