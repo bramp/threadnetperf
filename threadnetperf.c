@@ -163,7 +163,7 @@ void pause_for_duration(const struct settings *settings) {
 }
 
 void print_version() {
-	fprintf(stderr, "threadnetperf %s by bramp 2007-2008\n", THREADNETPERF_VERSION );
+	fprintf(stderr, "threadnetperf r%s by bramp 2007-2008\n", THREADNETPERF_VERSION );
 }
 
 void print_usage() {
