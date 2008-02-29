@@ -8,6 +8,8 @@
 	TODO make the code more generic by using function pointers (etc) so it doesn't matter where the code is run
 */
 
+#include "version.h"
+
 #include "common.h"
 #include "print.h"
 #include "server.h"
@@ -160,9 +162,13 @@ void pause_for_duration(const struct settings *settings) {
 	printf("\n");
 }
 
+void print_version() {
+	fprintf(stderr, "threadnetperf %s by bramp 2007-2008\n", THREADNETPERF_VERSION );
+}
+
 void print_usage() {
 
-	fprintf(stderr, "threadnetperf by bramp 2007\n" );
+	print_version();
 	fprintf(stderr, "Usage: threadnetperf [options] tests\n" );
 	fprintf(stderr, "Usage: threadnetperf -D [options]\n" );
 	fprintf(stderr, "Runs a threaded network test\n" );
@@ -183,6 +189,7 @@ void print_usage() {
 	fprintf(stderr, "	-t         Use TCP\n" );
 	fprintf(stderr, "	-u         Use UDP\n" );
 	fprintf(stderr, "	-v         Verbose\n" );
+	fprintf(stderr, "	-V         Display version only\n" );
 
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "	tests      Combination of cores and clients\n" );
@@ -234,7 +241,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	}
 
 	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "DtTeunvhs:d:p:c:i:H:")) != -1) {
+	while ((c = getopt(argc, argv, "DtTeunvVhs:d:p:c:i:H:")) != -1) {
 		switch ( c ) {
 
 			case 'c': {
@@ -324,6 +331,10 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 			case 'h':
 				print_usage();
+				return -1;
+
+			case 'V':
+				print_version();
 				return -1;
 
 			// TCP/UDP
