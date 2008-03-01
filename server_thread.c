@@ -342,7 +342,7 @@ void *server_thread(void *data) {
 					// We could dirty the buffer
 					if (settings.dirty) {
 						int *d;
-						int temp;
+						int temp = 0;
 						for (d=(int *)buffer; d<(int *)(buffer + len); d++)
 							temp += *d;
 
