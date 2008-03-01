@@ -7,7 +7,9 @@
 #include <math.h>
 #include <malloc.h>
 
+#ifndef WIN32
 #include <sys/ioctl.h>
+#endif
 
 // Works out how many cores the client will use
 unsigned int count_client_cores( unsigned int **clientserver, unsigned int cores ) {
@@ -151,12 +153,9 @@ unsigned long long get_packet_timestamp(SOCKET s) {
 	return 0;
 #else
 	struct timeval tv = {0,0};
-	//unsigned long flags = 1;
-	//setsockopt(s, SOL_SOCKET, SO_TIMESTAMP, (char *)&flags, sizeof(flags) );
 	if ( ioctl(s, SIOCGSTAMP, &tv) )
 		return 0;
 
-	//printf("AAAA %ld %ld\n", tv.tv_sec, tv.tv_usec);
 	return tv.tv_sec * 1000000 + tv.tv_usec;
 #endif
 }
