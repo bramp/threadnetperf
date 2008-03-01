@@ -107,10 +107,6 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	return 0;
 }
 
-void eat_func(int data) {
-	// Does nothing
-}
-
 /**
 	Creates a server, and handles each incoming client
 */
@@ -251,7 +247,7 @@ void *server_thread(void *data) {
 	// Add all the client sockets to the fd_set
 	for (c = client ; c < &client [clients] ; c++) {
 		assert ( *c != INVALID_SOCKET );
-		
+
 		FD_SET( *c, &readFD);
 		if ( (int)*c > nfds )
 			nfds = (int)*c;
@@ -345,26 +341,19 @@ void *server_thread(void *data) {
 				} else {
 					// We could dirty the buffer
 					if (settings.dirty) {
-						void (*func)(int) = eat_func;
-						int *d;
-						int temp = 0;
-
+						// These is volatile to stop the compiler removing this loop
+						volatile int *d; 
+						volatile int temp = 0;
 						for (d=(int *)buffer; d<(int *)(buffer + len); d++) {
-							//__asm {
-							//	nop
-							//};
 							temp += *d;
 						}
-						func( temp );
-
 					}
-
 
 					if ( settings.timestamp ) {
 						const unsigned long long now = get_microseconds();
 						const unsigned long long us = get_packet_timestamp(s);
 						const unsigned long long t = now - us;
-						
+
 						if(us <= now) {
 							pkts_time[ i ] += t;
 						} else {
