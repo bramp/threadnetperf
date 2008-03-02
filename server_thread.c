@@ -177,7 +177,7 @@ void *server_thread(void *data) {
 	}
 
 	recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
-	if ( send_socket_size < 0 ) {
+	if ( recv_socket_size < 0 ) {
 		fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
