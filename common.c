@@ -38,7 +38,7 @@ unsigned int count_server_cores( unsigned int **clientserver, unsigned int cores
 
 	unsigned int count = 0;
 	unsigned int servercore = 0;
-		
+
 	assert (clientserver != NULL);
 	assert (cores > 0);
 
@@ -78,7 +78,7 @@ int enable_nagle(SOCKET s) {
 
 int disable_nagle(SOCKET s) {
 	int one = 1;
-	
+
 	if ( s == INVALID_SOCKET )
 		return -1;
 
@@ -107,7 +107,7 @@ int set_socket_buffer( SOCKET s, int opt, int size ) {
 
     int new_size;
     socklen_t new_size_len = sizeof(new_size);
- 
+
 	if ( s == INVALID_SOCKET )
 		return -1;
 
@@ -198,7 +198,7 @@ unsigned long long get_microseconds() {
 #else
 	struct timeval tv;
 
-	gettimeofday(&tv, NULL); 
+	gettimeofday(&tv, NULL);
 	microseconds = tv.tv_sec * 1000000 + tv.tv_usec;
 
 #endif
@@ -228,17 +228,17 @@ void cleanup_winsock() {
 /**
 	Turn a addr into an string representing its address
 */
-char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen) { 
-    
+char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen) {
+
 	char port [ NI_MAXSERV ];
-	
+
 	// Validate parameters
     assert (addr != NULL);
 	assert (addlen > 0 );
 
 	assert (host != NULL);
 	assert (maxhostlen > 0);
-	
+
 
 	if ( getnameinfo (addr, addlen, host, maxhostlen, port, sizeof(port), NI_NUMERICHOST | NI_NUMERICSERV ) ) {
 		*host = '\0';
@@ -289,7 +289,7 @@ void free_2D(void **data, size_t x) {
 }
 
 void **malloc_2D(size_t element_size, size_t x, size_t y) {
-	
+
 	void **data;
 	size_t x1;
 
@@ -319,10 +319,10 @@ bail:
 }
 
 /*
- * Code taken from 
- * 
+ * Code taken from
+ *
  * http://www.owlnet.rice.edu/~elec428/projects/tinv.c
- * 
+ *
  * tinv(p,dof) returns the inverse t-distribution value for probability
  * p and dof degrees of freedom.  It does this by looking up the appropriate
  * value in the array tinv_array.  Only dof between 1 and 20 are exact.
@@ -385,7 +385,7 @@ double tinv(double p, unsigned int dof)  {
 	else {
 		return 0;
 	}
-	
+
 	if (p == 75.0)       pindex = 0;
 	else if (p == 90.0)  pindex = 1;
 	else if (p == 95.0)  pindex = 2;
@@ -404,12 +404,12 @@ double calc_confidence(double confidence_lvl, double mean, double variance, unsi
 	double bigZ;
 	double sd_div_samples;
 	double CI;
-	
-	if(variance == 0.0) 
+
+	if(variance == 0.0)
 		return 0;
-	
+
 	bigZ = tinv(confidence_lvl, n);
-	
+
 	if(bigZ == 0.0) {
 		fprintf(stderr, "%s:%d tinv(%f, %d) error\n", __FILE__, __LINE__, confidence_lvl, n );
 		return 0;
@@ -418,7 +418,7 @@ double calc_confidence(double confidence_lvl, double mean, double variance, unsi
 	sd_div_samples = sqrt(variance / n);
 
 	CI = bigZ * sd_div_samples;
-	
+
 	if(verbose) {
 		double min, max;
 		double confidence;
@@ -428,6 +428,6 @@ double calc_confidence(double confidence_lvl, double mean, double variance, unsi
 		confidence = (1 - ( CI / mean))*100;
 		printf("min: %.f, max: %.f, cl: %f\n", min, max, confidence);
 	}
-	
+
 	return CI;
 }

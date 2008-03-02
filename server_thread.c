@@ -1,4 +1,4 @@
-#include "server.h"
+include "server.h"
 
 #include "global.h"
 #include "print.h"
@@ -71,7 +71,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 			return 1;
 		}
-		
+
 		recv_socket_size = set_socket_recv_buffer( s, settings->socket_size );
 		if ( send_socket_size < 0 ) {
 			fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -97,7 +97,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		connected++;
 
 		if ( settings->verbose )
-			printf("  Server: %d incoming client %s (%d) socket size: %d/%d\n", 
+			printf("  Server: %d incoming client %s (%d) socket size: %d/%d\n",
 				req->core, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
 				send_socket_size, recv_socket_size );
 
@@ -112,16 +112,16 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 */
 void *server_thread(void *data) {
 	struct server_request * const req = data;
-	
-	// Copy the global settings	
+
+	// Copy the global settings
 	const struct settings settings = *req->settings;
-	
+
 	SOCKET s = INVALID_SOCKET; // The listen server socket
 
 	SOCKET client [ FD_SETSIZE ];
 	SOCKET *c = client;
 	int clients = req->n; // The number of clients
-	
+
 	int return_stats = 0; // Should we return the stats?
 
 	unsigned int i;
@@ -175,7 +175,7 @@ void *server_thread(void *data) {
 		fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
-	
+
 	recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
 	if ( send_socket_size < 0 ) {
 		fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -257,7 +257,7 @@ void *server_thread(void *data) {
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
-	
+
 	 // Signal we are ready
 	pthread_mutex_lock( &ready_mutex );
 	pthread_cond_signal( &ready_cond );
@@ -342,7 +342,7 @@ void *server_thread(void *data) {
 					// We could dirty the buffer
 					if (settings.dirty) {
 						// These is volatile to stop the compiler removing this loop
-						volatile int *d; 
+						volatile int *d;
 						volatile int temp = 0;
 						for (d=(int *)buffer; d<(int *)(buffer + len); d++) {
 							temp += *d;

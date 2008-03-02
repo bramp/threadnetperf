@@ -44,7 +44,7 @@ int print_results( const struct settings *settings, const struct stats *stats, v
 	pthread_mutex_lock( &printf_mutex );
 
 #ifdef WIN32 // Work around a silly windows bug in handling %llu
-	printf( "%i\t%u\t%I64u\t%I64u\t%.2fs\t%.2f", 
+	printf( "%i\t%u\t%I64u\t%I64u\t%.2fs\t%.2f",
 #else
 	printf( "%i\t%u\t%llu\t%llu\t%.2fs\t%.2f",
 #endif
@@ -54,15 +54,15 @@ int print_results( const struct settings *settings, const struct stats *stats, v
 		printf( "\t%lluus\t%d",stats->pkts_time, stats->time_err );
 
 	printf("\n");
-	
-#ifdef CHECK_TIMES 
-{ 	
+
+#ifdef CHECK_TIMES
+{
 	int i;
 	if(stats->processed_something) {
 		for(i=0; i<CHECK_TIMES && i < stats-> pkts_received; i++ ) {
-	
+
 			printf("%f\n", stats->processing_times[i]);
-		} 
+		}
 	}
 }
 	printf("\n");
@@ -97,7 +97,7 @@ void print_hex(void *data, int size){
             snprintf(addrstr, sizeof(addrstr), "%.4x",
                (unsigned int)(p- (unsigned char*) data) );
         }
-            
+
         c = *p;
         if (isalnum(c) == 0) {
             c = '.';
@@ -111,7 +111,7 @@ void print_hex(void *data, int size){
         snprintf(bytestr, sizeof(bytestr), "%c", c);
         strncat(charstr, bytestr, sizeof(charstr)-strlen(charstr)-1);
 
-        if(n%16 == 0) { 
+        if(n%16 == 0) {
             /* line completed */
             printf("[%4.4s]   %-50.50s  %s\n", addrstr, hexstr, charstr);
             hexstr[0] = 0;

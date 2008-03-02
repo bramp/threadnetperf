@@ -3,7 +3,7 @@
 
 #define _GNU_SOURCE
 
-//Used to turn on the checking of the microseconds 
+//Used to turn on the checking of the microseconds
 //#define CHECK_TIMES 100000
 #include "netlib.h"
 
@@ -13,19 +13,19 @@ struct stats {
 
 	// The number of bytes received
 	unsigned long long bytes_received;
-	
+
 	// The number of recv() handled
 	unsigned long long pkts_received;
 
 	// The duration packets were inside the network
-	unsigned long long pkts_time;	
-	
+	unsigned long long pkts_time;
+
 	// The duration over which these stats were recorded
 	unsigned long long duration;
-	
-	// Number of errors when using timestampe	
+
+	// Number of errors when using timestampe
 	unsigned int time_err;
-	
+
 #ifdef CHECK_TIMES
 	//Temp buffer for the recv time values used to plot a histogram
 	float processing_times[CHECK_TIMES];
@@ -38,10 +38,10 @@ struct stats {
 struct settings {
 
 	unsigned int duration;
-	
+
 	int type;
 	int protocol;
-	
+
 	unsigned int deamon          :1;
 	unsigned int verbose         :1;
 	unsigned int dirty           :1;
@@ -52,7 +52,7 @@ struct settings {
 	double confidence_int;
 	unsigned int min_iterations;
 	unsigned int max_iterations;
-	unsigned int message_size;	
+	unsigned int message_size;
 	unsigned int socket_size;
 
 	const char *server_host;

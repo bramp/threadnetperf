@@ -76,7 +76,7 @@ int create_servers(const struct settings *settings, void *data) {
 
 	// Create all the server threads
 	for (servercore = 0; servercore < settings->cores; servercore++) {
-		
+
 		cpu_set_t cpus;
 
 		// Don't bother if we don't have a server on this core
@@ -105,7 +105,7 @@ int create_servers(const struct settings *settings, void *data) {
 void stop_all_servers() {
 	if ( sreq ) {
 		unsigned int i = 0;
-		
+
 		assert ( sreq_size != 0 );
 
 		for (; i < sreq_size; i++) {

@@ -31,8 +31,8 @@ int connect_connections(const struct settings *settings, const struct client_req
 			// Print the host/port
 			addr_to_ipstr(details->addr, details->addr_len, addr, sizeof(addr));
 
-			printf("  Core %d: Connecting %d client%s to %s\n", 
-				req->core, details->n, details->n > 1 ? "s" : "", 
+			printf("  Core %d: Connecting %d client%s to %s\n",
+				req->core, details->n, details->n > 1 ? "s" : "",
 				addr);
 		}
 
@@ -58,13 +58,13 @@ int connect_connections(const struct settings *settings, const struct client_req
 				fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
-			
+
 	 		recv_socket_size = set_socket_recv_buffer( s, settings->socket_size );
 			if ( send_socket_size < 0 ) {
 				fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}
-			
+
 			if ( settings->verbose ) {
 				// TODO tidy this
 				printf("client socket size: %d/%d\n", send_socket_size, recv_socket_size );
@@ -265,7 +265,7 @@ void* client_thread(void *data) {
 			// Check if we are ready to write
 			if ( FD_ISSET( s, &writeFD) ) {
 				ret--;
-				
+
 				if (end_buffer != NULL) {
 					*end_buffer = get_microseconds();
 				}

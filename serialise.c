@@ -25,16 +25,16 @@ struct network_settings {
 	#define SETTINGS_VERSION 4 // Increment this each time the setting struct changes
 
 	uint32_t duration;
-	
+
 	uint32_t type;
 	uint32_t protocol;
-	
+
 	uint8_t verbose;
 	uint8_t dirty;
 	uint8_t timestamp;
 	uint8_t disable_nagles;
 
-	uint32_t message_size;	
+	uint32_t message_size;
 	uint32_t socket_size;
 
 	uint32_t cores;
@@ -47,19 +47,19 @@ struct network_stats {
 
 	// The number of bytes received
 	uint64_t bytes_received;
-	
+
 	// The number of recv() handled
 	uint64_t pkts_received;
 
 	// The duration packets were inside the network
-	uint64_t pkts_time;	
-	
+	uint64_t pkts_time;
+
 	// The duration over which these stats were recorded
 	uint64_t duration;
-	
+
 	//Total number of timestamp errors
 	uint32_t time_err;
-	
+
 };
 
 // Reads settings from a socket
@@ -86,7 +86,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->duration       = ntohl( net_settings.duration );
 	settings->type           = ntohl( net_settings.type );
 	settings->protocol       = ntohl( net_settings.protocol );
-	
+
 	settings->verbose        = net_settings.verbose;
 	settings->dirty          = net_settings.dirty;
 	settings->timestamp      = net_settings.timestamp;
@@ -97,7 +97,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 	settings->cores          = ntohl( net_settings.cores );
 	settings->port           = ntohs( net_settings.port );
-	
+
 	// Blank some fields
 	settings->deamon         = 0;
 	settings->confidence_lvl = 0.0;
@@ -211,7 +211,7 @@ int read_results( SOCKET s, struct stats * stats ) {
 	stats->core           = ntohl(net_stats.core);
 	stats->bytes_received = (net_stats.bytes_received);
 	stats->pkts_received  = (net_stats.pkts_received);
-	stats->pkts_time	    = (net_stats.pkts_time);	
+	stats->pkts_time	    = (net_stats.pkts_time);
 	stats->duration       = (net_stats.duration);
 	stats->time_err      = (net_stats.time_err);
 
@@ -229,7 +229,7 @@ int send_results( SOCKET s, const struct stats * stats ) {
 	net_stats.core           = htonl(stats->core);
 	net_stats.bytes_received = (stats->bytes_received);
 	net_stats.pkts_received  = (stats->pkts_received);
-	net_stats.pkts_time	    = (stats->pkts_time);	
+	net_stats.pkts_time	    = (stats->pkts_time);
 	net_stats.duration       = (stats->duration);
 	net_stats.time_err      = (stats->time_err);
 

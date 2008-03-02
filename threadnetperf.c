@@ -158,7 +158,7 @@ void pause_for_duration(const struct settings *settings) {
 		// Pause for 0.1 second
 		usleep( 100000 );
 	}
-	
+
 	printf("\n");
 }
 
@@ -181,7 +181,7 @@ void print_usage() {
 	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
 	fprintf(stderr, "	-H host    Set the remote host(and port) to connect to\n");
 	fprintf(stderr, "	-h         Display this help\n");
-	fprintf(stderr, "	-i min,max Set the minimum and maximum iterations\n");	
+	fprintf(stderr, "	-i min,max Set the minimum and maximum iterations\n");
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
@@ -201,7 +201,7 @@ void print_usage() {
 	fprintf(stderr, "Examples:\n" );
 	fprintf(stderr, "	> threadnetperf -n -s 10000 1{0-0}\n" );
 	fprintf(stderr, "	Disable Nagle's, send size of 10000 with 1 connection from core 0 to core 0\n" );
-	
+
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "	> threadnetperf 10{0-0} 10{1-1} 10{2-2}\n" );
 	fprintf(stderr, "	10 connection from core 0 to core 0, 10 connections from core 1 to core 1, and 10 connections from core 2 to core 2\n" );
@@ -246,11 +246,11 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 			case 'c': {
 				double level = 0.0, interval = 0.0;
-				
+
 				if ( sscanf( optarg, "%lf,%lf", &level, &interval ) < 2 ) {
 					fprintf(stdout, "Confidence interval defaulted to 5percent\n");
 				}
-				
+
 				if((level != 75 && level !=90 && level != 95 && level != 97.5 && level != 99 && level != 99.5 && level != 99.95 ) ) {
 						fprintf(stderr, "Confidence Level must be {75,90,95,97.5,99,99.5,99.95}. Given (%s)\n", optarg);
 						return -1;
@@ -323,7 +323,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			case 'T':
 				settings->timestamp = 1;
 				break;
-			
+
 			// Increase the verbose level
 			case 'v':
 				settings->verbose = 1;
@@ -362,7 +362,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		fprintf(stderr, "Must use TCP when disabling Nagles\n" );
 		return -1;
 	}
-	
+
 //	if( settings->timestamp && settings->message_size < sizeof(unsigned long long) ) {
 //		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );
 //		return -1;
@@ -442,9 +442,9 @@ void start_threads() {
 }
 
 void run( const struct run_functions * funcs, struct settings *settings, struct stats *total_stats ) {
-	
+
 	void *data = NULL;
-	
+
 	assert ( funcs != NULL );
 	assert ( settings != NULL );
 	assert ( total_stats != NULL );
@@ -611,7 +611,7 @@ int main (int argc, char *argv[]) {
 			mean = sum / (iteration+1);
 			variance = (double)(sumsquare / (iteration+1) - mean * mean);
 
-			if(settings.verbose) 
+			if(settings.verbose)
 				print_stats(sum, sumsquare, mean, variance);
 
 			confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);

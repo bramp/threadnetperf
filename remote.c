@@ -130,7 +130,7 @@ int send_test( SOCKET s, const struct settings *settings) {
 		fprintf(stderr, "%s:%d send_settings() error %d\n", __FILE__, __LINE__, ERRNO );
 		return -1;
 	}
-	
+
 	return 0;
 }
 
@@ -245,10 +245,10 @@ int remote_connect(struct settings *settings, void** data) {
 int remote_cleanup(const struct settings *settings, void* data) {
 
 	assert ( settings != NULL );
-	
+
 	if (data) {
 		SOCKET s = ((struct remote_data*)data)->s;
-		
+
 		if ( s != INVALID_SOCKET ) {
 			// Gracefully shut down to make sure any remaining stats get sent
 			shutdown ( s, SHUT_RDWR );

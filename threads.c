@@ -22,7 +22,7 @@ int usleep(unsigned int microseconds) {
 	struct timespec waittime;
 
 	waittime.tv_sec = microseconds / 1000000;
-	waittime.tv_nsec = (microseconds % 1000000) * 1000; 
+	waittime.tv_nsec = (microseconds % 1000000) * 1000;
 
 	pthread_delay_np ( &waittime );
 	return 0;
@@ -70,11 +70,11 @@ cleanup:
 
 // Creates a new thread and adds it to the thread array
 int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset ) {
-	int ret; 
-	
+	int ret;
+
 	if ( thread_count >= thread_max_count )
 		return -1;
-	
+
 	ret = pthread_create_on( &thread[thread_count], NULL, start_routine, arg , cpusetsize, cpuset);
 
 	if ( !ret )

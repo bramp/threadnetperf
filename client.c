@@ -49,7 +49,7 @@ int prepare_clients(const struct settings * settings, void *data) {
 
 				unready_threads++;
 				clientthreads++;
-			} 
+			}
 
 			// Malloc the request details
 			c = calloc( 1, sizeof( *c ) );
@@ -118,7 +118,7 @@ int create_clients(const struct settings *settings, void *data) {
 void stop_all_clients() {
 	if ( creq ) {
 		unsigned int i = 0;
-		
+
 		assert ( creq_size != 0 );
 
 		for (; i < creq_size; i++) {
@@ -134,7 +134,7 @@ void cleanup_clients() {
 		assert ( creq_size != 0 );
 
 		for (i = 0; i < creq_size; i++) {
-			
+
 			// Free the chain of details
 			struct client_request_details *c = creq[i].details;
 			while ( c != NULL ) {
