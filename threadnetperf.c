@@ -653,13 +653,13 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	}
 
+#ifdef WIN32
+	setup_winsock();
+#endif
+
 #ifdef SIGPIPE
 	// Disable SIGPIPE signals because they can fire from within send/read
 	signal ( SIGPIPE, SIG_IGN );
-#endif
-
-#ifdef WIN32
-	setup_winsock();
 #endif
 
 	// If we are daemon mode start that
@@ -669,6 +669,7 @@ int main (int argc, char *argv[]) {
 	}
 
 	// Decide what kind of test this is
+	// TODO do a better test for localhost
 	if ( strcmp(settings.server_host, "127.0.0.1") != 0 ) {
 		funcs = &remote_client_funcs;
 	} else {
@@ -684,28 +685,30 @@ int main (int argc, char *argv[]) {
 		// Start the tests
 		run ( funcs, &settings, &total_stats );
 
-		if (settings.confidence_lvl != 0.0) {
-			double mean;
-			double variance;
-			double confidence_interval;
+		// Print the results
+		funcs->print_results( &settings, &total_stats, NULL );
 
-			sum += total_stats.bytes_received;
-			sumsquare += (total_stats.bytes_received * total_stats.bytes_received);
-			mean = sum / (iteration+1);
-			variance = (double)(sumsquare / (iteration+1) - mean * mean);
+		if (settings.confidence_lvl != 0.0 ) {
+			// Only calculate after we reached the min
+			if ( iteration >= settings.min_iterations ) {
+				double mean;
+				double variance;
+				double conf_interval;
 
-			if(settings.verbose)
-				print_stats(sum, sumsquare, mean, variance);
+				sum += total_stats.bytes_received;
+				sumsquare += total_stats.bytes_received * total_stats.bytes_received;
+				mean = sum / (iteration+1);
+				variance = (double)(sumsquare / (iteration+1) - mean * mean);
 
-			confidence_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
-			if ( (confidence_interval < (settings.confidence_int/100) * mean) && iteration >= settings.min_iterations) {
-				funcs->print_results( &settings, &total_stats, NULL );
-				break;
+				if(settings.verbose)
+					print_stats(sum, sumsquare, mean, variance);
+
+				conf_interval = calc_confidence(settings.confidence_lvl, mean, variance, iteration+1, settings.verbose);
+				if ( (conf_interval < (settings.confidence_int/100) * mean) ) {
+					break;
+				}
 			}
-		} else {
-			funcs->print_results( &settings, &total_stats, NULL );
-		}
-
+		} 
 	}
 
 cleanup:
