@@ -211,6 +211,7 @@ void print_usage() {
 int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	int c;
 	unsigned int tests = 0;
+	const char *optstring = "DhvVtTeuns:d:p:c:i:H:";
 
 	assert ( settings != NULL );
 
@@ -238,12 +239,59 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		return -1;
 	}
 
-	// Lets parse some command line args
-	while ((c = getopt(argc, argv, "DtTeunvVhs:d:p:c:i:H:")) != -1) {
+	// A first pass of getopt to work out if we are a Deamon
+	while ((c = getopt(argc, argv, optstring)) != -1) {
+		switch ( c ) {
+
+			// Deamon mode (wait for incoming tests)
+			case 'D':
+				settings->deamon = 1;
+				break;
+
+			case 'h':
+				print_usage();
+				return -1;
+
+			// Increase the verbose level
+			case 'v':
+				settings->verbose = 1;
+				break;
+
+			case 'V':
+				print_version();
+				return -1;
+
+			case ':':
+				fprintf(stderr, "Missing argument for (%s)\n", argv[optind-1] );
+				return -1;
+
+			case '?':
+				fprintf(stderr, "Unknown argument (%s)\n", argv[optind-1] );
+				return -1;
+
+			default:
+				break;
+		}
+	}
+
+	if ( settings->deamon && optind < argc ) {
+		fprintf(stderr, "Tests can not be specified on the command line in Deamon mode\n" );
+		return -1;
+	}
+
+	optind = 0;
+
+	// Second pass which actually does the work
+	while ((c = getopt(argc, argv, optstring)) != -1) {
 		switch ( c ) {
 
 			case 'c': {
 				double level = 95.0, interval = 5.0;
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set confidence interval when in Deamon mode\n");
+					return -1;
+				}
 
 				if ( sscanf( optarg, "%lf,%lf", &level, &interval ) < 2 ) {
 					fprintf(stdout, "%lf%% Confidence interval defaulted to %lf percent\n", level, interval);
@@ -255,29 +303,39 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 					return -1;
 				}
 
-				settings->confidence_lvl = level ;
-				settings->confidence_int = interval ;
+				settings->confidence_lvl = level;
+				settings->confidence_int = interval;
+
 				break;
 			}
-			// Deamon mode (wait for incoming tests)
-			case 'D':
-				settings->deamon = 1;
-				break;
+
 
 			// Duration
 			case 'd':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set duration when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->duration = atoi( optarg );
 				if ( settings->duration == 0 ) {
 					fprintf(stderr, "Invalid duration given (%s)\n", optarg );
 					return -1;
 				}
+
 				break;
 
 			case 'i': { // min,max interations
 				unsigned int min = 0, max = 0;
 
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set iterations when in Deamon mode\n");
+					return -1;
+				}
+
 				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 || min > max || max == 0 ) {
-					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
+					fprintf(stderr, "Invalid min/max iterations(%s)\n", optarg );
 					return -1;
 				}
 				settings->min_iterations = min;
@@ -287,17 +345,35 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			}
 
 			case 'H': { // remote host
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set remote host when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->server_host = optarg;
 				break;
 			}
 
 			// Disable nagles algorithm (ie NO delay)
 			case 'n':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to disable Nagles when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->disable_nagles = 1;
 				break;
 
 			// Parse the message size
 			case 's':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set message size when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->message_size = atoi( optarg );
 				if ( settings->message_size == 0 ) {
 					fprintf(stderr, "Invalid message size given (%s)\n", optarg );
@@ -307,6 +383,12 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 			// Parse the port
 			case 'p':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set port when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->port = atoi( optarg );
 				if ( settings->port == 0 ) {
 					fprintf(stderr, "Invalid port number given (%s)\n", optarg );
@@ -316,40 +398,51 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 			// Dirty the data
 			case 'e':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to eat the data when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->dirty = 1;
 				break;
 
 			case 'T':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set timestamps when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->timestamp = 1;
 				break;
 
-			// Increase the verbose level
-			case 'v':
-				settings->verbose = 1;
-				break;
-
-			case 'h':
-				print_usage();
-				return -1;
-
-			case 'V':
-				print_version();
-				return -1;
-
 			// TCP/UDP
 			case 't':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set TCP when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->type = SOCK_STREAM;
 				settings->protocol = IPPROTO_TCP;
 				break;
 
 			case 'u':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set UDP when in Deamon mode\n");
+					return -1;
+				}
+
 				settings->type = SOCK_DGRAM;
 				settings->protocol = IPPROTO_UDP;
 				break;
 
-			case '?':
-				fprintf(stderr, "Unknown argument (%s)\n", argv[optind-1] );
-				return -1;
+			// Ignore the following parameters as they have been parsed in a previous getopt loop
+			case 'D': case 'h': case 'v': case 'V':
+				break;
 
 			default:
 				fprintf(stderr, "Argument not implemented (yet) (%c)\n", c );
@@ -366,12 +459,6 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 //		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );
 //		return -1;
 //	}
-
-	if ( settings->deamon && optind < argc ) {
-		// TODO make this test that other conflicting options haven't been needlessly set
-		fprintf(stderr, "Tests can not be specified on the command line in Deamon mode\n" );
-		return -1;
-	}
 
 	// Try and parse anything else left on the end
 	// 1{0-0} 10{1-1} 3{0-1}, 1 connection core 0 to core 0, 10 connections core 1 to core 1, and 3 connections core 0 to core 1
@@ -407,10 +494,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		return -1;
 	}
 
-	if ( tests != 0 && settings->deamon ) {
-		fprintf(stderr, "Cannot specify tests while running as a deamon\n");
-		return -1;
-	}
+	assert ( tests != 0 && settings->deamon );
 
 	return 0;
 }
