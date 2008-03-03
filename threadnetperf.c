@@ -3,9 +3,7 @@
 	by Andrew Brampton (2007)
 
 	Note, this app is very rough, and needs cleaning up, but it works!
-	TODO Allow the app to work across networks
 	TODO Add flag to output bandwidth at set intervals during the experiment
-	TODO make the code more generic by using function pointers (etc) so it doesn't matter where the code is run
 */
 
 #include "version.h"
@@ -227,8 +225,8 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	settings->verbose = 0;
 	settings->dirty = 0;
 	settings->timestamp = 0;
-	settings->confidence_lvl = 0;
-	settings->confidence_int = 0;
+	settings->confidence_lvl = 0.0;
+	settings->confidence_int = 0.0;
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
 
@@ -245,16 +243,17 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		switch ( c ) {
 
 			case 'c': {
-				double level = 0.0, interval = 0.0;
+				double level = 95.0, interval = 5.0;
 
 				if ( sscanf( optarg, "%lf,%lf", &level, &interval ) < 2 ) {
-					fprintf(stdout, "Confidence interval defaulted to 5percent\n");
+					fprintf(stdout, "%lf%% Confidence interval defaulted to %lf percent\n", level, interval);
 				}
 
-				if((level != 75 && level !=90 && level != 95 && level != 97.5 && level != 99 && level != 99.5 && level != 99.95 ) ) {
-						fprintf(stderr, "Confidence Level must be {75,90,95,97.5,99,99.5,99.95}. Given (%s)\n", optarg);
-						return -1;
-					}
+				if (level != 75.0 && level != 90.0 && level != 95.0 && level != 97.5 && 
+					level != 99.0 && level != 99.5 && level != 99.95) {
+					fprintf(stderr, "Confidence Level must be {75, 90, 95, 97.5, 99, 99.5, 99.95}. Given (%s)\n", optarg);
+					return -1;
+				}
 
 				settings->confidence_lvl = level ;
 				settings->confidence_int = interval ;
@@ -277,7 +276,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 			case 'i': { // min,max interations
 				unsigned int min = 0, max = 0;
 
-				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 || min == 0 || max == 0 ) {
+				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 || min > max || max == 0 ) {
 					fprintf(stderr, "Invalid min/max (%s)\n", optarg );
 					return -1;
 				}
@@ -306,7 +305,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				}
 				break;
 
-			// Parse the message size->
+			// Parse the port
 			case 'p':
 				settings->port = atoi( optarg );
 				if ( settings->port == 0 ) {
@@ -370,7 +369,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 	if ( settings->deamon && optind < argc ) {
 		// TODO make this test that other conflicting options haven't been needlessly set
-		fprintf(stderr, "Tests can not be specified on the command line in D->eamon mode\n" );
+		fprintf(stderr, "Tests can not be specified on the command line in Deamon mode\n" );
 		return -1;
 	}
 
