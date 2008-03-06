@@ -494,8 +494,6 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 		return -1;
 	}
 
-	assert ( tests != 0 && settings->deamon );
-
 	return 0;
 }
 
