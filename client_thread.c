@@ -14,10 +14,7 @@
 #include <unistd.h>
 #endif
 
-SOCKET client [ FD_SETSIZE ];
-int clients = 0; // The number of clients
-
-int connect_connections(const struct settings *settings, const struct client_request * req) {
+int connect_connections(const struct settings *settings, const struct client_request * req, SOCKET *client, int *clients) {
 
 	const struct client_request_details * details = req->details;
 
@@ -42,8 +39,8 @@ int connect_connections(const struct settings *settings, const struct client_req
 			int send_socket_size, recv_socket_size;
 			SOCKET s;
 
-			if ( clients >= sizeof(client) / sizeof(*client) ) {
-				fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
+			if ( *clients >= FD_SETSIZE ) {
+				fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, FD_SETSIZE );
 				return -1;
 			}
 
@@ -93,8 +90,8 @@ int connect_connections(const struct settings *settings, const struct client_req
 				goto cleanup;
 			}
 
-			client [ clients ] = s;
-			clients++;
+			client [ *clients ] = s;
+			(*clients)++;
 
 			i--;
 			continue;
@@ -115,6 +112,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 	Creates n client connects to address
 */
 void* client_thread(void *data) {
+
 	const struct client_request * const req = data;
 	const struct client_request_details * details = req->details;
 
@@ -122,7 +120,11 @@ void* client_thread(void *data) {
 	const struct settings settings = *req->settings;
 
 	// Pointer to the end of the buffer
-	unsigned long long* end_buffer = NULL ;
+	unsigned long long* end_buffer = NULL;
+
+	// Array of client sockets
+	SOCKET client [ FD_SETSIZE ];
+	int clients = 0; // The number of clients
 
 	SOCKET *c = NULL;
 
@@ -136,8 +138,6 @@ void* client_thread(void *data) {
 	assert ( req != NULL );
 	assert ( details != NULL );
 
-	clients = 0;
-
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
 		*c = INVALID_SOCKET;
@@ -145,9 +145,11 @@ void* client_thread(void *data) {
 	if ( settings.verbose )
 		printf("Core %d: Started client thread\n", req->core);
 
-	if ( connect_connections(&settings, req) ) {
+	if ( connect_connections(&settings, req, client, &clients) ) {
 		goto cleanup;
 	}
+	
+	assert ( clients <= sizeof(client) / sizeof(*client) );
 
 	buffer = malloc( settings.message_size );
 	memset( buffer, (int)BUFFER_FILL, settings.message_size );
@@ -155,7 +157,7 @@ void* client_thread(void *data) {
 	if (settings.timestamp && settings.message_size > sizeof(*end_buffer) )
 		end_buffer = (unsigned long long *) &buffer[settings.message_size - sizeof(*end_buffer) ];
 
-	nfds = (int)*client;
+	nfds = (int)client[0];
 	FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
 
 	// Loop all client sockets
@@ -185,14 +187,15 @@ void* client_thread(void *data) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
-
+	
 	// Now start the main loop
 	while ( req->bRunning ) {
 
 		int ret;
 		struct timeval waittime = {1, 0}; // 1 second
-
+		
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
+		
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -206,9 +209,9 @@ void* client_thread(void *data) {
 		// Figure out which sockets have fired
 		for (c = client ; c < &client [ clients ]; c++ ) {
 			SOCKET s = *c;
-
+			
 			assert ( s != INVALID_SOCKET );
-
+			
 			// Speed hack
 			if ( ret == 0 ) {
 				FD_SET( s, &readFD);
@@ -269,7 +272,7 @@ void* client_thread(void *data) {
 				if (end_buffer != NULL) {
 					*end_buffer = get_microseconds();
 				}
-
+					
 				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
 					if ( ERRNO != EWOULDBLOCK && ERRNO != EPIPE ) {
 						fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -280,8 +283,8 @@ void* client_thread(void *data) {
 				// Set the socket on this FD, to save us doing it at the beginning of each loop
 				FD_SET( s, &writeFD);
 			}
-
 		}
+		assert(ret == 0);
 	}
 
 cleanup:

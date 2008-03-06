@@ -10,6 +10,7 @@ struct client_request {
 	unsigned int core; // Which core this client is running on
 
 	const struct settings *settings;
+
 	struct client_request_details *details;
 };
 
