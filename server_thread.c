@@ -352,16 +352,15 @@ void *server_thread(void *data) {
 
 					if ( settings.timestamp ) {
 						const unsigned long long now = get_microseconds();
-						const unsigned long long us = get_packet_timestamp(s);
-						const unsigned long long t = now - us;
+						const unsigned long long us  = get_packet_timestamp(s);
 
 						if(us <= now) {
-							pkts_time[ i ] += t;
+							pkts_time[ i ] += now - us;
 						} else {
 							req->stats.time_err++;
 						}
 
-//						printf("%llu - %llu = %llu\n", now, us, t);
+						printf("%llu	%llu\n", now, us);
 						#ifdef CHECK_TIMES
 							if(pkts_recv [ i ] < CHECK_TIMES ) {
 								req->stats.processed_something = 1;
