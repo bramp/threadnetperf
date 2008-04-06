@@ -89,6 +89,8 @@ void move_down ( SOCKET *arr, SOCKET *arr_end );
 
 unsigned long long get_microseconds();
 
+unsigned long long get_nanoseconds();
+
 char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen);
 
 void stop_all();

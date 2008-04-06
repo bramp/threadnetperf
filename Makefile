@@ -4,7 +4,7 @@ CC = gcc
 #CFLAGS = -g -O0 -c -W -Wall -Wconversion -Wshadow -Wcast-qual -Wwrite-strings  $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
 #CFLAGS = -g -O0 -c -Wall  $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
 CFLAGS = -O3 -march=native -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT
-LDFLAGS = -pthread -lm
+LDFLAGS = -pthread -lm -lrt
 
 SOURCES =	threadnetperf.c common.c server_thread.c client_thread.c server.c client.c print.c remote.c serialise.c threads.c
 
@@ -24,5 +24,5 @@ clean:
 	rm -f version.h ${OBJECTS} $(EXECUTABLE)
 
 version.h:
-	./version.sh
+	/bin/sh ./version.sh
 

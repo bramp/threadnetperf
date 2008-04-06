@@ -9,6 +9,7 @@
 
 #ifndef WIN32
 #include <sys/ioctl.h>
+#include <time.h>
 #endif
 
 // Works out how many cores the client will use
@@ -148,15 +149,22 @@ int set_socket_timeout(SOCKET s, unsigned int milliseconds) {
 	return 0;
 }
 
+/* Returns the timestamp in nanoseconds */
+
 unsigned long long get_packet_timestamp(SOCKET s) {
 #ifdef WIN32
 	return 0;
 #else
-	struct timeval tv = {0,0};
-	if ( ioctl(s, SIOCGSTAMP, &tv) )
+	struct timespec ts = {0,0};
+	if ( ioctl(s, SIOCGSTAMPNS, &ts) )
 		return 0;
 
-	return tv.tv_sec * 1000000 + tv.tv_usec;
+	if ( ts.tv_sec < 0 ) {
+		printf("%ld %ld\n", ts.tv_sec, ts.tv_nsec);
+		return 0;
+	}
+
+	return ts.tv_sec * 1000000000 + ts.tv_nsec;
 #endif
 }
 
@@ -204,6 +212,30 @@ unsigned long long get_microseconds() {
 #endif
 
 	return microseconds;
+}
+
+unsigned long long get_nanoseconds() {
+	unsigned long long nanoseconds = 0;
+
+#ifdef WIN32
+	FILETIME ft;
+
+	GetSystemTimeAsFileTime(&ft);
+
+	nanoseconds |= ft.dwHighDateTime;
+	nanoseconds <<= 32;
+	nanoseconds |= ft.dwLowDateTime;
+
+	nanoseconds *= 10;	//convert into nanoseconds
+#else
+	struct timespec ts;
+
+	//getnstimeofday(&ts, NULL);
+	clock_gettime(CLOCK_REALTIME, &ts);
+	nanoseconds = ts.tv_sec * 1000000000 + ts.tv_nsec;
+#endif
+
+	return nanoseconds;	
 }
 
 

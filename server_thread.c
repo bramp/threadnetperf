@@ -85,6 +85,11 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			}
 		}
 
+		// If we are timestamping get a timestamp in advance to make sure the kernel is going to timestamp it
+		if ( settings->timestamp ) {
+			get_packet_timestamp(s);
+		}
+
 		// Always disable blocking (to work around linux bug)
 		if ( disable_blocking(s) == SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d disable_blocking() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -187,6 +192,11 @@ void *server_thread(void *data) {
 			fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
+	}
+
+	// If we are timestamping get a timestamp in advance to make sure the kernel is going to timestamp it
+	if ( settings.timestamp ) {
+		get_packet_timestamp(s);
 	}
 
 	// SO_REUSEADDR
@@ -351,23 +361,22 @@ void *server_thread(void *data) {
 					}
 
 					if ( settings.timestamp ) {
-						const unsigned long long now = get_microseconds();
-						const unsigned long long us  = get_packet_timestamp(s);
+						const unsigned long long now = get_nanoseconds();
+						const unsigned long long ns  = get_packet_timestamp(s);
 
-						if(us <= now) {
-							pkts_time[ i ] += now - us;
+						if(ns <= now) {
+							pkts_time[ i ] += now - ns;
 						} else {
+							printf("%llu	%llu\n", now, ns);
 							req->stats.time_err++;
 						}
 
-						printf("%llu	%llu\n", now, us);
 						#ifdef CHECK_TIMES
 							if(pkts_recv [ i ] < CHECK_TIMES ) {
 								req->stats.processed_something = 1;
 								req->stats.processing_times[pkts_recv [ i ]] = t;
 							}
 						#endif
-
 					}
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
