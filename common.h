@@ -80,6 +80,9 @@ int disable_nagle(SOCKET s);
 int enable_blocking(SOCKET s);
 int disable_blocking(SOCKET s);
 
+int enable_maxseq(SOCKET s, int size);
+int disable_maxseq(SOCKET s);
+
 int set_socket_send_buffer(SOCKET s, unsigned int socket_size);
 int set_socket_recv_buffer(SOCKET s, unsigned int socket_size);
 

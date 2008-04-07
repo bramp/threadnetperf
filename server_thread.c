@@ -197,6 +197,10 @@ void *server_thread(void *data) {
 			fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
+		if ( enable_maxseq ( s , settings.message_size) == SOCKET_ERROR ) {
+			fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+		}
 	}
 
 	if ( settings.timestamp ) {
@@ -393,7 +397,7 @@ void *server_thread(void *data) {
 								const struct timespec *ts = (struct timespec *) CMSG_DATA( cmsg );
 								const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
 
-								printf("%u	%llu	%llu\n", count, now, ns);
+								//printf("%u	%llu	%llu\n", count, now, ns);
 
 								if(ns <= now) {
 									pkts_time[ i ] += now - ns;

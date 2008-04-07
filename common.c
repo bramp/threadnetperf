@@ -68,38 +68,35 @@ void stats_add(struct stats *dest, const struct stats *src) {
 
 }
 
-int enable_opt(SOCKET s, int level, int optname) {
-	int one = 1;
-
+int set_opt(SOCKET s, int level, int optname, int one) {
 	if ( s == INVALID_SOCKET )
 		return SOCKET_ERROR;
 
 	return setsockopt(s, level, optname, (char *)&one, sizeof(one));	
 }
 
-int disable_opt(SOCKET s, int level, int optname) {
-	int zero = 0;
+int enable_maxseq(SOCKET s, int size) {
+	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, size + 52);	
+}
 
-	if ( s == INVALID_SOCKET )
-		return SOCKET_ERROR;
-
-	return setsockopt(s, level, optname, (char *)&zero, sizeof(zero));	
+int disable_maxseq(SOCKET s) {
+	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, 0);
 }
 
 int enable_nagle(SOCKET s) {
-	return enable_opt(s, IPPROTO_TCP, TCP_NODELAY);
+	return set_opt(s, IPPROTO_TCP, TCP_NODELAY, 1);
 }
 
 int disable_nagle(SOCKET s) {
-	return disable_opt(s, IPPROTO_TCP, TCP_NODELAY);
+	return set_opt(s, IPPROTO_TCP, TCP_NODELAY, 0);
 }
 
 int enable_timestamp(SOCKET s) {
-	return enable_opt(s, SOL_SOCKET, SO_TIMESTAMPNS);
+	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 1);
 }
 
 int disable_timestamp(SOCKET s) {
-	return disable_opt(s, SOL_SOCKET, SO_TIMESTAMPNS);
+	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 0);
 }
 
 
