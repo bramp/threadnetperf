@@ -135,7 +135,9 @@ void *server_thread(void *data) {
 
 	unsigned long long pkts_time [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
 
-	char *buffer = NULL; // Buffer to read data into, will be malloced later
+	struct msghdr msgs;
+	struct iovec msg_iov = {NULL, 0}; // Buffer to read data into, will be malloced later
+
 	struct sockaddr_in addr; // Address to listen on
 
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
@@ -196,6 +198,7 @@ void *server_thread(void *data) {
 
 	// If we are timestamping get a timestamp in advance to make sure the kernel is going to timestamp it
 	if ( settings.timestamp ) {
+		// TODO change this to enable timestamping
 		get_packet_timestamp(s);
 	}
 
@@ -245,12 +248,22 @@ void *server_thread(void *data) {
 	// By this point all the clients have connected, but the test hasn't started yet
 
 	// Setup the buffer
-	buffer = malloc( settings.message_size );
-	if ( buffer == NULL ) {
+	msg_iov.iov_len = settings.message_size;
+	msg_iov.iov_base = malloc( settings.message_size );
+	if ( msg_iov.iov_base == NULL ) {
 		fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
 
+	msgs.msg_name = NULL;
+	msgs.msg_namelen = 0;
+	msgs.msg_iov = &msg_iov;
+	msgs.msg_iovlen = 1;
+	msgs.msg_control = NULL;
+	msgs.msg_controllen = 0;
+	msgs.msg_flags = 0;
+
+	// Setup FD_SETs
 	FD_ZERO( &readFD );
 	nfds = (int)*client;
 
@@ -311,7 +324,8 @@ void *server_thread(void *data) {
 
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
-				int len = recv( s, buffer, settings.message_size, 0);
+				// TODO MSG_WAITALL
+				int len = recvmsg( s, &msgs, 0);
 
 				ret--;
 
@@ -355,7 +369,7 @@ void *server_thread(void *data) {
 						// These is volatile to stop the compiler removing this loop
 						volatile int *d;
 						volatile int temp = 0;
-						for (d=(int *)buffer; d<(int *)(buffer + len); d++) {
+						for (d=(int *)msg_iov.iov_base; d<(int *)(msg_iov.iov_base + len); d++) {
 							temp += *d;
 						}
 					}
@@ -411,8 +425,8 @@ cleanup:
 	stop_all();
 
 	// Cleanup
-	if ( buffer )
-		free( buffer );
+	if ( msg_iov.iov_base )
+		free( msg_iov.iov_base );
 
 	// Shutdown server socket
 	if ( s != INVALID_SOCKET ) {
