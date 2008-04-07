@@ -71,6 +71,9 @@ unsigned int count_server_cores( unsigned int **clientserver, unsigned int cores
 
 void stats_add(struct stats *dest, const struct stats *src);
 
+int enable_timestamp(SOCKET s);
+int disable_timestamp(SOCKET s);
+
 int enable_nagle(SOCKET s);
 int disable_nagle(SOCKET s);
 

@@ -85,9 +85,11 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			}
 		}
 
-		// If we are timestamping get a timestamp in advance to make sure the kernel is going to timestamp it
 		if ( settings->timestamp ) {
-			get_packet_timestamp(s);
+			if ( enable_timestamp(s) == SOCKET_ERROR ) {
+				fprintf(stderr, "%s:%d enable_timestamp() error %d\n", __FILE__, __LINE__, ERRNO );
+				return 1;
+			}
 		}
 
 		// Always disable blocking (to work around linux bug)
@@ -137,7 +139,8 @@ void *server_thread(void *data) {
 
 	struct msghdr msgs;
 	struct iovec msg_iov = {NULL, 0}; // Buffer to read data into, will be malloced later
-
+	unsigned char msg_control[1024];
+	
 	struct sockaddr_in addr; // Address to listen on
 
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
@@ -196,10 +199,11 @@ void *server_thread(void *data) {
 		}
 	}
 
-	// If we are timestamping get a timestamp in advance to make sure the kernel is going to timestamp it
 	if ( settings.timestamp ) {
-		// TODO change this to enable timestamping
-		get_packet_timestamp(s);
+		if ( enable_timestamp(s) == SOCKET_ERROR ) {
+			fprintf(stderr, "%s:%d enable_timestamp() error %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+		}
 	}
 
 	// SO_REUSEADDR
@@ -259,8 +263,8 @@ void *server_thread(void *data) {
 	msgs.msg_namelen = 0;
 	msgs.msg_iov = &msg_iov;
 	msgs.msg_iovlen = 1;
-	msgs.msg_control = NULL;
-	msgs.msg_controllen = 0;
+	msgs.msg_control = msg_control;
+	msgs.msg_controllen = sizeof(msg_control);
 	msgs.msg_flags = 0;
 
 	// Setup FD_SETs
@@ -324,8 +328,12 @@ void *server_thread(void *data) {
 
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
+				int len;
+
+				msgs.msg_controllen = sizeof(msg_control);
+
 				// TODO MSG_WAITALL
-				int len = recvmsg( s, &msgs, 0);
+				len = recvmsg( s, &msgs, 0);
 
 				ret--;
 
@@ -376,21 +384,38 @@ void *server_thread(void *data) {
 
 					if ( settings.timestamp ) {
 						const unsigned long long now = get_nanoseconds();
-						const unsigned long long ns  = get_packet_timestamp(s);
+						int count = 0;
+						struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msgs);
 
-						if(ns <= now) {
-							pkts_time[ i ] += now - ns;
-						} else {
-							printf("%llu	%llu\n", now, ns);
-							req->stats.time_err++;
-						}
+						while ( cmsg != NULL) {
 
-						#ifdef CHECK_TIMES
-							if(pkts_recv [ i ] < CHECK_TIMES ) {
-								req->stats.processed_something = 1;
-								req->stats.processing_times[pkts_recv [ i ]] = t;
+							if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_TIMESTAMPNS ) {
+								const struct timespec *ts = (struct timespec *) CMSG_DATA( cmsg );
+								const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
+
+								printf("%u	%llu	%llu\n", count, now, ns);
+
+								if(ns <= now) {
+									pkts_time[ i ] += now - ns;
+								} else {
+									printf("%llu	%llu\n", now, ns);
+									req->stats.time_err++;
+								}
+		
+								#ifdef CHECK_TIMES
+									if(pkts_recv [ i ] < CHECK_TIMES ) {
+										req->stats.processed_something = 1;
+										req->stats.processing_times[pkts_recv [ i ]] = t;
+									}
+								#endif
+
+								count++;
 							}
-						#endif
+							cmsg = CMSG_NXTHDR(&msgs, cmsg);
+						}
+						
+						if ( count == 0 )
+							req->stats.time_err++;
 					}
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;

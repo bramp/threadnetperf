@@ -68,23 +68,40 @@ void stats_add(struct stats *dest, const struct stats *src) {
 
 }
 
-int enable_nagle(SOCKET s) {
-	int zero = 0;
-
-	if ( s == INVALID_SOCKET )
-		return -1;
-
-	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&zero, sizeof(zero));
-}
-
-int disable_nagle(SOCKET s) {
+int enable_opt(SOCKET s, int level, int optname) {
 	int one = 1;
 
 	if ( s == INVALID_SOCKET )
-		return -1;
+		return SOCKET_ERROR;
 
-	return setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
+	return setsockopt(s, level, optname, (char *)&one, sizeof(one));	
 }
+
+int disable_opt(SOCKET s, int level, int optname) {
+	int zero = 0;
+
+	if ( s == INVALID_SOCKET )
+		return SOCKET_ERROR;
+
+	return setsockopt(s, level, optname, (char *)&zero, sizeof(zero));	
+}
+
+int enable_nagle(SOCKET s) {
+	return enable_opt(s, IPPROTO_TCP, TCP_NODELAY);
+}
+
+int disable_nagle(SOCKET s) {
+	return disable_opt(s, IPPROTO_TCP, TCP_NODELAY);
+}
+
+int enable_timestamp(SOCKET s) {
+	return enable_opt(s, SOL_SOCKET, SO_TIMESTAMPNS);
+}
+
+int disable_timestamp(SOCKET s) {
+	return disable_opt(s, SOL_SOCKET, SO_TIMESTAMPNS);
+}
+
 
 int enable_blocking(SOCKET s) {
 #ifdef WIN32
@@ -110,13 +127,13 @@ int set_socket_buffer( SOCKET s, int opt, int size ) {
     socklen_t new_size_len = sizeof(new_size);
 
 	if ( s == INVALID_SOCKET )
-		return -1;
+		return SOCKET_ERROR;
 
     if (size > 0 && setsockopt(s, SOL_SOCKET, opt, (char *)&size, sizeof(size)) < 0)
-      return -1;
+      return SOCKET_ERROR;
 
 	if (getsockopt(s, SOL_SOCKET, opt, (char *)&new_size, &new_size_len) < 0)
-		return -1;
+		return SOCKET_ERROR;
 
  	return new_size;
 }
@@ -135,16 +152,16 @@ int set_socket_timeout(SOCKET s, unsigned int milliseconds) {
 	struct timeval tv;
 
 	if ( s == INVALID_SOCKET )
-		return -1;
+		return SOCKET_ERROR;
 
 	tv.tv_sec = milliseconds / 1000;
 	tv.tv_usec = milliseconds % 1000 * 1000;
 
     if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)))
-      return -1;
+      return SOCKET_ERROR;
 
     if (setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv)))
-      return -1;
+      return SOCKET_ERROR;
 
 	return 0;
 }
