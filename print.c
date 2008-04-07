@@ -21,10 +21,10 @@ int print_headers(const struct settings* settings, void*data) {
 	pthread_mutex_lock( &printf_mutex );
 
 	printf("Core\tsend\treceived\tnum\ttime\tgoodput%s\n",
-		settings->timestamp ? "\tpacket\t" : "");
+		settings->timestamp ? "\t   packet\t" : "");
 
 	printf("\tmsg\tbytes\t\trecv()s\t\t(MB/s)\t%s\n",
-		settings->timestamp ? "latency\ttimestamps" : "");
+		settings->timestamp ? "latency (ns)\ttimestamps" : "");
 
 	printf("\tsize\t\t\t\t\t\t\t\n");
 
@@ -51,7 +51,7 @@ int print_results( const struct settings *settings, const struct stats *stats, v
 		stats->core, settings->message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
 
 	if ( settings->timestamp )
-		printf( "\t%lluus\t%d",stats->pkts_time, stats->timestamps );
+		printf( "\t%llu\t%llu",stats->pkts_time, stats->timestamps );
 
 	printf("\n");
 
