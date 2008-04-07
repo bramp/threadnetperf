@@ -64,7 +64,7 @@ void stats_add(struct stats *dest, const struct stats *src) {
 	dest->duration       += src->duration;
 	dest->pkts_received  += src->pkts_received;
 	dest->pkts_time      += src->pkts_time;
-	dest->time_err       += src->time_err;
+	dest->timestamps     += src->timestamps;
 
 }
 

@@ -73,10 +73,10 @@ int connect_connections(const struct settings *settings, const struct client_req
 					goto cleanup;
 				}
 			
-				if ( enable_maxseq ( s , settings->message_size ) == SOCKET_ERROR ) {
-					fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
-					goto cleanup;
-				}
+				//if ( enable_maxseq ( s , settings->message_size ) == SOCKET_ERROR ) {
+				//	fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
+				//	goto cleanup;
+				//}
 			}
 
 			if ( set_socket_timeout(s, CONTROL_TIMEOUT) ) {
@@ -198,9 +198,9 @@ void* client_thread(void *data) {
 
 		int ret;
 		struct timeval waittime = {1, 0}; // 1 second
-		
+
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
-		
+
 		if ( ret ==  SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;

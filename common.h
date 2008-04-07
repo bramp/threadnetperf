@@ -20,11 +20,11 @@ struct stats {
 	// The duration packets were inside the network
 	unsigned long long pkts_time;
 
+	// Number of timestamps received
+	unsigned long long timestamps;
+
 	// The duration over which these stats were recorded
 	unsigned long long duration;
-
-	// Number of errors when using timestampe
-	unsigned int time_err;
 
 #ifdef CHECK_TIMES
 	//Temp buffer for the recv time values used to plot a histogram

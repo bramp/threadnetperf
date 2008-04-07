@@ -83,6 +83,10 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 				return 1;
 			}
+	//		if ( enable_maxseq ( s , settings->message_size) == SOCKET_ERROR ) {
+	//			fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
+	//			return 1;
+	//		}
 		}
 
 		if ( settings->timestamp ) {
@@ -132,10 +136,14 @@ void *server_thread(void *data) {
 	int return_stats = 0; // Should we return the stats?
 
 	unsigned int i;
-	unsigned long long bytes_recv [ FD_SETSIZE ]; // Bytes received from each socket
-	unsigned long long pkts_recv [ FD_SETSIZE ]; // Number of recv calls from each socket
 
-	unsigned long long pkts_time [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
+	// TODO WHY are all these counted per socket? why not a aggrigate?
+	unsigned long long bytes_recv [ FD_SETSIZE ]; // Bytes received from each socket
+	unsigned long long pkts_recv  [ FD_SETSIZE ]; // Number of recv calls from each socket
+
+	unsigned long long pkts_time  [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
+	unsigned long long timestamps [ FD_SETSIZE ]; // Number of timestamps received
+
 
 	struct msghdr msgs;
 	struct iovec msg_iov = {NULL, 0}; // Buffer to read data into, will be malloced later
@@ -166,6 +174,7 @@ void *server_thread(void *data) {
 	memset( bytes_recv, 0, sizeof(bytes_recv) );
 	memset( pkts_recv, 0, sizeof(pkts_recv) );
 	memset( pkts_time, 0, sizeof(pkts_time) );
+	memset( timestamps, 0, sizeof(timestamps) );
 
 	if ( req->n > sizeof(client) / sizeof(*client) ) {
 		fprintf(stderr, "%s:%d server_thread() error Server thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
@@ -197,10 +206,10 @@ void *server_thread(void *data) {
 			fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
-		if ( enable_maxseq ( s , settings.message_size) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
+//		if ( enable_maxseq ( s , settings.message_size) == SOCKET_ERROR ) {
+//			fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
+//			goto cleanup;
+//		}
 	}
 
 	if ( settings.timestamp ) {
@@ -388,7 +397,6 @@ void *server_thread(void *data) {
 
 					if ( settings.timestamp ) {
 						const unsigned long long now = get_nanoseconds();
-						int count = 0;
 						struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msgs);
 
 						while ( cmsg != NULL) {
@@ -397,13 +405,11 @@ void *server_thread(void *data) {
 								const struct timespec *ts = (struct timespec *) CMSG_DATA( cmsg );
 								const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
 
-								//printf("%u	%llu	%llu\n", count, now, ns);
-
 								if(ns <= now) {
+									timestamps[ i ] ++;
 									pkts_time[ i ] += now - ns;
 								} else {
-									printf("%llu	%llu\n", now, ns);
-									req->stats.time_err++;
+									fprintf(stderr, "%s:%d Invalid timestamp %llu > %llu\n", __FILE__, __LINE__, ns, now );
 								}
 		
 								#ifdef CHECK_TIMES
@@ -412,14 +418,9 @@ void *server_thread(void *data) {
 										req->stats.processing_times[pkts_recv [ i ]] = t;
 									}
 								#endif
-
-								count++;
 							}
 							cmsg = CMSG_NXTHDR(&msgs, cmsg);
 						}
-						
-						if ( count == 0 )
-							req->stats.time_err++;
 					}
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
@@ -446,6 +447,7 @@ void *server_thread(void *data) {
 		req->stats.bytes_received += bytes_recv [ i ];
 		req->stats.pkts_received += pkts_recv [ i ];
 		req->stats.pkts_time += pkts_time [ i ];
+		req->stats.timestamps += timestamps [ i ];
 	}
 	return_stats = 1;
 
