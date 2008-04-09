@@ -373,10 +373,14 @@ void *server_thread(void *data) {
 
 					// Invalidate this client
 					closesocket( s );
-					move_down ( c, &client[ clients ] );
 					clients--;
 
+					// If all our clients have disconnected then just give up!
+					if ( clients == 0 )
+						goto end_loop;
+
 					// Move back
+					move_down ( c, &client[ clients ] );
 					c--;
 
 					// Update the nfds
@@ -434,6 +438,7 @@ void *server_thread(void *data) {
 			i++;
 		}
 	}
+end_loop:
 
 	// We have finished, work out some stats
 	end_time = get_microseconds();
