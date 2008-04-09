@@ -79,7 +79,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	ret = recv(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) || net_settings.version != ntohl(SETTINGS_VERSION) ) {
 		if ( ret > 0 )
-			fprintf(stderr, "Invalid setting struct received\n" );
+			fprintf(stderr, "Invalid setting struct received (size:%d vs %d, ver:%d vs %d\n", ret, sizeof(net_settings), net_settings.version, ntohl(SETTINGS_VERSION) );
 
 		return -1;
 	}
