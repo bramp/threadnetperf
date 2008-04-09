@@ -21,8 +21,8 @@
 struct network_settings {
 
 	// Version of the setting struct, this must be the first element
-	uint8_t version;
-	#define SETTINGS_VERSION 5 // Increment this each time the setting struct changes
+	uint32_t version;
+	#define SETTINGS_VERSION 6 // Increment this each time the setting struct changes
 
 	uint32_t duration;
 
