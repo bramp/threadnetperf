@@ -128,7 +128,7 @@ void* client_thread(void *data) {
 	unsigned long long* end_buffer = NULL;
 
 	// The time in microseconds to wait between each send (to limit our bandwidth)
-	const unsigned long long time_between_sends = settings.rate != 0 ? 1000000 / settings.rate : 0;
+	const unsigned long long time_between_sends = settings.rate > 0 ? 1000000 / settings.rate : 0;
 
 	// Array of client sockets
 	SOCKET client [ FD_SETSIZE ];
@@ -280,7 +280,7 @@ void* client_thread(void *data) {
 
 				const unsigned long long now = get_microseconds();
 
-				if ( last_send_time + time_between_sends < now )
+				if ( last_send_time + time_between_sends > now )
 					continue;
 
 				last_send_time = now;
