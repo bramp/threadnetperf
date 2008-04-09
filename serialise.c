@@ -21,14 +21,15 @@
 struct network_settings {
 
 	// Version of the setting struct, this must be the first element
-	unsigned int version;
-	#define SETTINGS_VERSION 4 // Increment this each time the setting struct changes
+	uint8_t version;
+	#define SETTINGS_VERSION 5 // Increment this each time the setting struct changes
 
 	uint32_t duration;
 
 	uint32_t type;
 	uint32_t protocol;
 
+	// TODO collapse these boolean values into one byte
 	uint8_t verbose;
 	uint8_t dirty;
 	uint8_t timestamp;
@@ -36,6 +37,8 @@ struct network_settings {
 
 	uint32_t message_size;
 	uint32_t socket_size;
+
+	uint32_t rate; // Sends per second
 
 	uint32_t cores;
 	uint16_t port;
@@ -93,6 +96,8 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 	settings->message_size   = ntohl( net_settings.message_size );
 	settings->socket_size    = ntohl( net_settings.socket_size );
+
+	settings->rate			 = ntohl( net_settings.rate );
 
 	settings->cores          = ntohl( net_settings.cores );
 	settings->port           = ntohs( net_settings.port );
@@ -163,6 +168,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 
 	net_settings.message_size   = htonl( settings->message_size );
 	net_settings.socket_size    = htonl( settings->socket_size );
+	net_settings.rate           = htonl( settings->rate );
 
 	net_settings.cores          = htonl( settings->cores );
 	net_settings.port           = htons( settings->port );

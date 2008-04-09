@@ -55,6 +55,8 @@ struct settings {
 	unsigned int message_size;
 	unsigned int socket_size;
 
+	unsigned int rate; // Sends per second
+
 	const char *server_host;
 	unsigned short port;
 

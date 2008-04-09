@@ -127,6 +127,9 @@ void* client_thread(void *data) {
 	// Pointer to the end of the buffer
 	unsigned long long* end_buffer = NULL;
 
+	// The time in microseconds to wait between each send (to limit our bandwidth)
+	const unsigned long long time_between_sends = settings.rate != 0 ? 1000000 / settings.rate : 0;
+
 	// Array of client sockets
 	SOCKET client [ FD_SETSIZE ];
 	int clients = 0; // The number of clients
@@ -198,6 +201,7 @@ void* client_thread(void *data) {
 
 		int ret;
 		struct timeval waittime = {1, 0}; // 1 second
+		unsigned long long last_send_time = 0;
 
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 
@@ -274,16 +278,25 @@ void* client_thread(void *data) {
 			if ( FD_ISSET( s, &writeFD) ) {
 				ret--;
 
+				const unsigned long long now = get_microseconds();
+
+				if ( last_send_time + time_between_sends < now )
+					continue;
+
+				last_send_time = now;
+
+				// Place the timestamp in the packet, if end_buffer is set (which is is if timestamping is allowed)
 				if (end_buffer != NULL) {
-					*end_buffer = get_microseconds();
+					*end_buffer = now;
 				}
-					
+
 				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
 					if ( ERRNO != EWOULDBLOCK && ERRNO != EPIPE ) {
 						fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
 						goto cleanup;
 					}
 				}
+
 			} else {
 				// Set the socket on this FD, to save us doing it at the beginning of each loop
 				FD_SET( s, &writeFD);

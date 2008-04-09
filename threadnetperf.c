@@ -4,6 +4,8 @@
 
 	Note, this app is very rough, and needs cleaning up, but it works!
 	TODO Add flag to output bandwidth at set intervals during the experiment
+	TODO fix assert error when listen socket is already bound by someone else
+	TODO lookup host names of address past with -H
 */
 
 #include "version.h"
@@ -185,6 +187,7 @@ void print_usage() {
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
 	fprintf(stderr, "	-T         Timestamp packets, and measure latency\n" );
 	fprintf(stderr, "	-t         Use TCP\n" );
+	fprintf(stderr, "	-r         Packets per second rate (default: ~0)\n" );
 	fprintf(stderr, "	-u         Use UDP\n" );
 	fprintf(stderr, "	-v         Verbose\n" );
 	fprintf(stderr, "	-V         Display version only\n" );
@@ -211,7 +214,7 @@ void print_usage() {
 int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	int c;
 	unsigned int tests = 0;
-	const char *optstring = "DhvVtTeuns:d:p:c:i:H:";
+	const char *optstring = "DhvVtTeuns:d:p:c:i:H:r:";
 
 	assert ( settings != NULL );
 
@@ -219,6 +222,7 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 	settings->deamon = 0;
 	settings->message_size = 1024;
 	settings->socket_size = ~0;
+	settings->rate = ~0;
 	settings->disable_nagles = 0;
 	settings->duration = 10;
 	settings->server_host = "127.0.0.1";
@@ -377,6 +381,21 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				settings->message_size = atoi( optarg );
 				if ( settings->message_size == 0 ) {
 					fprintf(stderr, "Invalid message size given (%s)\n", optarg );
+					return -1;
+				}
+				break;
+
+			// Send rate
+			case 'r':
+
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set send rate when in Deamon mode\n");
+					return -1;
+				}
+
+				settings->rate = atoi( optarg );
+				if ( settings->rate == 0 ) {
+					fprintf(stderr, "Invalid send rate given (%s)\n", optarg );
 					return -1;
 				}
 				break;
