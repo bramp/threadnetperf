@@ -129,6 +129,7 @@ void* client_thread(void *data) {
 
 	// The time in microseconds to wait between each send (to limit our bandwidth)
 	const unsigned long long time_between_sends = settings.rate > 0 ? 1000000 / settings.rate : 0;
+	unsigned long long next_send_time = 0;
 
 	// Array of client sockets
 	SOCKET client [ FD_SETSIZE ];
@@ -156,7 +157,7 @@ void* client_thread(void *data) {
 	if ( connect_connections(&settings, req, client, &clients) ) {
 		goto cleanup;
 	}
-	
+
 	assert ( clients <= sizeof(client) / sizeof(*client) );
 
 	buffer = malloc( settings.message_size );
@@ -195,13 +196,14 @@ void* client_thread(void *data) {
 		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
 	}
 	pthread_mutex_unlock( &go_mutex );
-	
+
+	next_send_time = get_microseconds();
+
 	// Now start the main loop
 	while ( req->bRunning ) {
 
 		int ret;
 		struct timeval waittime = {1, 0}; // 1 second
-		unsigned long long last_send_time = 0;
 
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 
@@ -218,9 +220,9 @@ void* client_thread(void *data) {
 		// Figure out which sockets have fired
 		for (c = client ; c < &client [ clients ]; c++ ) {
 			SOCKET s = *c;
-			
+
 			assert ( s != INVALID_SOCKET );
-			
+
 			// Speed hack
 			if ( ret == 0 ) {
 				FD_SET( s, &readFD);
@@ -280,10 +282,11 @@ void* client_thread(void *data) {
 
 				const unsigned long long now = get_microseconds();
 
-				if ( last_send_time + time_between_sends > now )
+				if ( next_send_time > now )
 					continue;
 
-				last_send_time = now;
+				//printf("%llu	%llu	%llu\n", last_send_time,  time_between_sends, now);
+				next_send_time += time_between_sends;
 
 				// Place the timestamp in the packet, if end_buffer is set (which is is if timestamping is allowed)
 				if (end_buffer != NULL) {
