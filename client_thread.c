@@ -124,9 +124,6 @@ void* client_thread(void *data) {
 	// Make a copy of the global settings
 	const struct settings settings = *req->settings;
 
-	// Pointer to the end of the buffer
-	unsigned long long* end_buffer = NULL;
-
 	// The time in microseconds to wait between each send (to limit our bandwidth)
 	const unsigned long long time_between_sends = settings.rate > 0 ? 1000000 / settings.rate : 0;
 	unsigned long long next_send_time = 0;
@@ -162,9 +159,6 @@ void* client_thread(void *data) {
 
 	buffer = malloc( settings.message_size );
 	memset( buffer, (int)BUFFER_FILL, settings.message_size );
-
-	if (settings.timestamp && settings.message_size > sizeof(*end_buffer) )
-		end_buffer = (unsigned long long *) &buffer[settings.message_size - sizeof(*end_buffer) ];
 
 	nfds = (int)client[0];
 	FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
@@ -280,17 +274,14 @@ void* client_thread(void *data) {
 			if ( FD_ISSET( s, &writeFD) ) {
 				ret--;
 
-				const unsigned long long now = get_microseconds();
+				if ( time_between_sends > 0 ) {
+					const unsigned long long now = get_microseconds();
 
-				if ( next_send_time > now )
-					continue;
+					if ( next_send_time > now )
+						continue;
 
-				//printf("%llu	%llu	%llu\n", last_send_time,  time_between_sends, now);
-				next_send_time += time_between_sends;
+					next_send_time += time_between_sends;
 
-				// Place the timestamp in the packet, if end_buffer is set (which is is if timestamping is allowed)
-				if (end_buffer != NULL) {
-					*end_buffer = now;
 				}
 
 				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {

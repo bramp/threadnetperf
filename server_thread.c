@@ -89,12 +89,14 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	//		}
 		}
 
+#ifndef WIN32
 		if ( settings->timestamp ) {
 			if ( enable_timestamp(s) == SOCKET_ERROR ) {
 				fprintf(stderr, "%s:%d enable_timestamp() error %d\n", __FILE__, __LINE__, ERRNO );
 				return 1;
 			}
 		}
+#endif
 
 		// Always disable blocking (to work around linux bug)
 		if ( disable_blocking(s) == SOCKET_ERROR ) {
@@ -144,11 +146,15 @@ void *server_thread(void *data) {
 	unsigned long long pkts_time  [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
 	unsigned long long timestamps [ FD_SETSIZE ]; // Number of timestamps received
 
-
+#ifdef WIN32
+	unsigned char *buf = NULL;
+#else
 	struct msghdr msgs;
 	struct iovec msg_iov = {NULL, 0}; // Buffer to read data into, will be malloced later
-	unsigned char msg_control[1024];
-	
+	unsigned char *msg_control = NULL;
+	size_t msg_control_len = 1024;
+#endif
+
 	struct sockaddr_in addr; // Address to listen on
 
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
@@ -212,12 +218,14 @@ void *server_thread(void *data) {
 //		}
 	}
 
+#ifndef WIN32
 	if ( settings.timestamp ) {
 		if ( enable_timestamp(s) == SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d enable_timestamp() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
 		}
 	}
+#endif
 
 	// SO_REUSEADDR
 	if ( setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
@@ -265,20 +273,34 @@ void *server_thread(void *data) {
 	// By this point all the clients have connected, but the test hasn't started yet
 
 	// Setup the buffer
-	msg_iov.iov_len = settings.message_size;
-	msg_iov.iov_base = malloc( settings.message_size );
-	if ( msg_iov.iov_base == NULL ) {
+	buf = malloc( settings.message_size );
+	if ( buf == NULL ) {
 		fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
 		goto cleanup;
 	}
+
+#ifndef WIN32
+	msg_iov.iov_len = settings.message_size;
+	msg_iov.iov_base = buf;
 
 	msgs.msg_name = NULL;
 	msgs.msg_namelen = 0;
 	msgs.msg_iov = &msg_iov;
 	msgs.msg_iovlen = 1;
-	msgs.msg_control = msg_control;
-	msgs.msg_controllen = sizeof(msg_control);
 	msgs.msg_flags = 0;
+
+	// If we need the control messages we should set them up
+	if ( settings.timestamp ) {
+		msg_control_len = 1024;
+		msgs.msg_control = malloc( msg_control_len );
+		if ( msgs.msg_control == NULL ) {
+			fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+		}
+	} else {
+		msg_control_len = 0;
+	}
+#endif
 
 	// Setup FD_SETs
 	FD_ZERO( &readFD );
@@ -343,11 +365,12 @@ void *server_thread(void *data) {
 			if ( FD_ISSET( s, &readFD) ) {
 				int len;
 
-				msgs.msg_controllen = sizeof(msg_control);
-
-				// TODO MSG_WAITALL
+#ifdef WIN32
+				len = recv( s, buf, settings.message_size, 0 );
+#else
+				msgs.msg_controllen = msg_control_len;
 				len = recvmsg( s, &msgs, 0);
-
+#endif
 				ret--;
 
 				// The socket has closed (or an error has occured)
@@ -394,37 +417,43 @@ void *server_thread(void *data) {
 						// These is volatile to stop the compiler removing this loop
 						volatile int *d;
 						volatile int temp = 0;
-						for (d=(int *)msg_iov.iov_base; d<(int *)(msg_iov.iov_base + len); d++) {
+						for (d=(int *)buf; d<(int *)(buf + len); d++) {
 							temp += *d;
 						}
 					}
 
 					if ( settings.timestamp ) {
 						const unsigned long long now = get_nanoseconds();
-						struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msgs);
 
+#ifndef WIN32
+						struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msgs);
 						while ( cmsg != NULL) {
 
 							if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_TIMESTAMPNS ) {
 								const struct timespec *ts = (struct timespec *) CMSG_DATA( cmsg );
 								const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
-
+#else
+								const unsigned long long ns = get_packet_timestamp(s);
+#endif
 								if(ns <= now) {
 									timestamps[ i ] ++;
 									pkts_time[ i ] += now - ns;
 								} else {
-									fprintf(stderr, "%s:%d Invalid timestamp %llu > %llu\n", __FILE__, __LINE__, ns, now );
+									if ( ns != 0 )
+										fprintf(stderr, "%s:%d Invalid timestamp %llu > %llu\n", __FILE__, __LINE__, ns, now );
 								}
-		
+
 								#ifdef CHECK_TIMES
 									if(pkts_recv [ i ] < CHECK_TIMES ) {
 										req->stats.processed_something = 1;
 										req->stats.processing_times[pkts_recv [ i ]] = t;
 									}
 								#endif
+#ifndef WIN32
 							}
 							cmsg = CMSG_NXTHDR(&msgs, cmsg);
 						}
+#endif
 					}
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
@@ -461,8 +490,8 @@ cleanup:
 	stop_all();
 
 	// Cleanup
-	if ( msg_iov.iov_base )
-		free( msg_iov.iov_base );
+	if ( buf )
+		free( buf );
 
 	// Shutdown server socket
 	if ( s != INVALID_SOCKET ) {

@@ -75,6 +75,7 @@ int set_opt(SOCKET s, int level, int optname, int one) {
 	return setsockopt(s, level, optname, (char *)&one, sizeof(one));	
 }
 
+#ifndef WIN32
 int enable_maxseq(SOCKET s, int size) {
 	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, size + 52);	
 }
@@ -82,6 +83,7 @@ int enable_maxseq(SOCKET s, int size) {
 int disable_maxseq(SOCKET s) {
 	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, 0);
 }
+#endif
 
 int enable_nagle(SOCKET s) {
 	return set_opt(s, IPPROTO_TCP, TCP_NODELAY, 1);
@@ -91,6 +93,7 @@ int disable_nagle(SOCKET s) {
 	return set_opt(s, IPPROTO_TCP, TCP_NODELAY, 0);
 }
 
+#ifndef WIN32
 int enable_timestamp(SOCKET s) {
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 1);
 }
@@ -98,7 +101,7 @@ int enable_timestamp(SOCKET s) {
 int disable_timestamp(SOCKET s) {
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 0);
 }
-
+#endif
 
 int enable_blocking(SOCKET s) {
 #ifdef WIN32
