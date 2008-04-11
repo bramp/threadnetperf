@@ -10,6 +10,8 @@
 	TODO make server/client loop faster by removing unneed checks for rate limits, and others
 	TODO make timestamps in packets work better (by buffering up until the intended buffer size)
 	TODO either make timestamping work on windows, or remove it completely
+	TODO check UDP ends without error
+	TODO change the rate to be in mb/sec not packet/sec
 */
 
 #include "version.h"
