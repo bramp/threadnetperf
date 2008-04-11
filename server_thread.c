@@ -148,9 +148,8 @@ void *server_thread(void *data) {
 
 	unsigned char *buf = NULL;
 #ifndef WIN32
-	struct msghdr msgs;
+	struct msghdr msgs = {0};
 	struct iovec msg_iov = {NULL, 0}; // Buffer to read data into, will be malloced later
-	unsigned char *msg_control = NULL;
 	size_t msg_control_len = 1024;
 #endif
 
@@ -492,6 +491,11 @@ cleanup:
 	// Cleanup
 	if ( buf )
 		free( buf );
+
+#ifndef WIN32
+	if ( msgs.msg_control )
+		free ( msgs.msg_control );
+#endif
 
 	// Shutdown server socket
 	if ( s != INVALID_SOCKET ) {
