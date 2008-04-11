@@ -75,16 +75,6 @@ int set_opt(SOCKET s, int level, int optname, int one) {
 	return setsockopt(s, level, optname, (char *)&one, sizeof(one));	
 }
 
-#ifndef WIN32
-int enable_maxseq(SOCKET s, int size) {
-	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, size + 52);	
-}
-
-int disable_maxseq(SOCKET s) {
-	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, 0);
-}
-#endif
-
 int enable_nagle(SOCKET s) {
 	return set_opt(s, IPPROTO_TCP, TCP_NODELAY, 1);
 }
@@ -94,6 +84,14 @@ int disable_nagle(SOCKET s) {
 }
 
 #ifndef WIN32
+int enable_maxseq(SOCKET s, int size) {
+	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, size + 52);	
+}
+
+int disable_maxseq(SOCKET s) {
+	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, 0);
+}
+
 int enable_timestamp(SOCKET s) {
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 1);
 }
@@ -101,6 +99,24 @@ int enable_timestamp(SOCKET s) {
 int disable_timestamp(SOCKET s) {
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 0);
 }
+
+/* Returns the timestamp in nanoseconds 
+	Can be used when SO_TIMESTAMPNS does not work
+*/
+unsigned long long get_packet_timestamp(SOCKET s) {
+	struct timespec ts = {0,0};
+	if ( ioctl(s, SIOCGSTAMPNS, &ts) )
+		return 0;
+
+	if ( ts.tv_sec < 0 ) {
+		printf("%ld %ld\n", ts.tv_sec, ts.tv_nsec);
+		return 0;
+	}
+
+	return ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+
 #endif
 
 int enable_blocking(SOCKET s) {
@@ -166,24 +182,6 @@ int set_socket_timeout(SOCKET s, unsigned int milliseconds) {
 	return 0;
 }
 
-/* Returns the timestamp in nanoseconds */
-
-unsigned long long get_packet_timestamp(SOCKET s) {
-#ifdef WIN32
-	return 0;
-#else
-	struct timespec ts = {0,0};
-	if ( ioctl(s, SIOCGSTAMPNS, &ts) )
-		return 0;
-
-	if ( ts.tv_sec < 0 ) {
-		printf("%ld %ld\n", ts.tv_sec, ts.tv_nsec);
-		return 0;
-	}
-
-	return ts.tv_sec * 1000000000 + ts.tv_nsec;
-#endif
-}
 
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end ) {

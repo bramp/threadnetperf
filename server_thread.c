@@ -421,19 +421,17 @@ void *server_thread(void *data) {
 						}
 					}
 
+#ifndef WIN32
 					if ( settings.timestamp ) {
 						const unsigned long long now = get_nanoseconds();
 
-#ifndef WIN32
 						struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msgs);
 						while ( cmsg != NULL) {
 
 							if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_TIMESTAMPNS ) {
 								const struct timespec *ts = (struct timespec *) CMSG_DATA( cmsg );
 								const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
-#else
-								const unsigned long long ns = get_packet_timestamp(s);
-#endif
+
 								if(ns <= now) {
 									timestamps[ i ] ++;
 									pkts_time[ i ] += now - ns;
@@ -448,12 +446,12 @@ void *server_thread(void *data) {
 										req->stats.processing_times[pkts_recv [ i ]] = t;
 									}
 								#endif
-#ifndef WIN32
 							}
 							cmsg = CMSG_NXTHDR(&msgs, cmsg);
 						}
-#endif
 					}
+#endif
+
 					// Count how many bytes have been received
 					bytes_recv [ i ] += len;
 					pkts_recv [ i ] ++;

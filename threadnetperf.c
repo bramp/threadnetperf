@@ -191,7 +191,7 @@ void print_usage() {
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
-	fprintf(stderr, "	-T         Timestamp packets, and measure latency\n" );
+	fprintf(stderr, "	-T         Timestamp packets, and measure latency (only available on *nix)\n" );
 	fprintf(stderr, "	-t         Use TCP\n" );
 	fprintf(stderr, "	-r         Packets per second rate (default: ~0)\n" );
 	fprintf(stderr, "	-u         Use UDP\n" );
@@ -433,6 +433,11 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 				break;
 
 			case 'T':
+
+#ifdef WIN32
+				fprintf(stdout, "Timestamps option unavailable on windows\n");
+				return -1;
+#endif
 
 				if ( settings->deamon ) {
 					fprintf(stdout, "Unable to set timestamps when in Deamon mode\n");
