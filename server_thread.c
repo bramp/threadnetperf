@@ -146,9 +146,8 @@ void *server_thread(void *data) {
 	unsigned long long pkts_time  [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
 	unsigned long long timestamps [ FD_SETSIZE ]; // Number of timestamps received
 
-#ifdef WIN32
 	unsigned char *buf = NULL;
-#else
+#ifndef WIN32
 	struct msghdr msgs;
 	struct iovec msg_iov = {NULL, 0}; // Buffer to read data into, will be malloced later
 	unsigned char *msg_control = NULL;
