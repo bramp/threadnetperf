@@ -395,15 +395,16 @@ void *server_thread(void *data) {
 
 					// Invalidate this client
 					closesocket( s );
-					clients--;
-
-					// If all our clients have disconnected then just give up!
-					if ( clients == 0 )
-						goto end_loop;
 
 					// Move back
-					move_down ( c, &client[ clients ] );
+					move_down ( c, &client[ clients  ] );
 					c--;
+
+					clients--;
+
+					// If this is the last client then just give up!
+					if ( clients == 0 )
+						goto end_loop;
 
 					// Update the nfds
 					nfds = (int)highest_socket(client, clients) + 1;

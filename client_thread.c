@@ -281,7 +281,6 @@ void* client_thread(void *data) {
 						continue;
 
 					next_send_time += time_between_sends;
-
 				}
 
 				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
