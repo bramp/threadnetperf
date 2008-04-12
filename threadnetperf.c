@@ -8,10 +8,9 @@
 	TODO lookup host names of address past with -H
 	TODO check out ePoll
 	TODO make server/client loop faster by removing unneed checks for rate limits, and others
-	TODO make timestamps in packets work better (by buffering up until the intended buffer size)
-	TODO either make timestamping work on windows, or remove it completely
 	TODO check UDP ends without error
 	TODO change the rate to be in mb/sec not packet/sec
+	TODO allow it to connect to different endpoints
 */
 
 #include "version.h"
@@ -526,6 +525,44 @@ int parse_arguments( int argc, char *argv[], struct settings *settings ) {
 
 	return 0;
 }
+
+/*
+// Parses N(C-S)
+int parse_combination( const char *arg ) {
+	if ( sscanf( arg, "%u", &count ) <1 ) {
+		goto parse_error;
+	}
+
+	if ( sscanf( arg, "(", &count ) <1 ) {
+		if ( sscanf( arg, "{", &count ) <1 ) {
+			goto parse_error;
+		}
+	}
+
+	if ( sscanf( argv[optind], "%u", &client ) <3 ) {
+		// Check if they are using the ?
+		if ( sscanf( arg, "?-)", &count ) <3 ) {
+
+		}
+	}
+
+		if ( sscanf( arg, "{", &count ) <1 ) {
+			goto parse_error;
+		}
+
+	if ( sscanf( arg, ")", &count ) <1 ) {
+		if ( sscanf( arg, "}", &count ) <1 ) {
+			goto parse_error;
+		}
+	}
+
+	return 0;
+
+parse_error:
+	fprintf(stderr, "Unknown argument (%s)\n", arg );
+	return -1;
+}
+*/
 
 // Wait until every thread signals a ready
 void wait_for_threads() {
