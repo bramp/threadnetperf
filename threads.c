@@ -48,9 +48,11 @@ int pthread_create_on( pthread_t *t, pthread_attr_t *attr, void *(*start_routine
 	}
 
 	// Set the CPU
-	ret = pthread_attr_setaffinity_np( attr, cpusetsize, cpuset );
-	if (ret)
-		goto cleanup;
+	if ( cpuset != NULL ) {
+		ret = pthread_attr_setaffinity_np( attr, cpusetsize, cpuset );
+		if (ret)
+			goto cleanup;
+	}
 
 	// Make sure the thread is joinable
 	ret = pthread_attr_setdetachstate( attr, PTHREAD_CREATE_JOINABLE);
@@ -71,6 +73,8 @@ cleanup:
 // Creates a new thread and adds it to the thread array
 int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset ) {
 	int ret;
+
+	assert (start_routine != NULL);
 
 	if ( thread_count >= thread_max_count )
 		return -1;
