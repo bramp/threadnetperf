@@ -197,6 +197,10 @@ char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, 
 int str_to_addr(const char *host, struct sockaddr *addr, socklen_t *addlen) {
 	struct addrinfo *aiList = NULL;
 
+	assert ( host != NULL );
+	assert ( addr != NULL );
+	assert ( addlen != NULL );
+
 	if ( getaddrinfo(host, NULL, NULL, &aiList) ) {
 		return -1;
 	}
