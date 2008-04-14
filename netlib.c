@@ -2,7 +2,6 @@
 
 #ifndef WIN32
 #include <sys/ioctl.h>
-#include <time.h>
 #endif
 
 #include <assert.h>
