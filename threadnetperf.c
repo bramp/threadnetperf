@@ -330,7 +330,7 @@ int main (int argc, char *argv[]) {
 
 	// Decide what kind of test this is
 	// TODO do a better test for localhost
-	if ( strcmp(settings.server_host, "127.0.0.1") != 0 ) {
+	if ( settings.server_host != NULL ) {
 		funcs = &remote_client_funcs;
 	} else {
 		funcs = &local_funcs;

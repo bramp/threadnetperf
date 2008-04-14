@@ -129,7 +129,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	settings->rate = ~0;
 	settings->disable_nagles = 0;
 	settings->duration = 10;
-	settings->server_host = "127.0.0.1";
+	settings->server_host = NULL;
 	settings->port = 1234;
 	settings->verbose = 0;
 	settings->dirty = 0;
