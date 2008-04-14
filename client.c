@@ -12,15 +12,17 @@ size_t creq_size = 0;
 int prepare_clients(const struct settings * settings, void *data) {
 
 	unsigned int clientthreads = 0;
-	unsigned int servercore, clientcore;
-	unsigned int ** clientserver;
+	unsigned int i;
 
 	assert ( settings != NULL );
+	assert ( settings->test != NULL );
 	assert ( creq == NULL );
 	assert ( creq_size == 0 );
 
+	// Malloc one space for each core combination
+	creq_size = settings->servercores;
+
 	// Malloc one space for each core
-	creq_size = settings->cores;
 	creq = calloc ( creq_size, sizeof(*creq) );
 	if ( !creq ) {
 		creq_size = 0;
@@ -28,85 +30,83 @@ int prepare_clients(const struct settings * settings, void *data) {
 		return -1;
 	}
 
-	clientserver = settings->clientserver;
-	assert ( clientserver != NULL );
-
 	// Loop through clientserver looking for each server we need to create
-	for (servercore = 0; servercore < settings->cores; servercore++) {
-		for (clientcore = 0; clientcore < settings->cores; clientcore++) {
+	for ( i = 0; i < settings->tests; i++) {
+		const struct test * test = &settings->test[i];
+		struct client_request *c;
+		struct client_request_details *details;
 
-			struct client_request_details *c;
+		// find an exisiting sreq with this core combo
+		for ( c = creq; c < &creq[creq_size]; c++) {
+			if ( c->bRunning == 0 || c->core == test->clientcores )
+				break;
+		}
+		assert ( c < &creq[creq_size] );
 
-			// Don't bother if there are zero requests
-			if ( clientserver [ clientcore ] [ servercore ] == 0 )
-				continue;
+		// Check if we haven't set up this client thread yet
+		if ( c->bRunning == 0 ) {
+			c->bRunning = 1;
+			c->settings = settings;
+			c->core = test->clientcores;
 
-			// Check if we haven't set up this client thread yet
-			if ( creq [ clientcore ].bRunning == 0 ) {
-				creq [ clientcore ].bRunning = 1;
-				creq [ clientcore ].settings = settings;
-				creq [ clientcore ].core = clientcore;
+			unready_threads++;
+			clientthreads++;
+		}
 
-				unready_threads++;
-				clientthreads++;
-			}
+		// Malloc the request details
+		details = calloc( 1, sizeof( *details ) );
+		if ( !details ) {
+			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+			return -1;
+		}
 
-			// Malloc the request details
-			c = calloc( 1, sizeof( *c ) );
-			if ( !c ) {
-				fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-				return -1;
-			}
+		// Add this new details before the other details
+		details->next =c->details;
+		c->details = details;
 
-			// Add this new details before the other details
-			c->next = creq [ clientcore ].details;
-			creq [ clientcore ].details = c;
+		details->n = test->connections;
 
-			c->n = clientserver [ clientcore ] [ servercore ];
+		// Create the client dest addr
+		details->addr_len = sizeof ( struct sockaddr_in );
 
-			// Create the client dest addr
-			c->addr_len = sizeof ( struct sockaddr_in );
+		details->addr = calloc ( 1, details->addr_len ) ;
+		if ( !details->addr ) {
+			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+			return -1;
+		}
 
-			c->addr = calloc ( 1, c->addr_len ) ;
-			if ( !c->addr ) {
-				fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-				return -1;
-			}
+		// Change this to be more address indepentant
+		((struct sockaddr_in *)details->addr)->sin_family = AF_INET;
+		((struct sockaddr_in *)details->addr)->sin_addr.s_addr = inet_addr( settings->server_host );
+		((struct sockaddr_in *)details->addr)->sin_port = htons( settings->port + 0 ); // TODO PORT
 
-			// Change this to be more address indepentant
-			((struct sockaddr_in *)c->addr)->sin_family = AF_INET;
-			((struct sockaddr_in *)c->addr)->sin_addr.s_addr = inet_addr( settings->server_host );
-			((struct sockaddr_in *)c->addr)->sin_port = htons( settings->port + servercore );
-
-			if ( ((struct sockaddr_in *)c->addr)->sin_addr.s_addr == INADDR_NONE ) {
-				fprintf(stderr, "Invalid host name (%s)\n", settings->server_host );
-				return -1;
-			}
+		if ( ((struct sockaddr_in *)details->addr)->sin_addr.s_addr == INADDR_NONE ) {
+			fprintf(stderr, "Invalid host name (%s)\n", settings->server_host );
+			return -1;
 		}
 	}
 
 	// Double check we made the correct number of servers
-	assert ( clientthreads == count_client_cores(settings->clientserver, settings->cores) );
+	assert ( creq[creq_size - 1].bRunning == 1 );
 
 	return 0;
 }
 
 int create_clients(const struct settings *settings, void *data) {
-	unsigned int clientcore;
+	unsigned int i;
 
 	assert ( settings != NULL );
 	assert ( creq != NULL );
 
-	for (clientcore = 0; clientcore < settings->cores; clientcore++) {
+	for (i = 0; i < creq_size; i++) {
 		cpu_set_t cpus;
 
-		if ( ! creq[clientcore].bRunning )
-			continue;
+		assert ( creq[i].bRunning );
 
 		CPU_ZERO ( &cpus );
-		CPU_SET ( clientcore, &cpus );
+		CPU_SET ( creq[i].core , &cpus );
 
-		if ( create_thread( client_thread, &creq [clientcore] , sizeof(cpus), &cpus) ) {
+		if ( create_thread( client_thread, &creq [i] , sizeof(cpus), &cpus) ) {
 			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
 			return -1;
 		}

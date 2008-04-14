@@ -158,7 +158,7 @@ void* client_thread(void *data) {
 	assert ( clients <= sizeof(client) / sizeof(*client) );
 
 	buffer = malloc( settings.message_size );
-	memset( buffer, (int)BUFFER_FILL, settings.message_size );
+	memset( buffer, (int)BUFFER_FILL, settings.message_size ); // TODO fix 32bit linux compile problem
 
 	nfds = (int)client[0];
 	FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );

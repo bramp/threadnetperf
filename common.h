@@ -7,6 +7,9 @@
 //#define CHECK_TIMES 100000
 #include "netlib.h"
 
+// The number of cores this machine has
+extern const unsigned int max_cores; // TODO get the real number!
+
 struct stats {
 	// The core these stats were recorded from
 	unsigned int core;
@@ -32,6 +35,13 @@ struct stats {
 	int processed_something;
 #endif
 
+};
+
+struct test { 
+	unsigned int clientcores; // The cores the client may run on
+	unsigned int servercores; // The cores the servers may run on
+
+	unsigned int connections; // The number of connections
 };
 
 // Settings
@@ -60,37 +70,22 @@ struct settings {
 	const char *server_host;
 	unsigned short port;
 
-	// A 2D array for each possible to and from core (with number of connections)
-	unsigned int cores;
-	unsigned int **clientserver;
+	// An array of each test
+	unsigned int tests;
+	struct test *test;
+
+	// Helper members, so we don't have to recalc all the time
+	unsigned int clientcores;
+	unsigned int servercores;
 };
 
 // Works out how many cores the client will use
-unsigned int count_client_cores( unsigned int **clientserver, unsigned int cores );
+unsigned int count_client_cores( const struct test *test, const unsigned int tests );
 
 // Works out how many cores the server will use
-unsigned int count_server_cores( unsigned int **clientserver, unsigned int cores );
+unsigned int count_server_cores( const struct test *test, const unsigned int tests );
 
 void stats_add(struct stats *dest, const struct stats *src);
-
-int enable_timestamp(SOCKET s);
-int disable_timestamp(SOCKET s);
-
-int enable_nagle(SOCKET s);
-int disable_nagle(SOCKET s);
-
-int enable_blocking(SOCKET s);
-int disable_blocking(SOCKET s);
-
-int enable_maxseq(SOCKET s, int size);
-int disable_maxseq(SOCKET s);
-
-int set_socket_send_buffer(SOCKET s, unsigned int socket_size);
-int set_socket_recv_buffer(SOCKET s, unsigned int socket_size);
-
-int set_socket_timeout(SOCKET s, unsigned int milliseconds);
-
-unsigned long long get_packet_timestamp(SOCKET s);
 
 // Move all the elements after arr down one
 void move_down ( SOCKET *arr, SOCKET *arr_end );
@@ -105,10 +100,8 @@ void stop_all();
 
 double calc_confidence(double confidence_lvl, double mean, double variance, unsigned int n, int verbose);
 
-#ifdef WIN32
-void cleanup_winsock();
-void setup_winsock();
 
+#ifdef WIN32
 // Sleep for a number of microseconds
 int usleep(unsigned int useconds);
 #endif

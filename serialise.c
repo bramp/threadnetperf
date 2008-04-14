@@ -1,5 +1,7 @@
 #include "serialise.h"
 
+#include "parse.h"
+
 #include <assert.h>
 #include <stdio.h>
 #include <malloc.h>
@@ -42,6 +44,8 @@ struct network_settings {
 
 	uint32_t cores;
 	uint16_t port;
+
+	uint8_t tests; // The number of tests
 };
 
 struct network_stats {
@@ -68,10 +72,9 @@ struct network_stats {
 // TODO add extra check
 int read_settings( SOCKET s, struct settings * settings ) {
 	int ret;
-	unsigned int x, y;
+	unsigned int i = 0;
+
 	struct network_settings net_settings;
-	uint32_t *buffer = NULL;
-	unsigned int buffer_len = 0;
 
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
@@ -99,8 +102,9 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 	settings->rate			 = ntohl( net_settings.rate );
 
-	settings->cores          = ntohl( net_settings.cores );
 	settings->port           = ntohs( net_settings.port );
+
+	settings->tests          = net_settings.tests;
 
 	// Blank some fields
 	settings->deamon         = 0;
@@ -108,38 +112,37 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->confidence_int = 0.0;
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
-
 	settings->server_host    = NULL;
-	settings->clientserver   = NULL;
 
-	// Create a buffer to read all the values
-	buffer_len = settings->cores * settings->cores * sizeof( uint32_t );
-	buffer = malloc( buffer_len );
-	if ( buffer == NULL ) {
-		fprintf(stderr, "%s:%d malloc() error\n", __FILE__, __LINE__);
+	// Create space for all the tests
+	settings->test = calloc( settings->tests, sizeof(*settings->test) );
+	if ( !settings->test ) {
+		fprintf(stderr, "%s:%d read_settings() calloc error\n", __FILE__, __LINE__ );
 		return -1;
 	}
 
-	ret = recv(s, (char *)buffer, buffer_len, 0);
-	if ( ret != buffer_len ) {
-		return -1;
-	}
+	// Now parse each test, one at a time
+	for (i = 0; i < settings->tests; i++) {
+		unsigned char buffer[ 256 ];
+		unsigned char buflen;
 
-	// Now construct the clientserver table
-	settings->clientserver = (unsigned int **)malloc_2D(sizeof(unsigned int), settings->cores, settings->cores);
-	if ( settings->clientserver == NULL ) {
-		fprintf(stderr, "%s:%d malloc_2D() error\n", __FILE__, __LINE__);
-		free(buffer);
-		return -1;
-	}
-
-	for (x = 0; x < settings->cores; x++) {
-		for (y=0; y < settings->cores; y++) {
-			settings->clientserver[x][y] = ntohl( buffer [ x * settings->cores + y ] );
+		ret = recv(s, &buflen, sizeof(buflen), 0);
+		if ( ret != sizeof(buflen) ) {
+			return -1;
 		}
+
+		ret = recv(s, buffer, buflen, 0);
+		if ( ret != buflen ) {
+			return -1;
+		}
+		buffer [ buflen ] = '\0';
+
+		if ( parse_test(buffer, &settings->test[i]) )
+			return -1;
 	}
 
-	free(buffer);
+	settings->servercores  = count_server_cores( settings->test, settings->tests) ;
+	settings->clientcores  = count_client_cores( settings->test, settings->tests) ;
 
 	return 0;
 }
@@ -147,10 +150,8 @@ int read_settings( SOCKET s, struct settings * settings ) {
 // Sends settings to a socket
 int send_settings( SOCKET s, const struct settings * settings ) {
 	int ret;
-	unsigned int x, y;
 	struct network_settings net_settings;
-	uint32_t *buffer = NULL;
-	unsigned int buffer_len = 0;
+	unsigned int i;
 
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
@@ -170,31 +171,27 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	net_settings.socket_size    = htonl( settings->socket_size );
 	net_settings.rate           = htonl( settings->rate );
 
-	net_settings.cores          = htonl( settings->cores );
 	net_settings.port           = htons( settings->port );
+
+	net_settings.tests          = settings->tests;
 
 	ret = send(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) ) {
 		return -1;
 	}
 
-	// Build a buffer with all the client/server combinations
-	buffer_len = settings->cores * settings->cores * sizeof( uint32_t );
-	buffer = malloc( buffer_len );
-	if ( buffer == NULL )
-		return -1;
+	for (i = 0; i < settings->tests; i++) {
+		unsigned char buffer[256 + 1];
+		const struct test * test = &settings->test[i];
+		sprintf(&buffer[1], "%u(%u-%u) ", test->connections, test->clientcores, test->servercores);
 
-	for (x = 0; x < settings->cores; x++) {
-		for (y=0; y < settings->cores; y++) {
-			buffer [ x * settings->cores + y ] = htonl( settings->clientserver[x][y] );
+		assert ( strlen(&buffer[1]) < 256 );
+		buffer[0] = (char)strlen(&buffer[1]);
+
+		ret = send(s, buffer, *buffer + 1, 0);
+		if ( ret != *buffer + 1 ) {
+			return -1;
 		}
-	}
-
-	ret = send(s, (const char *)buffer, buffer_len, 0);
-	free (buffer);
-
-	if ( ret != buffer_len ) {
-		return -1;
 	}
 
 	return 0;

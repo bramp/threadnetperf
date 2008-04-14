@@ -12,48 +12,79 @@
 #include <time.h>
 #endif
 
+const unsigned int max_cores = 8; // TODO get the real number!
+
 // Works out how many cores the client will use
-unsigned int count_client_cores( unsigned int **clientserver, unsigned int cores ) {
+unsigned int count_client_cores( const struct test *test, const unsigned int tests ){
 
-	unsigned int count = 0;
-	unsigned int clientcore = 0;
+	unsigned int bins = 0;
+	unsigned int *bin;
+	unsigned int i = 0;
 
-	assert (clientserver != NULL);
-	assert (cores > 0);
+	assert (test != NULL);
+	assert (tests > 0);
 
-	for (; clientcore < cores; clientcore++) {
-		unsigned int servercore =0;
-		for (; servercore < cores; servercore++) {
-			if ( clientserver [ clientcore ] [ servercore ] > 0 ) {
-				count++;
+	// Malloc space for the max number of core combinations
+	bin = calloc(tests, sizeof(*bin)); 
+	if ( bin == NULL )
+		return -1;
+
+	for ( i = 0; i < tests; i++ ) {
+		unsigned int b = 0;
+
+		// Find the bin this test is in
+		for ( ; b < bins; b++) {
+			if ( bin[ b ] == test[i].clientcores )
 				break;
-			}
 		}
+
+		// Break if we found this bin early
+		if ( b < bins )
+			break;
+
+		bin[bins] = test[i].clientcores;
+		bins++;
 	}
 
-	return count;
+	free(bin);
+
+	return bins;
 }
 
 // Works out how many cores the server will use
-unsigned int count_server_cores( unsigned int **clientserver, unsigned int cores ) {
+unsigned int count_server_cores( const struct test *test, const unsigned int tests ) {
 
-	unsigned int count = 0;
-	unsigned int servercore = 0;
+	unsigned int bins = 0;
+	unsigned int *bin;
+	unsigned int i = 0;
 
-	assert (clientserver != NULL);
-	assert (cores > 0);
+	assert (test != NULL);
+	assert (tests > 0);
 
-	for (; servercore < cores; servercore++) {
-		unsigned int clientcore =0;
-		for (; clientcore < cores; clientcore++) {
-			if ( clientserver [ clientcore ] [ servercore ] > 0 ) {
-				count++;
+	bin = calloc(tests, sizeof(*bin)); 
+	if ( bin == NULL )
+		return -1;
+
+	for ( i = 0; i < tests; i++ ) {
+		unsigned int b = 0;
+
+		// Find the bin this test is in
+		for ( ; b < bins; b++) {
+			if ( bin[ b ] == test[i].servercores )
 				break;
-			}
 		}
+
+		// Break if we found this bin early
+		if ( b < bins )
+			break;
+
+		bin[bins] = test[i].servercores;
+		bins++;
 	}
 
-	return count;
+	free(bin);
+
+	return bins;
 }
 
 void stats_add(struct stats *dest, const struct stats *src) {

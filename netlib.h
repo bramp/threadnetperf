@@ -32,3 +32,27 @@
 	#define INVALID_SOCKET (-1)
 	#define SOCKET_ERROR (-1)
 #endif
+
+int enable_timestamp(SOCKET s);
+int disable_timestamp(SOCKET s);
+
+int enable_nagle(SOCKET s);
+int disable_nagle(SOCKET s);
+
+int enable_blocking(SOCKET s);
+int disable_blocking(SOCKET s);
+
+int enable_maxseq(SOCKET s, int size);
+int disable_maxseq(SOCKET s);
+
+int set_socket_send_buffer(SOCKET s, unsigned int socket_size);
+int set_socket_recv_buffer(SOCKET s, unsigned int socket_size);
+
+int set_socket_timeout(SOCKET s, unsigned int milliseconds);
+
+unsigned long long get_packet_timestamp(SOCKET s);
+
+#ifdef WIN32
+void cleanup_winsock();
+void setup_winsock();
+#endif

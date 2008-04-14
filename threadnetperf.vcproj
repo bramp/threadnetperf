@@ -142,6 +142,9 @@
 				RelativePath=".\getopt.c">
 			</File>
 			<File
+				RelativePath=".\parse.c">
+			</File>
+			<File
 				RelativePath=".\print.c">
 			</File>
 			<File
@@ -181,6 +184,9 @@
 			</File>
 			<File
 				RelativePath=".\netlib.h">
+			</File>
+			<File
+				RelativePath=".\parse.h">
 			</File>
 			<File
 				RelativePath=".\print.h">

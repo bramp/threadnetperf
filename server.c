@@ -15,15 +15,18 @@ size_t sreq_size = 0;
 
 int prepare_servers(const struct settings * settings, void *data) {
 
-	unsigned int servercore, clientcore;
-	unsigned int ** clientserver;
+	unsigned int i;
 
 	assert ( settings != NULL );
+	assert ( settings->test != NULL );
+
 	assert ( sreq == NULL );
 	assert ( sreq_size == 0 );
 
-	// Malloc one space for each core
-	sreq_size = settings->cores;
+
+	// Malloc one space for each core combination
+	sreq_size = settings->servercores;
+
 	sreq = calloc (sreq_size , sizeof(*sreq) );
 	if ( !sreq ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
@@ -31,64 +34,58 @@ int prepare_servers(const struct settings * settings, void *data) {
 		return -1;
 	}
 
-	clientserver = settings->clientserver;
-	assert ( clientserver != NULL );
+	// Now setup the server structs for each core combination
+	for ( i = 0; i < settings->tests; i++) {
+		struct server_request *s;
+		const struct test * test = &settings->test[i];
 
-	// Loop through clientserver looking for each server we need to create
-	for (servercore = 0; servercore < settings->cores; servercore++) {
-		for (clientcore = 0; clientcore < settings->cores; clientcore++) {
-
-			// Don't bother if there are zero requests
-			if ( clientserver [ clientcore ] [ servercore ] == 0 )
-				continue;
-
-			if ( clientcore > max_cores || servercore > max_cores ) {
-				fprintf(stderr, "Too many cores! %u > %u\n", clientcore > servercore ? clientcore : servercore, max_cores );
-				return -1;
-			}
-
-			// Check if we haven't set up this server thread yet
-			if ( sreq [ servercore ].bRunning == 0 ) {
-				sreq [ servercore ].bRunning = 1;
-				sreq [ servercore ].settings = settings;
-				sreq [ servercore ].port = settings->port + servercore;
-				sreq [ servercore ].n = 0;
-				sreq [ servercore ].core = servercore;
-
-				unready_threads++;
-				server_listen_unready++;
-			}
-
-			sreq [ servercore ].n += clientserver [ clientcore ] [ servercore ];
+		// find an exisiting sreq with this core combo
+		for ( s = sreq; s < &sreq[sreq_size]; s++) {
+			if ( s->bRunning == 0 || s->core == test->servercores )
+				break;
 		}
+		assert ( s < &sreq[sreq_size] );
+
+		// Check if we haven't set up this server thread yet
+		if ( s->bRunning == 0 ) {
+			s->bRunning = 1;
+			s->settings = settings;
+			s->port = settings->port + 0; // TODO PORT
+			s->n = 0;
+			s->core = test->servercores;
+
+			unready_threads++;
+			server_listen_unready++;
+		}
+
+		s->n += test->connections;
 	}
 
 	// Double check we made the correct number of servers
-	assert ( server_listen_unready == count_server_cores(settings->clientserver, settings->cores) );
+	assert ( sreq[sreq_size - 1].bRunning == 1 );
 
 	return 0;
 }
 
 int create_servers(const struct settings *settings, void *data) {
-	unsigned int servercore;
+	unsigned int i;
 
-	assert ( sreq_size == settings->cores );
+	assert ( sreq_size == settings->servercores );
 
 	// Create all the server threads
-	for (servercore = 0; servercore < settings->cores; servercore++) {
+	for (i = 0; i < sreq_size; i++) {
 
 		cpu_set_t cpus;
 
 		// Don't bother if we don't have a server on this core
-		if ( ! sreq[servercore].bRunning )
-			continue;
+		assert ( sreq[i].bRunning );
 
 		// Set which CPU this thread should be on
 		CPU_ZERO ( &cpus );
-		CPU_SET ( servercore, &cpus );
+		CPU_SET ( sreq [i].core , &cpus );
 
 		//if ( create_thread( server_thread, &sreq [servercore] , sizeof(cpus), &cpus) ) {
-		if ( create_thread( server_thread, &sreq [servercore] , 0, NULL) ) {
+		if ( create_thread( server_thread, &sreq [i] , 0, NULL) ) {
 			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
 			return -1;
 		}

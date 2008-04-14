@@ -263,7 +263,6 @@ int remote_cleanup(const struct settings *settings, void* data) {
 // Receive the results from the remote daemon
 int remote_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void * data), void *data) {
 	unsigned int core = 0;
-	unsigned int cores;
 	SOCKET s;
 
 	assert ( settings != NULL );
@@ -276,9 +275,7 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 	s = ((struct remote_data*)data)->s;
 	assert ( s != INVALID_SOCKET );
 
-	cores = count_server_cores(settings->clientserver, settings->cores);
-
-	for ( ; core < cores; core++ ) {
+	for ( ; core < settings->servercores; core++ ) {
 		struct stats stats;
 
 		if ( read_results( s, &stats ) ) {
@@ -291,7 +288,7 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 		stats_add( total_stats, &stats );
 	}
 
-	total_stats->duration  /= cores;
+	total_stats->duration  /= settings->servercores;
 
 	return 0;
 }
