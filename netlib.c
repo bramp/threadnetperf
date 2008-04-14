@@ -1,5 +1,10 @@
 #include "netlib.h"
 
+#ifndef WIN32
+#include <sys/ioctl.h>
+#include <time.h>
+#endif
+
 #include <assert.h>
 
 int set_opt(SOCKET s, int level, int optname, int one) {

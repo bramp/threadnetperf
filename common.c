@@ -7,11 +7,6 @@
 #include <math.h>
 #include <malloc.h>
 
-#ifndef WIN32
-#include <sys/ioctl.h>
-#include <time.h>
-#endif
-
 const unsigned int max_cores = 8; // TODO get the real number!
 
 // Works out how many cores the client will use
