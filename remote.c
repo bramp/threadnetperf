@@ -159,6 +159,11 @@ SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings) {
 		goto cleanup;
 	}
 
+	if ( read_settings ( s, recv_settings ) ) {
+		fprintf(stderr, "%s:%d read_settings() error %d\n", __FILE__, __LINE__, ERRNO );
+		goto cleanup;
+	}
+
 	if ( recv_settings->verbose ) {
 		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
 
@@ -166,15 +171,9 @@ SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings) {
 		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
 
 		printf("Incoming control connection %s\n", addr_str);
-	}
 
-	if ( read_settings ( s, recv_settings ) ) {
-		fprintf(stderr, "%s:%d read_settings() error %d\n", __FILE__, __LINE__, ERRNO );
-		goto cleanup;
-	}
-
-	if ( recv_settings->verbose )
 		printf("Received tests\n");
+	}
 
 	return s;
 

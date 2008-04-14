@@ -43,7 +43,6 @@ struct network_settings {
 
 	uint32_t rate; // Sends per second
 
-	uint32_t cores;
 	uint16_t port;
 
 	uint8_t tests; // The number of tests
