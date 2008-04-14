@@ -123,7 +123,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 	// Now parse each test, one at a time
 	for (i = 0; i < settings->tests; i++) {
-		unsigned char buffer[ 256 ];
+		char buffer[ 256 ];
 		unsigned char buflen;
 
 		ret = recv(s, &buflen, sizeof(buflen), 0);
@@ -181,7 +181,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	}
 
 	for (i = 0; i < settings->tests; i++) {
-		unsigned char buffer[256 + 1];
+		char buffer[256 + 1];
 		const struct test * test = &settings->test[i];
 		sprintf(&buffer[1], "%u(%u-%u) ", test->connections, test->clientcores, test->servercores);
 

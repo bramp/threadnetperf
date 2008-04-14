@@ -4,6 +4,13 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+#ifdef WIN32
+	#include "getopt.h"
+#else
+	#include <unistd.h>
+#endif
 
 void print_version() {
 	fprintf(stderr, "threadnetperf r%s by bramp 2007-2008\n", THREADNETPERF_VERSION );
