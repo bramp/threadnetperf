@@ -100,8 +100,6 @@ int create_clients(const struct settings *settings, void *data) {
 
 	for (i = 0; i < creq_size; i++) {
 		cpu_set_t cpus;
-		unsigned int core = 0;
-		unsigned int c = creq[i].cores;
 
 		assert ( creq[i].bRunning );
 

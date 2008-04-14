@@ -83,8 +83,7 @@ int create_servers(const struct settings *settings, void *data) {
 		// Set which CPU this thread should be on
 		cpu_setup( &cpus, sreq[i].cores );
 
-		//if ( create_thread( server_thread, &sreq [servercore] , sizeof(cpus), &cpus) ) {
-		if ( create_thread( server_thread, &sreq [i] , 0, NULL) ) {
+		if ( create_thread( server_thread, &sreq [i] , sizeof(cpus), &cpus) ) {
 			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
 			return -1;
 		}
