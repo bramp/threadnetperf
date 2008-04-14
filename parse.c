@@ -63,7 +63,9 @@ void print_usage() {
 }
 
 // Parses N(C-S)
-int parse_test( const char *arg, struct test * test ) {
+int parse_test( const struct settings *settings, const char *arg, struct test * test ) {
+
+	const char *hostname;
 
 	assert( arg != NULL );
 	assert( test != NULL );
@@ -73,6 +75,19 @@ int parse_test( const char *arg, struct test * test ) {
 		if ( sscanf( arg, "%u(%u-%u)", &test->connections, &test->clientcores, &test->servercores ) <3 ) {
 			return -1;
 		}
+	}
+
+	memset( &test->addr, 0, sizeof(test->addr) );
+
+	hostname = settings->server_host;
+
+	((struct sockaddr_in *)&test->addr)->sin_family = AF_INET;
+	((struct sockaddr_in *)&test->addr)->sin_addr.s_addr = inet_addr( hostname );
+	((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + 0 ); // TODO PORT
+
+	if ( ((struct sockaddr_in *)&test->addr)->sin_addr.s_addr == INADDR_NONE ) {
+		fprintf(stderr, "Invalid host name (%s)\n", hostname );
+		return -1;
 	}
 
 	return 0;
@@ -363,7 +378,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 		settings->test = realloc ( settings->test, sizeof(*settings->test) * (settings->tests + 1) );
 
 		// Parse N{C-S}
-		if ( parse_test ( argv[optind], test ) != 0 ) {
+		if ( parse_test ( settings, argv[optind], test ) != 0 ) {
 			fprintf(stderr, "Unknown argument (%s)\n", argv[optind] );
 			return -1;
 		}

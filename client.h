@@ -18,8 +18,8 @@ struct client_request {
 struct client_request_details {
 
 	// The address to connect to
-	struct sockaddr *addr;
-	int addr_len;
+	struct sockaddr_storage addr;
+	socklen_t addr_len;
 
 	unsigned int n; // The number of connection to create
 

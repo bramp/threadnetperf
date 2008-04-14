@@ -26,7 +26,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 			char addr[NI_MAXHOST + NI_MAXSERV + 1];
 
 			// Print the host/port
-			addr_to_ipstr(details->addr, details->addr_len, addr, sizeof(addr));
+			addr_to_ipstr((const struct sockaddr *)&details->addr, details->addr_len, addr, sizeof(addr));
 
 			printf("  Core %d: Connecting %d client%s to %s\n",
 				req->cores, details->n, details->n > 1 ? "s" : "",
@@ -84,7 +84,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 				goto cleanup;
 			}
 
-			if ( connect( s, details->addr, details->addr_len ) == SOCKET_ERROR ) {
+			if ( connect( s, (const struct sockaddr *)&details->addr, (int)details->addr_len ) == SOCKET_ERROR ) {
 				fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
 				goto cleanup;
 			}

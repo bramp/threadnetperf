@@ -138,7 +138,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 		}
 		buffer [ buflen ] = '\0';
 
-		if ( parse_test(buffer, &settings->test[i]) )
+		if ( parse_test(settings, buffer, &settings->test[i]) )
 			return -1;
 	}
 

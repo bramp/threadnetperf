@@ -64,26 +64,9 @@ int prepare_clients(const struct settings * settings, void *data) {
 		details->next =c->details;
 		c->details = details;
 
-		details->n = test->connections;
-
-		// Create the client dest addr
-		details->addr_len = sizeof ( struct sockaddr_in );
-
-		details->addr = calloc ( 1, details->addr_len ) ;
-		if ( !details->addr ) {
-			fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
-			return -1;
-		}
-
-		// Change this to be more address indepentant
-		((struct sockaddr_in *)details->addr)->sin_family = AF_INET;
-		((struct sockaddr_in *)details->addr)->sin_addr.s_addr = inet_addr( settings->server_host );
-		((struct sockaddr_in *)details->addr)->sin_port = htons( settings->port + 0 ); // TODO PORT
-
-		if ( ((struct sockaddr_in *)details->addr)->sin_addr.s_addr == INADDR_NONE ) {
-			fprintf(stderr, "Invalid host name (%s)\n", settings->server_host );
-			return -1;
-		}
+		details->n        = test->connections;
+		details->addr     = test->addr;
+		details->addr_len = test->addr_len;
 	}
 
 	// Double check we made the correct number of servers
@@ -138,7 +121,6 @@ void cleanup_clients() {
 			struct client_request_details *c = creq[i].details;
 			while ( c != NULL ) {
 				struct client_request_details *nextC = c->next;
-				free ( c->addr );
 				free ( c );
 				c = nextC;
 			}

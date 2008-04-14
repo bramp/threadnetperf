@@ -317,7 +317,6 @@ char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, 
 	assert (host != NULL);
 	assert (maxhostlen > 0);
 
-
 	if ( getnameinfo (addr, addlen, host, maxhostlen, port, sizeof(port), NI_NUMERICHOST | NI_NUMERICSERV ) ) {
 		*host = '\0';
 		return NULL;

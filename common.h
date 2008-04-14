@@ -42,6 +42,9 @@ struct test {
 	unsigned int servercores; // The cores the servers may run on
 
 	unsigned int connections; // The number of connections
+
+	struct sockaddr_storage addr;
+	socklen_t addr_len;
 };
 
 // Settings
