@@ -65,7 +65,7 @@ void print_usage() {
 // Parses N(C-S)
 int parse_test( const struct settings *settings, const char *arg, struct test * test ) {
 
-	char hostname[NI_MAXHOST + NI_MAXSERV + 1] = {0};
+	char hostname[NI_MAXHOST + NI_MAXSERV + 1];
 
 	assert( arg != NULL );
 	assert( test != NULL );
@@ -103,17 +103,19 @@ int parse_test( const struct settings *settings, const char *arg, struct test * 
 
 good:
 
+	if ( hostname[0] == '\0' ) {
+		strcpy(hostname, "127.0.0.1");
+	}
+
 	memset( &test->addr, 0, sizeof(test->addr) );
+	test->addr_len = sizeof(struct sockaddr_in);
 
-	if ( hostname[0] != '\0' ) {
-		test->addr_len = sizeof(struct sockaddr_in);
-		str_to_addr( hostname, (struct sockaddr *) &test->addr, &test->addr_len );
-		((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + test->servercores );
+	str_to_addr( hostname, (struct sockaddr *) &test->addr, &test->addr_len );
+	((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + test->servercores );
 
-		if ( ((struct sockaddr_in *)&test->addr)->sin_addr.s_addr == INADDR_NONE ) {
-			fprintf(stderr, "Invalid host name (%s)\n", hostname );
-			return -1;
-		}
+	if ( ((struct sockaddr_in *)&test->addr)->sin_addr.s_addr == INADDR_NONE ) {
+		fprintf(stderr, "Invalid host name (%s)\n", hostname );
+		return -1;
 	}
 
 	return 0;
