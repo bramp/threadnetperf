@@ -395,10 +395,11 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	// 1{0-0} 10{1-1} 3{0-1}, 1 connection core 0 to core 0, 10 connections core 1 to core 1, and 3 connections core 0 to core 1
 	while (optind < argc) {
 
-		struct test * const test = &settings->test [ settings->tests ];
+		struct test * test;
 
 		// Malloc space for this extra test
 		settings->test = realloc ( settings->test, sizeof(*settings->test) * (settings->tests + 1) );
+		test = &settings->test [ settings->tests ];
 
 		// Parse N{C-S}
 		if ( parse_test ( settings, argv[optind], test ) != 0 ) {
