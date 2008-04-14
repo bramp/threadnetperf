@@ -65,7 +65,7 @@ void print_usage() {
 // Parses N(C-S)
 int parse_test( const struct settings *settings, const char *arg, struct test * test ) {
 
-	char hostname[NI_MAXHOST + NI_MAXSERV + 1];
+	char hostname[NI_MAXHOST + NI_MAXSERV + 1] = {0};
 
 	assert( arg != NULL );
 	assert( test != NULL );
@@ -89,7 +89,7 @@ int parse_test( const struct settings *settings, const char *arg, struct test * 
 
 	if ( settings->server_host != NULL )
 		strncpy(hostname, settings->server_host, sizeof(hostname));
-
+	
 	if ( sscanf( arg, "%u(%u-%u)", &test->connections, &test->clientcores, &test->servercores ) == 3 ) {
 		goto good;
 	}
