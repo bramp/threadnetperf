@@ -76,6 +76,7 @@ bail:
 SOCKET connect_daemon(const struct settings *settings) {
 	SOCKET s;
 	struct sockaddr_in addr; // Address to listen on
+	socklen_t addr_len = sizeof(addr);
 
 	assert ( settings != NULL );
 
@@ -91,9 +92,10 @@ SOCKET connect_daemon(const struct settings *settings) {
 	}
 
 	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = inet_addr( settings->server_host );
-	addr.sin_port = htons( CONTROL_PORT );
+	str_to_addr( settings->server_host, (struct sockaddr *)&addr, &addr_len );
+
+	if ( addr.sin_port == 0 )
+		addr.sin_port = htons( CONTROL_PORT );
 
 	if ( settings->verbose ) {
 		char addr_str[NI_MAXHOST + NI_MAXSERV + 1];
