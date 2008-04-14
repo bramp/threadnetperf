@@ -9,7 +9,7 @@ struct server_request {
 	unsigned short port; // The port the server is listening on
 	unsigned int n; // The number of connections to accept
 
-	unsigned int core; // Which core this server is running on
+	unsigned int cores; // Which cores this server is running on
 
 	const struct settings *settings;
 

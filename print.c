@@ -48,7 +48,7 @@ int print_results( const struct settings *settings, const struct stats *stats, v
 #else
 	printf( "%i\t%u\t%llu\t%llu\t%.2fs\t%.2f",
 #endif
-		stats->core, settings->message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
+		stats->cores, settings->message_size, stats->bytes_received, stats->pkts_received, duration, thruput );
 
 	if ( settings->timestamp )
 		printf( "\t%llu\t%llu",stats->pkts_time, stats->timestamps );

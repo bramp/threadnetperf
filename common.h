@@ -11,8 +11,8 @@
 extern const unsigned int max_cores; // TODO get the real number!
 
 struct stats {
-	// The core these stats were recorded from
-	unsigned int core;
+	// The cores these stats were recorded from
+	unsigned int cores;
 
 	// The number of bytes received
 	unsigned long long bytes_received;

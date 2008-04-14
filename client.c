@@ -38,7 +38,7 @@ int prepare_clients(const struct settings * settings, void *data) {
 
 		// find an exisiting sreq with this core combo
 		for ( c = creq; c < &creq[creq_size]; c++) {
-			if ( c->bRunning == 0 || c->core == test->clientcores )
+			if ( c->bRunning == 0 || c->cores == test->clientcores )
 				break;
 		}
 		assert ( c < &creq[creq_size] );
@@ -47,7 +47,7 @@ int prepare_clients(const struct settings * settings, void *data) {
 		if ( c->bRunning == 0 ) {
 			c->bRunning = 1;
 			c->settings = settings;
-			c->core = test->clientcores;
+			c->cores = test->clientcores;
 
 			unready_threads++;
 			clientthreads++;
@@ -100,11 +100,12 @@ int create_clients(const struct settings *settings, void *data) {
 
 	for (i = 0; i < creq_size; i++) {
 		cpu_set_t cpus;
+		unsigned int core = 0;
+		unsigned int c = creq[i].cores;
 
 		assert ( creq[i].bRunning );
 
-		CPU_ZERO ( &cpus );
-		CPU_SET ( creq[i].core , &cpus );
+		cpu_setup( &cpus, creq[i].cores );
 
 		if ( create_thread( client_thread, &creq [i] , sizeof(cpus), &cpus) ) {
 			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );

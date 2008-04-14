@@ -34,6 +34,20 @@ int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const
 }
 #endif
 
+void cpu_setup( cpu_set_t *cpu, unsigned int cores ) {
+	unsigned int core = 0;
+	
+	CPU_ZERO ( cpu );
+
+	// Set all the correct bits
+	while ( cores > 0 ) {
+		if ( cores & 1 )
+			CPU_SET ( core , cpu );
+		cores = cores >> 1;
+		core++;
+	}
+}
+
 /**
 	Create a thread on a specific core(s)
 */

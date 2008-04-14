@@ -41,7 +41,7 @@ int prepare_servers(const struct settings * settings, void *data) {
 
 		// find an exisiting sreq with this core combo
 		for ( s = sreq; s < &sreq[sreq_size]; s++) {
-			if ( s->bRunning == 0 || s->core == test->servercores )
+			if ( s->bRunning == 0 || s->cores == test->servercores )
 				break;
 		}
 		assert ( s < &sreq[sreq_size] );
@@ -52,7 +52,7 @@ int prepare_servers(const struct settings * settings, void *data) {
 			s->settings = settings;
 			s->port = settings->port + 0; // TODO PORT
 			s->n = 0;
-			s->core = test->servercores;
+			s->cores = test->servercores;
 
 			unready_threads++;
 			server_listen_unready++;
@@ -81,8 +81,7 @@ int create_servers(const struct settings *settings, void *data) {
 		assert ( sreq[i].bRunning );
 
 		// Set which CPU this thread should be on
-		CPU_ZERO ( &cpus );
-		CPU_SET ( sreq [i].core , &cpus );
+		cpu_setup( &cpus, sreq[i].cores );
 
 		//if ( create_thread( server_thread, &sreq [servercore] , sizeof(cpus), &cpus) ) {
 		if ( create_thread( server_thread, &sreq [i] , 0, NULL) ) {

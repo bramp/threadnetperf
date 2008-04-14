@@ -50,8 +50,8 @@ struct network_settings {
 };
 
 struct network_stats {
-	// The core these stats were recorded from
-	uint32_t core;
+	// The cores these stats were recorded from
+	uint32_t cores;
 
 	// The number of bytes received
 	uint64_t bytes_received;
@@ -211,7 +211,7 @@ int read_results( SOCKET s, struct stats * stats ) {
 	}
 
 	// TODO find a 64bit ntohl
-	stats->core           = ntohl(net_stats.core);
+	stats->cores          = ntohl(net_stats.cores);
 	stats->bytes_received = (net_stats.bytes_received);
 	stats->pkts_received  = (net_stats.pkts_received);
 	stats->pkts_time      = (net_stats.pkts_time);
@@ -229,7 +229,7 @@ int send_results( SOCKET s, const struct stats * stats ) {
 	assert (stats != NULL );
 
 	// TODO find a 64bit htonl
-	net_stats.core           = htonl(stats->core);
+	net_stats.cores          = htonl(stats->cores);
 	net_stats.bytes_received = (stats->bytes_received);
 	net_stats.pkts_received  = (stats->pkts_received);
 	net_stats.pkts_time	     = (stats->pkts_time);

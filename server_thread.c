@@ -111,7 +111,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 		if ( settings->verbose )
 			printf("  Server: %d incoming client %s (%d) socket size: %d/%d\n",
-				req->core, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
+				req->cores, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
 				send_socket_size, recv_socket_size );
 
 		n--;
@@ -169,7 +169,7 @@ void *server_thread(void *data) {
 	int nfds;
 
 	if ( settings.verbose )
-		printf("Core %d: Started server thread port %d\n", req->core, req->port );
+		printf("Core %d: Started server thread port %d\n", req->cores, req->port );
 
 	// Blank client before we start
 	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
@@ -388,7 +388,7 @@ void *server_thread(void *data) {
 					}
 
 					if ( settings.verbose )
-						printf("  Server: %d Removed client (%d/%d)\n", req->core, i + 1, clients );
+						printf("  Server: %d Removed client (%d/%d)\n", req->cores, i + 1, clients );
 
 					FD_CLR( s, &readFD );
 
@@ -470,7 +470,7 @@ end_loop:
 	end_time = get_microseconds();
 
 	// Add up all the client bytes
-	req->stats.core = req->core;
+	req->stats.cores = req->cores;
 	req->stats.duration = end_time - start_time;
 	req->stats.bytes_received = 0;
 	req->stats.pkts_received = 0;

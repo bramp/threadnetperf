@@ -7,7 +7,7 @@ struct client_request {
 
 	volatile int bRunning; // Flag to indicate if the client should be running
 
-	unsigned int core; // Which core this client is running on
+	unsigned int cores; // Which cores this client is running on
 
 	const struct settings *settings;
 

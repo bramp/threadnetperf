@@ -45,17 +45,19 @@ void print_usage() {
 
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "	tests      Combination of cores and clients\n" );
+	fprintf(stderr, "	tests      Core numbers are masks, for example 1 is core 0, 3 is core 0 and core 1\n" );
 	fprintf(stderr, "		N{c-s}   N connections\n" );
-	fprintf(stderr, "		         c client core\n" );
-	fprintf(stderr, "		         s server core\n" );
+	fprintf(stderr, "		         c client cores mask\n" );
+	fprintf(stderr, "		         s server cores mask\n" );
+
 
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "Examples:\n" );
-	fprintf(stderr, "	> threadnetperf -n -s 10000 1{0-0}\n" );
+	fprintf(stderr, "	> threadnetperf -n -s 10000 1{1-1}\n" );
 	fprintf(stderr, "	Disable Nagle's, send size of 10000 with 1 connection from core 0 to core 0\n" );
 
 	fprintf(stderr, "\n" );
-	fprintf(stderr, "	> threadnetperf 10{0-0} 10{1-1} 10{2-2}\n" );
+	fprintf(stderr, "	> threadnetperf 10{1-1} 10{2-2} 10{4-4}\n" );
 	fprintf(stderr, "	10 connection from core 0 to core 0, 10 connections from core 1 to core 1, and 10 connections from core 2 to core 2\n" );
 
 }
@@ -367,6 +369,11 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 		}
 
 		// Check all the paramters make sense
+		if ( test->clientcores == 0 || test->servercores == 0 ) {
+			fprintf(stderr, "Cores of zero will not run on any core (%s)\n", argv[optind] );
+			return -1;
+		}
+
 		// TODO check if the server is remote, and then decide if the cores make sense
 		if ( test->clientcores >= (unsigned int)(1 << max_cores) || test->servercores >= (unsigned int)(1 << max_cores) ) {
 			fprintf(stderr, "Cores must not be greater than %d (%s)\n", max_cores, argv[optind] );

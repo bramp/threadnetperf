@@ -29,7 +29,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 			addr_to_ipstr(details->addr, details->addr_len, addr, sizeof(addr));
 
 			printf("  Core %d: Connecting %d client%s to %s\n",
-				req->core, details->n, details->n > 1 ? "s" : "",
+				req->cores, details->n, details->n > 1 ? "s" : "",
 				addr);
 		}
 
@@ -149,7 +149,7 @@ void* client_thread(void *data) {
 		*c = INVALID_SOCKET;
 
 	if ( settings.verbose )
-		printf("Core %d: Started client thread\n", req->core);
+		printf("Core %d: Started client thread\n", req->cores);
 
 	if ( connect_connections(&settings, req, client, &clients) ) {
 		goto cleanup;
@@ -247,7 +247,7 @@ void* client_thread(void *data) {
 					}
 
 					if ( settings.verbose )
-						printf("  Client: %d Removed client (%d/%d)\n", req->core, (int)((c - client) / sizeof(*c)) + 1, clients );
+						printf("  Client: %d Removed client (%d/%d)\n", req->cores, (int)((c - client) / sizeof(*c)) + 1, clients );
 
 					// Unset me from the set
 					FD_CLR( s, &readFD );
