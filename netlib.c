@@ -4,6 +4,7 @@
 #include <sys/ioctl.h>
 #endif
 
+#include <stdio.h>
 #include <assert.h>
 
 int set_opt(SOCKET s, int level, int optname, int one) {
