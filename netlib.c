@@ -202,7 +202,7 @@ int str_to_addr(const char *host, struct sockaddr *addr, socklen_t *addlen) {
 	}
 
 	*addr = *(aiList->ai_addr);
-	*addlen = aiList->ai_addrlen;
+	*addlen = (socklen_t) aiList->ai_addrlen;
 
 	freeaddrinfo( aiList );
 

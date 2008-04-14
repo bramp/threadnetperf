@@ -20,7 +20,7 @@ int prepare_clients(const struct settings * settings, void *data) {
 	assert ( creq_size == 0 );
 
 	// Malloc one space for each core combination
-	creq_size = settings->servercores;
+	creq_size = settings->clientcores;
 
 	// Malloc one space for each core
 	creq = calloc ( creq_size, sizeof(*creq) );
