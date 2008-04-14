@@ -261,8 +261,8 @@ int remote_cleanup(const struct settings *settings, void* data) {
 		free ( data );
 	}
 
-	free( settings->test );
-	free( settings );
+	if ( settings->test != NULL )
+		free ( settings->test );
 
 	return 0;
 }
