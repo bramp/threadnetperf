@@ -30,6 +30,11 @@
 #include <assert.h>
 #include <string.h>
 
+#ifndef WIN32
+#include <unistd.h> //usleep
+#endif
+
+
 // Condition Variable that is signaled each time a thread is ready
 pthread_cond_t ready_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t ready_mutex = PTHREAD_MUTEX_INITIALIZER;
