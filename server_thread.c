@@ -181,7 +181,7 @@ void *server_thread(void *data) {
 	memset( timestamps, 0, sizeof(timestamps) );
 
 	if ( req->n > sizeof(client) / sizeof(*client) ) {
-		fprintf(stderr, "%s:%d server_thread() error Server thread can have no more than %d connections\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)) );
+		fprintf(stderr, "%s:%d server_thread() error Server thread can have no more than %d connections (%d specified)\n", __FILE__, __LINE__, (int)(sizeof(client) / sizeof(*client)), req->n );
 		goto cleanup;
 	}
 
