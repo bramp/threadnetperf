@@ -3,6 +3,7 @@
 #include "version.h"
 
 #include <assert.h>
+#include <stdio.h>
 
 void print_version() {
 	fprintf(stderr, "threadnetperf r%s by bramp 2007-2008\n", THREADNETPERF_VERSION );
