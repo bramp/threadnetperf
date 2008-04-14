@@ -5,6 +5,7 @@
 #endif
 
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 
 int set_opt(SOCKET s, int level, int optname, int one) {
