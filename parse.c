@@ -70,7 +70,7 @@ int parse_test( const struct settings *settings, const char *arg, struct test * 
 	assert( arg != NULL );
 	assert( test != NULL );
 
-	if ( sscanf( arg, "%u(%u-%u:%s)", &test->connections, &test->clientcores, &test->servercores, hostname ) == 4 ) {
+	if ( sscanf( arg, "%u(%u-%u:%1000s)", &test->connections, &test->clientcores, &test->servercores, hostname ) == 4 ) {
 		// Find the last ) and remove
 		char *c = strchr(hostname, ')');
 		if ( c != NULL )
@@ -79,7 +79,7 @@ int parse_test( const struct settings *settings, const char *arg, struct test * 
 	}
 
 	// Parse with different brackets
-	if ( sscanf( arg, "%u{%u-%u:%s}", &test->connections, &test->clientcores, &test->servercores, hostname ) == 4 ) {
+	if ( sscanf( arg, "%u{%u-%u:%1000s}", &test->connections, &test->clientcores, &test->servercores, hostname ) == 4 ) {
 		// Find the last ) and remove
 		char *c = strchr(hostname, '}');
 		if ( c != NULL )
@@ -87,7 +87,8 @@ int parse_test( const struct settings *settings, const char *arg, struct test * 
 		goto good;
 	}
 
-	strncpy(hostname, settings->server_host, sizeof(hostname));
+	if ( settings->server_host != NULL )
+		strncpy(hostname, settings->server_host, sizeof(hostname));
 
 	if ( sscanf( arg, "%u(%u-%u)", &test->connections, &test->clientcores, &test->servercores ) == 3 ) {
 		goto good;
@@ -104,13 +105,15 @@ good:
 
 	memset( &test->addr, 0, sizeof(test->addr) );
 
-	test->addr_len = sizeof(struct sockaddr_in);
-	str_to_addr( hostname, (struct sockaddr *) &test->addr, &test->addr_len );
-	((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + test->servercores );
+	if ( hostname[0] != '\0' ) {
+		test->addr_len = sizeof(struct sockaddr_in);
+		str_to_addr( hostname, (struct sockaddr *) &test->addr, &test->addr_len );
+		((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + test->servercores );
 
-	if ( ((struct sockaddr_in *)&test->addr)->sin_addr.s_addr == INADDR_NONE ) {
-		fprintf(stderr, "Invalid host name (%s)\n", hostname );
-		return -1;
+		if ( ((struct sockaddr_in *)&test->addr)->sin_addr.s_addr == INADDR_NONE ) {
+			fprintf(stderr, "Invalid host name (%s)\n", hostname );
+			return -1;
+		}
 	}
 
 	return 0;
