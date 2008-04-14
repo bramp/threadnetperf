@@ -81,9 +81,10 @@ int parse_test( const struct settings *settings, const char *arg, struct test * 
 
 	hostname = settings->server_host;
 
+	test->addr_len = sizeof(struct sockaddr_in);
 	((struct sockaddr_in *)&test->addr)->sin_family = AF_INET;
 	((struct sockaddr_in *)&test->addr)->sin_addr.s_addr = inet_addr( hostname );
-	((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + 0 ); // TODO PORT
+	((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + test->servercores );
 
 	if ( ((struct sockaddr_in *)&test->addr)->sin_addr.s_addr == INADDR_NONE ) {
 		fprintf(stderr, "Invalid host name (%s)\n", hostname );

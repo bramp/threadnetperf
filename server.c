@@ -49,11 +49,14 @@ int prepare_servers(const struct settings * settings, void *data) {
 		// Check if we haven't set up this server thread yet
 		if ( s->bRunning == 0 ) {
 			s->bRunning = 1;
+			
 			s->settings = settings;
-			s->port = settings->port + 0; // TODO PORT
-			s->n = 0;
 			s->cores = test->servercores;
 
+			// TODO change this from a simple port to a full sockaddr struct
+			s->port = ntohs( ((struct sockaddr_in *)&test->addr)->sin_port );
+			s->n = 0;
+			
 			unready_threads++;
 			server_listen_unready++;
 		}

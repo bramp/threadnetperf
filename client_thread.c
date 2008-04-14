@@ -72,7 +72,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 					fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 					goto cleanup;
 				}
-			
+
 				//if ( enable_maxseq ( s , settings->message_size ) == SOCKET_ERROR ) {
 				//	fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
 				//	goto cleanup;
