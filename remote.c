@@ -92,7 +92,10 @@ SOCKET connect_daemon(const struct settings *settings) {
 	}
 
 	memset(&addr, 0, sizeof(addr));
-	str_to_addr( settings->server_host, (struct sockaddr *)&addr, &addr_len );
+	if ( str_to_addr( settings->server_host, (struct sockaddr *)&addr, &addr_len ); ) {
+		fprintf(stderr, "%s:%d str_to_addr() error\n", __FILE__, __LINE__);
+		goto cleanup;
+	}
 
 	if ( addr.sin_port == 0 )
 		addr.sin_port = htons( CONTROL_PORT );

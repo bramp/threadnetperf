@@ -110,13 +110,12 @@ good:
 	memset( &test->addr, 0, sizeof(test->addr) );
 	test->addr_len = sizeof(struct sockaddr_in);
 
-	str_to_addr( hostname, (struct sockaddr *) &test->addr, &test->addr_len );
-	((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + test->servercores );
-
-	if ( ((struct sockaddr_in *)&test->addr)->sin_addr.s_addr == INADDR_NONE ) {
+	if ( str_to_addr( hostname, (struct sockaddr *) &test->addr, &test->addr_len ) ) {
 		fprintf(stderr, "Invalid host name (%s)\n", hostname );
 		return -1;
 	}
+
+	((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + test->servercores );
 
 	return 0;
 }
