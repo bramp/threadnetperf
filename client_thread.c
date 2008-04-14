@@ -260,6 +260,10 @@ void* client_thread(void *data) {
 					// Move this back
 					c--;
 
+					// If this is the last client then just give up!
+					if ( clients == 0 )
+						goto cleanup;
+
 					// Update the nfds
 					nfds = (int)highest_socket(client, clients) + 1;
 
