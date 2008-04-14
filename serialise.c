@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <malloc.h>
+#include <string.h>
 
 #ifdef WIN32
 	typedef signed char             int8_t;
