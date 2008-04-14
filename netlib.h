@@ -56,3 +56,7 @@ unsigned long long get_packet_timestamp(SOCKET s);
 void cleanup_winsock();
 void setup_winsock();
 #endif
+
+char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen);
+int str_to_addr(const char *host, struct sockaddr *addr, socklen_t *addlen);
+

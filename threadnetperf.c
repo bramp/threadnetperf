@@ -309,10 +309,6 @@ int main (int argc, char *argv[]) {
 	double sum = 0.0;
 	double sumsquare = 0.0;
 
-	if ( parse_settings( argc, argv, &settings ) ) {
-		goto cleanup;
-	}
-
 #ifdef WIN32
 	setup_winsock();
 #endif
@@ -321,6 +317,10 @@ int main (int argc, char *argv[]) {
 	// Disable SIGPIPE signals because they can fire from within send/read
 	signal ( SIGPIPE, SIG_IGN );
 #endif
+
+	if ( parse_settings( argc, argv, &settings ) ) {
+		goto cleanup;
+	}
 
 	// If we are daemon mode start that
 	if (settings.deamon) {

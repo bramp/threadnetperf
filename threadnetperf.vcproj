@@ -142,6 +142,9 @@
 				RelativePath=".\getopt.c">
 			</File>
 			<File
+				RelativePath=".\netlib.c">
+			</File>
+			<File
 				RelativePath=".\parse.c">
 			</File>
 			<File

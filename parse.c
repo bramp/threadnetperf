@@ -65,25 +65,47 @@ void print_usage() {
 // Parses N(C-S)
 int parse_test( const struct settings *settings, const char *arg, struct test * test ) {
 
-	const char *hostname;
+	char hostname[NI_MAXHOST + NI_MAXSERV + 1];
 
 	assert( arg != NULL );
 	assert( test != NULL );
 
-	if ( sscanf( arg, "%u{%u-%u}", &test->connections, &test->clientcores, &test->servercores ) <3 ) {
-		// Check if they are using the wrong brackets
-		if ( sscanf( arg, "%u(%u-%u)", &test->connections, &test->clientcores, &test->servercores ) <3 ) {
-			return -1;
-		}
+	if ( sscanf( arg, "%u(%u-%u:%s)", &test->connections, &test->clientcores, &test->servercores, hostname ) == 4 ) {
+		// Find the last ) and remove
+		char *c = strchr(hostname, ')');
+		if ( c != NULL )
+			*c = '\0';
+		goto good;
 	}
+
+	// Parse with different brackets
+	if ( sscanf( arg, "%u{%u-%u:%s}", &test->connections, &test->clientcores, &test->servercores, hostname ) == 4 ) {
+		// Find the last ) and remove
+		char *c = strchr(hostname, '}');
+		if ( c != NULL )
+			*c = '\0';
+		goto good;
+	}
+
+	strncpy(hostname, settings->server_host, sizeof(hostname));
+
+	if ( sscanf( arg, "%u(%u-%u)", &test->connections, &test->clientcores, &test->servercores ) == 3 ) {
+		goto good;
+	}
+
+	// Parse with different brackets
+	if ( sscanf( arg, "%u{%u-%u}", &test->connections, &test->clientcores, &test->servercores ) == 3 ) {
+		goto good;
+	}
+
+	return -1;
+
+good:
 
 	memset( &test->addr, 0, sizeof(test->addr) );
 
-	hostname = settings->server_host;
-
 	test->addr_len = sizeof(struct sockaddr_in);
-	((struct sockaddr_in *)&test->addr)->sin_family = AF_INET;
-	((struct sockaddr_in *)&test->addr)->sin_addr.s_addr = inet_addr( hostname );
+	str_to_addr( hostname, (struct sockaddr *) &test->addr, &test->addr_len );
 	((struct sockaddr_in *)&test->addr)->sin_port = htons( settings->port + test->servercores );
 
 	if ( ((struct sockaddr_in *)&test->addr)->sin_addr.s_addr == INADDR_NONE ) {
