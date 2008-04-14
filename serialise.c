@@ -79,6 +79,8 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
 
+	memset( &net_settings, 0, sizeof(net_settings) );
+
 	ret = recv(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) || net_settings.version != ntohl(SETTINGS_VERSION) ) {
 		if ( ret > 0 )
@@ -156,6 +158,8 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	assert ( s != INVALID_SOCKET );
 	assert ( settings != NULL );
 
+	memset( &net_settings, 0, sizeof(net_settings) );
+
 	// Copy all the settings into a struct which can be sent over the network easily
 	net_settings.version        = htonl( SETTINGS_VERSION );
 	net_settings.duration       = htonl( settings->duration );
@@ -204,6 +208,8 @@ int read_results( SOCKET s, struct stats * stats ) {
 	assert ( s != INVALID_SOCKET );
 	assert ( stats != NULL );
 
+	memset( &net_stats, 0, sizeof(net_stats) );
+
 	ret = recv(s, (char *)&net_stats, sizeof(net_stats), 0);
 	if ( ret != sizeof(net_stats) ) {
 		return -1;
@@ -226,6 +232,8 @@ int send_results( SOCKET s, const struct stats * stats ) {
 
 	assert (s != INVALID_SOCKET);
 	assert (stats != NULL );
+
+	memset( &net_stats, 0, sizeof(net_stats) );
 
 	// TODO find a 64bit htonl
 	net_stats.cores          = htonl(stats->cores);
