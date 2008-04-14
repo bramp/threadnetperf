@@ -269,8 +269,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 					return -1;
 				}
 
-				if ( str_to_addr( hostname, &addr, &addr_len ) ) {
-					fprintf(stderr, "Invalid host name (%s)\n", hostname );
+				if ( str_to_addr( optarg, (struct sockaddr *)&addr, &addr_len ) ) {
+					fprintf(stderr, "Invalid host name (%s)\n", optarg );
 					return -1;
 				}
 
