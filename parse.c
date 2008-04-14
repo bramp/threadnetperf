@@ -261,8 +261,16 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 
 			case 'H': { // remote host
 
+				struct sockaddr_storage addr;
+				socklen_t addr_len = sizeof(addr);
+
 				if ( settings->deamon ) {
 					fprintf(stdout, "Unable to set remote host when in Deamon mode\n");
+					return -1;
+				}
+
+				if ( str_to_addr( hostname, &addr, &addr_len ) ) {
+					fprintf(stderr, "Invalid host name (%s)\n", hostname );
 					return -1;
 				}
 
