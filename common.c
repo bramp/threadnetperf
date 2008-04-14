@@ -22,7 +22,6 @@ unsigned int count_client_cores( const struct test *test, const unsigned int tes
 	unsigned int i = 0;
 
 	assert (test != NULL);
-	assert (tests > 0);
 
 	// Malloc space for the max number of core combinations
 	bin = calloc(tests, sizeof(*bin)); 
@@ -59,7 +58,6 @@ unsigned int count_server_cores( const struct test *test, const unsigned int tes
 	unsigned int i = 0;
 
 	assert (test != NULL);
-	assert (tests > 0);
 
 	bin = calloc(tests, sizeof(*bin)); 
 	if ( bin == NULL )
