@@ -138,17 +138,17 @@ void *server_thread(void *data) {
 
 	int clients = req->n; // The number of clients
 
-	SOCKET *client;
+	SOCKET *client = NULL;
 	SOCKET *c;
 
 	int return_stats = 0; // Should we return the stats?
 
 	// We count stats per socket, so we can get more fine grain stats
-	unsigned long long *bytes_recv; // Bytes received from each socket
-	unsigned long long *pkts_recv;  // Number of recv calls from each socket
+	unsigned long long bytes_recv = 0; // Bytes received from each socket
+	unsigned long long pkts_recv  = 0;  // Number of recv calls from each socket
 
-	unsigned long long *pkts_time;  // Total time packets spent (in network) for each socket (used in timestamping)
-	unsigned long long *timestamps; // Number of timestamps received
+	unsigned long long pkts_time  = 0;  // Total time packets spent (in network) for each socket (used in timestamping)
+	unsigned long long timestamps = 0; // Number of timestamps received
 
 	unsigned char *buf = NULL;
 
@@ -177,7 +177,7 @@ void *server_thread(void *data) {
 	long long end_time; // The time we ended
 
 	int send_socket_size, recv_socket_size; // The socket buffer sizes
-	
+
 	unsigned int i = 0;
 	const int one = 1;
 
@@ -185,15 +185,9 @@ void *server_thread(void *data) {
 		printf("Core %d: Started server thread port %d\n", req->cores, req->port );
 
 	// Malloc client space for many of the arrays
-	bytes_recv = calloc(clients, sizeof(*bytes_recv));
-	pkts_recv  = calloc(clients, sizeof(*pkts_recv ));
+	client = calloc(clients, sizeof(*client));
 
-	pkts_time  = calloc(clients, sizeof(*pkts_time ));
-	timestamps = calloc(clients, sizeof(*timestamps));
-
-	client     = calloc(clients, sizeof(*client));
-
-	if ( !bytes_recv|| !pkts_recv || !pkts_time|| !timestamps || !client ) {
+	if ( !client ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
@@ -388,7 +382,7 @@ void *server_thread(void *data) {
 		ret = epoll_wait(readFD_epoll, events, clients, 1000);
 
 		//fprintf(stderr, "MF: num_fds fired %d on line %d\n", num_fds, __LINE__);
-		while ( i < ret ) {
+		for ( i = 0; i < ret; i++ ) {
 			SOCKET s = events[i].data.fd;
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
 				fprintf(stderr, "%s:%d epoll() error %d\n", __FILE__, __LINE__, ERRNO );
@@ -487,17 +481,17 @@ void *server_thread(void *data) {
 								const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
 
 								if(ns <= now) {
-									timestamps[ i ] ++;
-									pkts_time[ i ] += now - ns;
+									timestamps++;
+									pkts_time += now - ns;
 								} else {
 									if ( ns != 0 )
 										fprintf(stderr, "%s:%d Invalid timestamp %llu > %llu\n", __FILE__, __LINE__, ns, now );
 								}
 
 								#ifdef CHECK_TIMES
-									if(pkts_recv [ i ] < CHECK_TIMES ) {
+									if(pkts_recv < CHECK_TIMES ) {
 										req->stats.processed_something = 1;
-										req->stats.processing_times[pkts_recv [ i ]] = t;
+										req->stats.processing_times[pkts_recv] = t;
 									}
 								#endif
 							}
@@ -506,17 +500,16 @@ void *server_thread(void *data) {
 					}
 #endif
 					// Count how many bytes have been received
-					bytes_recv [ i ] += len;
-					pkts_recv [ i ] ++;
+					bytes_recv += len;
+					pkts_recv++;
 				}
-				
+
 #ifndef USE_EPOLL
 			} else {
 				// Set the socket on this FD, to save us doing it at the beginning of each loop
 				FD_SET( s, &readFD);
 			}
 #endif
-			i++;
 		}
 	}
 end_loop:
@@ -530,12 +523,11 @@ end_loop:
 	req->stats.bytes_received = 0;
 	req->stats.pkts_received  = 0;
 
-	for (i = 0 ; i <  sizeof(bytes_recv) / sizeof(*bytes_recv); i++) {
-		req->stats.bytes_received += bytes_recv [ i ];
-		req->stats.pkts_received  += pkts_recv  [ i ];
-		req->stats.pkts_time      += pkts_time  [ i ];
-		req->stats.timestamps     += timestamps [ i ];
-	}
+	req->stats.bytes_received += bytes_recv;
+	req->stats.pkts_received  += pkts_recv;
+	req->stats.pkts_time      += pkts_time;
+	req->stats.timestamps     += timestamps;
+
 	return_stats = 1;
 
 cleanup:
@@ -545,6 +537,9 @@ cleanup:
 	// Cleanup
 	if ( buf )
 		free( buf );
+
+	if ( client )
+		free ( client );
 
 #ifndef WIN32
 #ifdef USE_EPOLL
