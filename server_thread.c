@@ -9,12 +9,13 @@
 #include <malloc.h>
 #include <errno.h>
 #include <string.h>
-//MF: Needed for epoll to work
-#include <sys/epoll.h>
 
+#ifdef USE_EPOLL
+	#include <sys/epoll.h>
+#endif
 
 #ifndef WIN32
-#include <unistd.h>
+	#include <unistd.h>
 #endif
 
 // Count of how many threads are not listening
@@ -22,9 +23,6 @@ volatile unsigned int server_listen_unready = 0;
 
 /**
 	Wait for and accept N connections
-	
- * MF: Why don't we create the FD_SET for the incoming connections in this method?
- * and either return it or using pass-by-value?
 **/
 int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *clients) {
 
@@ -33,41 +31,13 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	unsigned int n = req->n;
 	int connected = 0;
 	
-	//MF: However, we need this additional struct for epoll
-	struct epoll_event event;
-	
-	//MF: Added a new fd set for epoll
-		 
-	int readFD_epoll = 0;
 	fd_set readFD;
 
 	assert ( listen != INVALID_SOCKET );
 	assert ( clients != NULL );
 	assert ( req->n > 0 );
 
-	//MF: Initalise the FD_SETS
-	if(settings->use_epoll) {
-		//MF: I'm not sure about this number, but for now let's use n
-		readFD_epoll = epoll_create(n);
-		//MF: Check the actual return value and change this to a sensible name
-		if(readFD_epoll == -1) {
-			fprintf(stderr, "%s:%d epoll_create() error %d\n", __FILE__, __LINE__, ERRNO );
-			return -1;
-		}
-		
-		//EPOLLHUP and EPOLLERR are included by default.
-		event.events = EPOLLIN | EPOLLET;
-		//MF: Where should this be?
-		event.data.fd = listen;
-	
-		if (epoll_ctl(readFD_epoll, EPOLL_CTL_ADD, listen, &event) == -1) {
-			fprintf(stderr, "%s:%d epoll_ctl() error %d\n", __FILE__, __LINE__, ERRNO );
-			return -1;
-	    }
-
-	} else {
-		FD_ZERO(&readFD);
-	}
+	FD_ZERO(&readFD);
 
 	// Wait for all connections
 	while ( req->bRunning && n > 0 ) {
@@ -77,49 +47,21 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		socklen_t addr_len = sizeof(addr);
 		SOCKET s;
 		int send_socket_size, recv_socket_size;
-
-		if(settings->use_epoll) {
-			int i=0;
-			struct epoll_event events[n];
-			if(settings->verbose) {
-				printf("  epoll() is being used\n");
-			}
-			//MF: TODO: Check 1000ms is ok for the timeout
-			int num_fds = epoll_wait(readFD_epoll, events, n, 1000);
-			for(i=0; i<num_fds; i++) {
-			 	if (events[i].events & (EPOLLHUP | EPOLLERR)) {
-			 		fprintf(stderr, "%s:%d epoll() error %d\n", __FILE__, __LINE__, ERRNO );
-			 		close(events[i].data.fd);
-			 		continue;
-			 	}
-
-				//We have an incoming connection
-			 	if (events[i].data.fd == listen) {
-			 		goto accept;
-			 	}
-			 }
-		} else {
 		
-			FD_SET( listen, &readFD);
-	
-			if(settings->verbose) {
-				printf("  select() is being used\n");
-			}
-			ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
-			if ( ret <= 0 ) {
-				if (ERRNO != 0)
-					fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
-				return 1;
-			}
-	
-			// Did the listen socket fire?
-			if ( ! FD_ISSET(listen, &readFD) ) {
-				fprintf(stderr, "%s:%d FD_ISSET() has an invalid socket firing\n", __FILE__, __LINE__ );
-				return 1;
-			}
-			goto accept;
+		FD_SET( listen, &readFD);
+
+		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
+		if ( ret <= 0 ) {
+			if (ERRNO != 0)
+				fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
+			return 1;
 		}
-	accept:
+
+		// Did the listen socket fire?
+		if ( ! FD_ISSET(listen, &readFD) ) {
+			fprintf(stderr, "%s:%d FD_ISSET() has an invalid socket firing\n", __FILE__, __LINE__ );
+			return 1;
+		}
 
 		// Accept a new client socket
 		s = accept( listen, (struct sockaddr *)&addr, &addr_len );
@@ -169,7 +111,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 		assert ( *clients == INVALID_SOCKET );
 		*clients = s;
-		++clients;
+		clients++;
 		connected++;
 
 		if ( settings->verbose )
