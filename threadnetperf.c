@@ -6,7 +6,6 @@
 	TODO Add flag to output bandwidth at set intervals during the experiment
 	TODO fix assert error when listen socket is already bound by someone else
 	TODO lookup host names of address past with -H
-	TODO check out ePoll
 	TODO make server/client loop faster by removing unneed checks for rate limits, and others
 	TODO check UDP ends without error
 	TODO change the rate to be in mb/sec not packet/sec

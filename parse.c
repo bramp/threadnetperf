@@ -30,7 +30,6 @@ void print_usage() {
 	fprintf(stderr, "	-D         Use deamon mode (wait for incoming tests)\n" );
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
 	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
-	fprintf(stderr, "	-E         Use epoll() instead of select())\n");
 	fprintf(stderr, "	-H host    Set the remote host(and port) to connect to\n");
 	fprintf(stderr, "	-h         Display this help\n");
 	fprintf(stderr, "	-i min,max Set the minimum and maximum iterations\n");
@@ -123,7 +122,7 @@ good:
 
 int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	int c;
-	const char *optstring = "DhvVtTeEuns:d:p:c:i:H:r:";
+	const char *optstring = "DhvVtTeuns:d:p:c:i:H:r:";
 
 	assert ( settings != NULL );
 
@@ -138,7 +137,6 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	settings->port = 1234;
 	settings->verbose = 0;
 	settings->dirty = 0;
-	settings->use_epoll = 0;
 	settings->timestamp = 0;
 	settings->confidence_lvl = 0.0;
 	settings->confidence_int = 0.0;
@@ -347,11 +345,6 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 				settings->dirty = 1;
 				break;
 
-			//MF: Capital E indicates we want to use epoll and NOT select
-			case 'E' :
-				settings->use_epoll = 1;
-				break;
-				
 			case 'T':
 
 #ifdef WIN32
