@@ -1,6 +1,6 @@
 /***
 	A multi-threaded network benchmark tool
-	by Andrew Brampton (2007)
+	by Andrew Brampton (2007-2008)
 
 	Note, this app is very rough, and needs cleaning up, but it works!
 	TODO Add flag to output bandwidth at set intervals during the experiment
@@ -11,6 +11,7 @@
 	TODO check UDP ends without error
 	TODO change the rate to be in mb/sec not packet/sec
 	TODO allow it to connect to different endpoints
+	TODO Allow the connections to mimic BitTorrent/HTTP/NNTP/IRC/etc
 */
 
 #include "common.h"
