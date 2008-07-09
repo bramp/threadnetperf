@@ -12,6 +12,7 @@
 	TODO change the rate to be in mb/sec not packet/sec
 	TODO allow it to connect to different endpoints
 	TODO Allow the connections to mimic BitTorrent/HTTP/NNTP/IRC/etc
+	TODO Add the error msg "server_thread() error Server thread can have no more than %d connections (%d specified)\n"
 */
 
 #include "common.h"
