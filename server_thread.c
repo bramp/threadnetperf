@@ -538,9 +538,6 @@ cleanup:
 	if ( buf )
 		free( buf );
 
-	if ( client )
-		free ( client );
-
 #ifndef WIN32
 #ifdef USE_EPOLL
 	close(readFD_epoll);
@@ -563,6 +560,9 @@ cleanup:
 			closesocket( *c );
 		}
 	}
+
+	if ( client )
+		free ( client );
 
 	if ( return_stats )
 		return &req->stats;
