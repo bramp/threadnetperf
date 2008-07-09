@@ -60,6 +60,8 @@ struct settings {
 	unsigned int dirty           :1;
 	unsigned int timestamp       :1;
 	unsigned int disable_nagles  :1;
+	//MF: Added to allow cmd line change to epoll
+	unsigned int use_epoll		 :1;
 
 	double confidence_lvl;
 	double confidence_int;

@@ -37,7 +37,8 @@ struct network_settings {
 	uint8_t dirty;
 	uint8_t timestamp;
 	uint8_t disable_nagles;
-
+	
+	
 	uint32_t message_size;
 	uint32_t socket_size;
 
@@ -46,6 +47,7 @@ struct network_settings {
 	uint16_t port;
 
 	uint8_t tests; // The number of tests
+	uint8_t use_epoll;
 };
 
 struct network_stats {
@@ -98,6 +100,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->dirty          = net_settings.dirty;
 	settings->timestamp      = net_settings.timestamp;
 	settings->disable_nagles = net_settings.disable_nagles;
+	settings->use_epoll		 = net_settings.use_epoll;
 
 	settings->message_size   = ntohl( net_settings.message_size );
 	settings->socket_size    = ntohl( net_settings.socket_size );
@@ -178,6 +181,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	net_settings.port           = htons( settings->port );
 
 	net_settings.tests          = settings->tests;
+	net_settings.use_epoll		= settings->use_epoll;
 
 	ret = send(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) ) {

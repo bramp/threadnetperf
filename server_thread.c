@@ -9,6 +9,9 @@
 #include <malloc.h>
 #include <errno.h>
 #include <string.h>
+//MF: Needed for epoll to work
+#include <sys/epoll.h>
+
 
 #ifndef WIN32
 #include <unistd.h>
@@ -19,6 +22,9 @@ volatile unsigned int server_listen_unready = 0;
 
 /**
 	Wait for and accept N connections
+	
+ * MF: Why don't we create the FD_SET for the incoming connections in this method?
+ * and either return it or using pass-by-value?
 **/
 int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *clients) {
 
@@ -26,13 +32,42 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 	unsigned int n = req->n;
 	int connected = 0;
+	
+	//MF: However, we need this additional struct for epoll
+	struct epoll_event event;
+	
+	//MF: Added a new fd set for epoll
+		 
+	int readFD_epoll = 0;
 	fd_set readFD;
 
 	assert ( listen != INVALID_SOCKET );
 	assert ( clients != NULL );
 	assert ( req->n > 0 );
 
-	FD_ZERO(&readFD);
+	//MF: Initalise the FD_SETS
+	if(settings->use_epoll) {
+		//MF: I'm not sure about this number, but for now let's use n
+		readFD_epoll = epoll_create(n);
+		//MF: Check the actual return value and change this to a sensible name
+		if(readFD_epoll == -1) {
+			fprintf(stderr, "%s:%d epoll_create() error %d\n", __FILE__, __LINE__, ERRNO );
+			return -1;
+		}
+		
+		//EPOLLHUP and EPOLLERR are included by default.
+		event.events = EPOLLIN | EPOLLET;
+		//MF: Where should this be?
+		event.data.fd = listen;
+	
+		if (epoll_ctl(readFD_epoll, EPOLL_CTL_ADD, listen, &event) == -1) {
+			fprintf(stderr, "%s:%d epoll_ctl() error %d\n", __FILE__, __LINE__, ERRNO );
+			return -1;
+	    }
+
+	} else {
+		FD_ZERO(&readFD);
+	}
 
 	// Wait for all connections
 	while ( req->bRunning && n > 0 ) {
@@ -43,20 +78,48 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		SOCKET s;
 		int send_socket_size, recv_socket_size;
 
-		FD_SET( listen, &readFD);
+		if(settings->use_epoll) {
+			int i=0;
+			struct epoll_event events[n];
+			if(settings->verbose) {
+				printf("  epoll() is being used\n");
+			}
+			//MF: TODO: Check 1000ms is ok for the timeout
+			int num_fds = epoll_wait(readFD_epoll, events, n, 1000);
+			for(i=0; i<num_fds; i++) {
+			 	if (events[i].events & (EPOLLHUP | EPOLLERR)) {
+			 		fprintf(stderr, "%s:%d epoll() error %d\n", __FILE__, __LINE__, ERRNO );
+			 		close(events[i].data.fd);
+			 		continue;
+			 	}
 
-		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
-		if ( ret <= 0 ) {
-			if (ERRNO != 0)
-				fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
-			return 1;
+				//We have an incoming connection
+			 	if (events[i].data.fd == listen) {
+			 		goto accept;
+			 	}
+			 }
+		} else {
+		
+			FD_SET( listen, &readFD);
+	
+			if(settings->verbose) {
+				printf("  select() is being used\n");
+			}
+			ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
+			if ( ret <= 0 ) {
+				if (ERRNO != 0)
+					fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
+				return 1;
+			}
+	
+			// Did the listen socket fire?
+			if ( ! FD_ISSET(listen, &readFD) ) {
+				fprintf(stderr, "%s:%d FD_ISSET() has an invalid socket firing\n", __FILE__, __LINE__ );
+				return 1;
+			}
+			goto accept;
 		}
-
-		// Did the listen socket fire?
-		if ( ! FD_ISSET(listen, &readFD) ) {
-			fprintf(stderr, "%s:%d FD_ISSET() has an invalid socket firing\n", __FILE__, __LINE__ );
-			return 1;
-		}
+	accept:
 
 		// Accept a new client socket
 		s = accept( listen, (struct sockaddr *)&addr, &addr_len );
@@ -83,10 +146,10 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
 				return 1;
 			}
-	//		if ( enable_maxseq ( s , settings->message_size) == SOCKET_ERROR ) {
-	//			fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
-	//			return 1;
-	//		}
+		//	if ( enable_maxseq ( s , settings->message_size) == SOCKET_ERROR ) {
+		//		fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
+		//		return 1;
+		//	}
 		}
 
 #ifndef WIN32
@@ -120,8 +183,98 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	return 0;
 }
 
+#define CLIENT_DISCON -99
+
+/*
+ * Perform the recv processing on behave of EITHER select or epoll
+ * Return codes
+ * 
+ * TODO: Make method parameters smaller
+ */ 
+int recv_processing(const struct settings settings, SOCKET fired_socket, unsigned long long* bytes_recv, 
+					unsigned long long* pkt_recv, unsigned long long* pkts_time, 
+					unsigned long long* timestamps, unsigned char *buf, int clients,
+					struct msghdr msgs, size_t msg_control_len) {
+	int len;
+
+#ifdef WIN32
+	len = recv( fired_socket, buf, settings.message_size, 0 );
+#else
+	msgs.msg_controllen = msg_control_len;
+	len = recvmsg( fired_socket, &msgs, 0);
+#endif
+	// The socket has closed (or an error has occured)
+	if ( len <= 0 ) {		
+			if ( len == SOCKET_ERROR ) {
+				int lastErr = ERRNO;
+				
+				// If it is a blocking error just continue
+				if ( lastErr == EWOULDBLOCK ) {
+					//IGNORE THIS ERROR?
+				}
+	
+				else if ( lastErr != ECONNRESET ) {
+					fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, lastErr );
+					if ( settings.verbose ) printf("  Server: %d Removed client (%d/%d)\n", settings.servercores, fired_socket+1, clients );
+					return CLIENT_DISCON;					
+				}
+				if ( settings.verbose ) printf("  Server: %d Removed client (%d/%d)\n", settings.servercores, fired_socket+1, clients );
+				return CLIENT_DISCON;
+			}
+			
+		}
+	
+		// We could dirty the buffer
+		if (settings.dirty) {
+			// These is volatile to stop the compiler removing this loop
+			volatile int *d;
+			volatile int temp = 0;
+			for (d=(int *)buf; d<(int *)(buf + len); d++) {
+				temp += *d;
+			}
+		}
+	
+#ifndef WIN32
+	if ( settings.timestamp ) {
+		const unsigned long long now = get_nanoseconds();
+	
+		struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msgs);
+		while ( cmsg != NULL) {
+	
+			if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_TIMESTAMPNS ) {
+				const struct timespec *ts = (struct timespec *) CMSG_DATA( cmsg );
+				const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
+	
+				if(ns <= now) {
+					timestamps ++;
+					pkts_time += now - ns;
+				} else {
+					if ( ns != 0 )
+						fprintf(stderr, "%s:%d Invalid timestamp %llu > %llu\n", __FILE__, __LINE__, ns, now );
+				}
+	
+				#ifdef CHECK_TIMES
+					if(pkts_recv [ i ] < CHECK_TIMES ) {
+						req->stats.processed_something = 1;
+						req->stats.processing_times[pkts_recv [ i ]] = t;
+					}
+				#endif
+			}
+			cmsg = CMSG_NXTHDR(&msgs, cmsg);
+		}
+	}
+#endif
+	// Count how many bytes have been received
+	*bytes_recv += len;
+	*pkt_recv  = *pkt_recv + 1;
+	
+	return 0;
+}
+
 /**
 	Creates a server, and handles each incoming client
+	MF: Added a local variable to represent the max set size
+	MF: TODO: Remove this local variable ?
 */
 void *server_thread(void *data) {
 	struct server_request * const req = data;
@@ -130,9 +283,18 @@ void *server_thread(void *data) {
 	const struct settings settings = *req->settings;
 
 	SOCKET s = INVALID_SOCKET; // The listen server socket
-
-	SOCKET client [ FD_SETSIZE ];
+	int max_set = 0;
+	
+	//MF: This is to remove the need for a limit when using epoll
+	if(settings.use_epoll)
+		max_set = 1024;
+	else 
+		max_set = FD_SETSIZE;
+	
+	SOCKET client [ max_set ];
 	SOCKET *c = client;
+
+	
 	int clients = req->n; // The number of clients
 
 	int return_stats = 0; // Should we return the stats?
@@ -140,11 +302,11 @@ void *server_thread(void *data) {
 	unsigned int i;
 
 	// TODO WHY are all these counted per socket? why not a aggrigate?
-	unsigned long long bytes_recv [ FD_SETSIZE ]; // Bytes received from each socket
-	unsigned long long pkts_recv  [ FD_SETSIZE ]; // Number of recv calls from each socket
+	unsigned long long bytes_recv [ max_set ]; // Bytes received from each socket
+	unsigned long long pkts_recv  [ max_set ]; // Number of recv calls from each socket
 
-	unsigned long long pkts_time  [ FD_SETSIZE ]; // Total time packets spent (in network) for each socket (used in timestamping)
-	unsigned long long timestamps [ FD_SETSIZE ]; // Number of timestamps received
+	unsigned long long pkts_time  [ max_set ]; // Total time packets spent (in network) for each socket (used in timestamping)
+	unsigned long long timestamps [ max_set ]; // Number of timestamps received
 
 	unsigned char *buf = NULL;
 #ifndef WIN32
@@ -162,8 +324,13 @@ void *server_thread(void *data) {
 
 	int send_socket_size, recv_socket_size; // The socket buffer sizes
 
-	fd_set readFD;
-
+	//MF: added the "fd_set" for epoll
+	int		readFD_epoll;
+	fd_set 	readFD;
+	
+	//MF: Poll event struct  
+	struct epoll_event event;
+	
 	int one = 1;
 
 	int nfds;
@@ -216,8 +383,16 @@ void *server_thread(void *data) {
 //		}
 	}
 
+#ifdef WIN32
+	if( settings.use_epoll ) {		
+			fprintf(stderr, "%s:%d error epoll() not available on windows %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+	}
+#endif
 #ifndef WIN32
-	if ( settings.timestamp ) {
+	
+	
+	if ( settings.timestamp  ) {
 		if ( enable_timestamp(s) == SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d enable_timestamp() error %d\n", __FILE__, __LINE__, ERRNO );
 			goto cleanup;
@@ -299,20 +474,50 @@ void *server_thread(void *data) {
 		msg_control_len = 0;
 	}
 #endif
-
-	// Setup FD_SETs
-	FD_ZERO( &readFD );
+	if(settings.use_epoll) {
+		readFD_epoll = epoll_create(clients);
+		if(readFD_epoll == -1) {
+			fprintf(stderr, "%s:%d epoll_create() error %d\n", __FILE__, __LINE__, ERRNO );
+			goto cleanup;
+		}
+	}
+	else {
+		// Setup FD_SETs
+		FD_ZERO( &readFD );
+	}
 	nfds = (int)*client;
 
 	// Add all the client sockets to the fd_set
 	for (c = client ; c < &client [clients] ; c++) {
 		assert ( *c != INVALID_SOCKET );
 
-		FD_SET( *c, &readFD);
-		if ( (int)*c > nfds )
-			nfds = (int)*c;
+		//MF: If we are using epoll let's add them to that "fd_set"
+		if(settings.use_epoll) { 
+			//MF: TODO: Check that the client's socket is none-blocking
+			//MF: TODO: Check that we don't want or need the servers socket here!
+			disable_blocking(*c);
+			
+			/*
+			 * MF: THIS IS THE PROBLEM CODE!
+			 * 
+			 * | EPOLLET
+			 */ 
+			
+			event.events = EPOLLIN ;
+			event.data.fd = *c;
+			if (epoll_ctl(readFD_epoll, EPOLL_CTL_ADD, *c, &event) == -1) {
+				fprintf(stderr, "%s:%d epoll() error adding server %d\n", __FILE__, __LINE__, ERRNO );
+				goto cleanup;
+			}
+		} else {
+			FD_SET( *c, &readFD);
+			if ( (int)*c > nfds )
+				nfds = (int)*c;
+		}
 	}
 	nfds = nfds + 1;
+	
+	//At this point we've populated the fd_set we need for either select() or epoll() 
 
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
@@ -336,139 +541,107 @@ void *server_thread(void *data) {
 	while ( req->bRunning ) {
 		struct timeval waittime = {1, 0}; // 1 second
 		int ret;
-
-		ret = select( nfds, &readFD, NULL, NULL, &waittime);
-		if ( ret ==  SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
-			goto cleanup;
-		}
-
-		#ifdef _DEBUG
-		if ( ret == 0 && !req->bRunning )
-			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
-		#endif
-
-		// Figure out which sockets have fired
-		for (c = client, i = 0 ; c < &client [ clients ]; c++ ) {
-			SOCKET s = *c;
-
-			assert ( s != INVALID_SOCKET );
-
-			if ( ret == 0 ) {
-				FD_SET( s, &readFD);
-				continue;
-			}
-
-			// Check for reads
-			if ( FD_ISSET( s, &readFD) ) {
-				int len;
-
-#ifdef WIN32
-				len = recv( s, buf, settings.message_size, 0 );
-#else
-				msgs.msg_controllen = msg_control_len;
-				len = recvmsg( s, &msgs, 0);
-#endif
-				ret--;
-
-				// The socket has closed (or an error has occured)
-				if ( len <= 0 ) {
-
-					if ( len == SOCKET_ERROR ) {
-						int lastErr = ERRNO;
-
-						// If it is a blocking error just continue
-						if ( lastErr == EWOULDBLOCK )
-							continue;
-
-						else if ( lastErr != ECONNRESET ) {
-							fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, lastErr );
-							goto cleanup;
-						}
-					}
-
-					if ( settings.verbose )
-						printf("  Server: %d Removed client (%d/%d)\n", req->cores, i + 1, clients );
-
-					FD_CLR( s, &readFD );
-
-					// Invalidate this client
-					closesocket( s );
-
-					// Move back
-					move_down ( c, &client[ clients  ] );
-					c--;
-
-					clients--;
-
-					// If this is the last client then just give up!
-					if ( clients == 0 )
-						goto end_loop;
-
-					// Update the nfds
-					nfds = (int)highest_socket(client, clients) + 1;
-
-					continue;
-
-				} else {
-					// We could dirty the buffer
-					if (settings.dirty) {
-						// These is volatile to stop the compiler removing this loop
-						volatile int *d;
-						volatile int temp = 0;
-						for (d=(int *)buf; d<(int *)(buf + len); d++) {
-							temp += *d;
-						}
-					}
-
-#ifndef WIN32
-					if ( settings.timestamp ) {
-						const unsigned long long now = get_nanoseconds();
-
-						struct cmsghdr * cmsg = CMSG_FIRSTHDR(&msgs);
-						while ( cmsg != NULL) {
-
-							if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_TIMESTAMPNS ) {
-								const struct timespec *ts = (struct timespec *) CMSG_DATA( cmsg );
-								const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
-
-								if(ns <= now) {
-									timestamps[ i ] ++;
-									pkts_time[ i ] += now - ns;
-								} else {
-									if ( ns != 0 )
-										fprintf(stderr, "%s:%d Invalid timestamp %llu > %llu\n", __FILE__, __LINE__, ns, now );
-								}
-
-								#ifdef CHECK_TIMES
-									if(pkts_recv [ i ] < CHECK_TIMES ) {
-										req->stats.processed_something = 1;
-										req->stats.processing_times[pkts_recv [ i ]] = t;
-									}
-								#endif
-							}
-							cmsg = CMSG_NXTHDR(&msgs, cmsg);
-						}
-					}
-#endif
-
-					// Count how many bytes have been received
-					bytes_recv [ i ] += len;
-					pkts_recv [ i ] ++;
+		
+		if(!settings.use_epoll) {
+			ret = select( nfds, &readFD, NULL, NULL, &waittime);
+			
+			// Figure out which sockets have fired
+			for (c = client, i = 0 ; c < &client [ clients ]; c++ ) {
+				
+				if ( ret ==  SOCKET_ERROR ) {
+					fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
+					goto cleanup;
 				}
-			} else {
-				// Set the socket on this FD, to save us doing it at the beginning of each loop
-				FD_SET( s, &readFD);
-			}
+				#ifdef _DEBUG
+				if ( ret == 0 && !req->bRunning )
+					fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
+				#endif
+				
+				SOCKET s = *c;
 
-			i++;
+				assert ( s != INVALID_SOCKET );
+
+				if ( ret == 0 ) {
+					FD_SET( s, &readFD);
+					continue;
+				}
+				if ( FD_ISSET( s, &readFD) ) {
+					//recv_processing//
+					
+					int ret_recv_process = recv_processing(settings, s, &bytes_recv[i], &pkts_recv[i], &pkts_time[i], &pkts_time[i], buf ,clients,msgs ,msg_control_len);
+					ret--;
+					if(ret_recv_process < 0) {
+						if(ret_recv_process == CLIENT_DISCON) {
+							//TODO: Add the code to change the select fd set stuff
+							//TODO: WARN: Duplicate code 
+							clients--;
+							// If this is the last client then just give up!
+							if ( clients == 0 )
+								goto end_loop;
+
+							// Update the nfds
+							nfds = (int)highest_socket(client, clients) + 1;
+
+							continue;
+						}
+					}
+				} else {
+					// Set the socket on this FD, to save us doing it at the beginning of each loop
+					FD_SET( s, &readFD);
+				}
+
+				i++;
+			}
+		} else {
+			struct epoll_event events[clients];
+		//	fprintf(stderr, "MF: num clients %d on line %d\n", clients, __LINE__);
+			//num_fds are the number of sockets that have some action
+			int num_fds = epoll_wait(readFD_epoll, events, clients, 1000);
+			
+			//fprintf(stderr, "MF: num_fds fired %d on line %d\n", num_fds, __LINE__);
+			for(i=0; i<num_fds; i++) {
+				int ret_recv_process=0;
+				if (events[i].events & (EPOLLHUP | EPOLLERR)) {
+					fprintf(stderr, "%s:%d epoll() error %d\n", __FILE__, __LINE__, ERRNO );
+					//Closing a file descriptor automagically removes it from the epoll fd set.
+					close(events[i].data.fd);
+					continue;
+				}
+				
+			/*	//Socket with action is our listening socket, therefore we have a new connection
+				if(events[i].data.fd == s) {
+					//For now i'm just going to ignore any more incoming connections!
+					continue;
+				} 
+			*/
+		
+				ret_recv_process = recv_processing(settings, events[i].data.fd, &bytes_recv[i], &pkts_recv[i], &pkts_time[i], &pkts_time[i], buf ,clients, msgs, msg_control_len);
+				
+				if(ret_recv_process < 0 ) {
+					if(ret_recv_process == CLIENT_DISCON) {
+						if ( settings.verbose )
+						printf("  Server: %d Removed client (%d/%d)\n", settings.servercores, events[i].data.fd+1, clients );
+						close(events[i].data.fd);
+						//TODO: WARN: Duplicate code 
+						clients--;
+						// If this is the last client then just give up!
+						if ( clients == 0 )
+							goto end_loop;
+
+						// Update the nfds
+						nfds = (int)highest_socket(client, clients) + 1;
+
+						continue;
+					}	
+				}
+			}
 		}
 	}
 end_loop:
 
 	// We have finished, work out some stats
 	end_time = get_microseconds();
-
+	
 	// Add up all the client bytes
 	req->stats.cores = req->cores;
 	req->stats.duration = end_time - start_time;
