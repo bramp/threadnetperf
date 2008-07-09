@@ -329,7 +329,7 @@ void *server_thread(void *data) {
 	// Add all the client sockets to the fd_set
 	for (c = client ; c < &client [clients] ; c++) {
 #ifdef USE_EPOLL
-		struct epoll_event event;
+		struct epoll_event event = {0};
 		/*
 		 * MF: THIS IS THE PROBLEM CODE!
 		 * 
