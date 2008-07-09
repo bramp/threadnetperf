@@ -139,7 +139,7 @@ void *server_thread(void *data) {
 	int clients = req->n; // The number of clients
 
 	SOCKET *client;
-	SOCKET *c = client;
+	SOCKET *c;
 
 	int return_stats = 0; // Should we return the stats?
 
@@ -178,7 +178,8 @@ void *server_thread(void *data) {
 
 	int send_socket_size, recv_socket_size; // The socket buffer sizes
 	
-	int one = 1;
+	unsigned int i = 0;
+	const int one = 1;
 
 	if ( settings.verbose )
 		printf("Core %d: Started server thread port %d\n", req->cores, req->port );
@@ -192,8 +193,13 @@ void *server_thread(void *data) {
 
 	client     = calloc(clients, sizeof(*client));
 
+	if ( !bytes_recv|| !pkts_recv || !pkts_time|| !timestamps || !client ) {
+		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
 	// Blank client before we start
-	for ( c = client; c < client + clients; c++)
+	for ( c = client; c < &client[clients]; c++)
 		*c = INVALID_SOCKET;
 
 	// Create the listen socket
@@ -350,7 +356,6 @@ void *server_thread(void *data) {
 		FD_SET( *c, &readFD);
 		if ( (int)*c >= nfds )
 			nfds = (int)*c + 1;
-		}
 #endif
 	}
 
@@ -378,7 +383,6 @@ void *server_thread(void *data) {
 	while ( req->bRunning ) {
 		struct timeval waittime = {1, 0}; // 1 second
 		int ret, len;
-		unsigned int i = 0;
 
 #ifdef USE_EPOLL
 		ret = epoll_wait(readFD_epoll, events, clients, 1000);
@@ -397,12 +401,12 @@ void *server_thread(void *data) {
 
 		// Figure out which sockets have fired
 		for (c = client; c < &client [ clients ]; c++ ) {
+			SOCKET s = *c;
+
 			#ifdef _DEBUG
 			if ( ret == 0 && !req->bRunning )
 				fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 			#endif
-
-			SOCKET s = *c;
 
 			assert ( s != INVALID_SOCKET );
 
