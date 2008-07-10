@@ -22,11 +22,6 @@ int connect_connections(const struct settings *settings, const struct client_req
 	while ( details != NULL ) {
 		unsigned int i = details->n;
 
-		if ( (*clients + i) > FD_SETSIZE ) {
-			fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, FD_SETSIZE );
-			return -1;
-		}
-
 		if ( settings->verbose ) {
 			char addr[NI_MAXHOST + NI_MAXSERV + 1];
 
@@ -156,6 +151,11 @@ void* client_thread(void *data) {
 	if ( clients == 0 ) {
 		fprintf(stderr, "%s:%d Must have more than zero clients!\n", __FILE__, __LINE__ );
 		goto cleanup;
+	}
+
+	if ( clients > FD_SETSIZE ) {
+		fprintf(stderr, "%s:%d Client thread can have no more than %d connections\n", __FILE__, __LINE__, FD_SETSIZE );
+		return -1;
 	}
 
 	client = calloc(clients, sizeof(*client));
