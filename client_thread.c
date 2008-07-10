@@ -41,7 +41,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 		// Connect all the clients
 		while ( i > 0 ) {
 			int send_socket_size, recv_socket_size;
-			SOCKET s;
+			SOCKET s = INVALID_SOCKET;
 
 			s = socket( AF_INET, settings->type, settings->protocol);
 			if ( s == INVALID_SOCKET ) {
@@ -94,6 +94,8 @@ int connect_connections(const struct settings *settings, const struct client_req
 				goto cleanup;
 			}
 
+			assert ( s != INVALID_SOCKET );
+
 			client [ *clients ] = s;
 			(*clients)++;
 
@@ -101,6 +103,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 			continue;
 
 		cleanup:
+			// This cleanup section is within the loop so we can cleanup s
 			closesocket(s);
 			return -1;
 		}
