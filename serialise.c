@@ -205,7 +205,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 int read_results( SOCKET s, struct stats * stats ) {
 	struct network_stats net_stats;
 
-	char *p = &net_stats;
+	char *p = (char *)&net_stats;
 	size_t p_len = sizeof(net_stats);
 
 	int ret;
