@@ -173,6 +173,7 @@ unsigned long long get_nanoseconds() {
 	return nanoseconds;	
 }
 
+#ifdef WIN32
 #define TIMESPEC_TO_FILETIME_OFFSET (((LONGLONG)27111902 << 32) + (LONGLONG)3577643008)
 
 static void timespec_to_filetime(const struct timespec *ts, FILETIME *ft) {
@@ -183,6 +184,7 @@ static void filetime_to_timespec(const FILETIME *ft, struct timespec *ts) {
 	ts->tv_sec = (int)((*(LONGLONG *)ft - TIMESPEC_TO_FILETIME_OFFSET) / 10000000);
 	ts->tv_nsec = (int)((*(LONGLONG *)ft - TIMESPEC_TO_FILETIME_OFFSET - ((LONGLONG)ts->tv_sec * (LONGLONG)10000000)) * 100);
 }
+#endif
 
 /**
 	Returns now as a timespec value
