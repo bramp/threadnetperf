@@ -14,13 +14,18 @@
 #include <unistd.h>
 #endif
 
-int connect_connections(const struct settings *settings, const struct client_request * req, SOCKET *client, int *clients) {
+int connect_connections(const struct settings *settings, const struct client_request * req, SOCKET *client, unsigned int *clients) {
 
 	const struct client_request_details * details = req->details;
 
 	// Loop all the client requests for this thread
 	while ( details != NULL ) {
-		unsigned int i;
+		unsigned int i = details->n;
+
+		if ( i > FD_SETSIZE ) {
+			fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, FD_SETSIZE );
+			return -1;
+		}
 
 		if ( settings->verbose ) {
 			char addr[NI_MAXHOST + NI_MAXSERV + 1];
@@ -34,15 +39,9 @@ int connect_connections(const struct settings *settings, const struct client_req
 		}
 
 		// Connect all the clients
-		i = details->n;
 		while ( i > 0 ) {
 			int send_socket_size, recv_socket_size;
 			SOCKET s;
-
-			if ( *clients >= FD_SETSIZE ) {
-				fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, FD_SETSIZE );
-				return -1;
-			}
 
 			s = socket( AF_INET, settings->type, settings->protocol);
 			if ( s == INVALID_SOCKET ) {
@@ -130,7 +129,7 @@ void* client_thread(void *data) {
 
 	// Array of client sockets
 	SOCKET client [ FD_SETSIZE ];
-	int clients = 0; // The number of clients
+	unsigned int clients = 0; // The number of clients
 
 	SOCKET *c = NULL;
 
