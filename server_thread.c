@@ -185,7 +185,7 @@ void *server_thread(void *data) {
 	// Malloc client space for many of the arrays
 	client = calloc(clients, sizeof(*client));
 
-	if ( !client ) {
+	if ( client == NULL ) {
 		fprintf(stderr, "%s:%d calloc() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
@@ -293,7 +293,12 @@ void *server_thread(void *data) {
 		fprintf(stderr, "%s:%d epoll_create() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
-	events = malloc( sizeof(*events) * clients);
+
+	events = calloc( clients, sizeof(*events) );
+	if ( events == NULL ) {
+		fprintf(stderr, "%s:%d calloc error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
 #endif
 
 	msg_iov.iov_len = settings.message_size;

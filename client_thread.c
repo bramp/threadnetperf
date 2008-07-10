@@ -131,7 +131,7 @@ void* client_thread(void *data) {
 	unsigned long long next_send_time = 0;
 
 	// Array of client sockets
-	SOCKET *client;
+	SOCKET *client = NULL;
 	unsigned int clients = 0; // The number of clients
 	unsigned int clients_temp = 0; // The number of clients
 
@@ -159,6 +159,11 @@ void* client_thread(void *data) {
 
 	client = calloc(clients, sizeof(*client));
 
+	if ( client == NULL ) {
+		fprintf(stderr, "%s:%d calloc error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
 	// Blank client before we start
 	for ( c = client; c < &client[ clients ]; c++)
 		*c = INVALID_SOCKET;
@@ -176,6 +181,12 @@ void* client_thread(void *data) {
 	}
 
 	buffer = malloc( settings.message_size );
+
+	if ( buffer == NULL ) {
+		fprintf(stderr, "%s:%d malloc error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
 	memset( buffer, (int)BUFFER_FILL, settings.message_size ); // TODO fix 32bit linux compile problem
 
 	nfds = (int)*client;
@@ -345,6 +356,8 @@ cleanup:
 			closesocket( s );
 		}
 	}
+
+	free ( client );
 
 	return NULL;
 }
