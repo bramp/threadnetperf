@@ -152,6 +152,11 @@ void* client_thread(void *data) {
 		details  = details->next;
 	}
 
+	if ( clients == 0 ) {
+		fprintf(stderr, "%s:%d Must have more than zero clients!\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
 	client = calloc(clients, sizeof(*client));
 
 	// Blank client before we start
