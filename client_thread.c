@@ -41,9 +41,9 @@ int connect_connections(const struct settings *settings, const struct client_req
 		// Connect all the clients
 		while ( i > 0 ) {
 			int send_socket_size, recv_socket_size;
-			SOCKET s = INVALID_SOCKET;
 
-			s = socket( AF_INET, settings->type, settings->protocol);
+			SOCKET s = socket( AF_INET, settings->type, settings->protocol);
+
 			if ( s == INVALID_SOCKET ) {
 				fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				return -1;
@@ -95,6 +95,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 			}
 
 			assert ( s != INVALID_SOCKET );
+			assert ( *client == INVALID_SOCKET );
 
 			*client++ = s; // Add socket s to the end of the array and move along
 			(*clients)++; // Increment the count of clients
