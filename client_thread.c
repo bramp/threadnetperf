@@ -206,8 +206,8 @@ void* client_thread(void *data) {
 		if ( (int)s > nfds )
 			nfds = (int)s;
 
-		assert ( FD_ISSET(s, readFD ) );
-		assert ( FD_ISSET(s, writeFD ) );
+		assert ( FD_ISSET(s, &readFD ) );
+		assert ( FD_ISSET(s, &writeFD ) );
 	}
 
 	nfds = nfds + 1;
