@@ -22,7 +22,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 	while ( details != NULL ) {
 		unsigned int i = details->n;
 
-		if ( i > FD_SETSIZE ) {
+		if ( (*clients + i) > FD_SETSIZE ) {
 			fprintf(stderr, "%s:%d client_thread() error Client thread can have no more than %d connections\n", __FILE__, __LINE__, FD_SETSIZE );
 			return -1;
 		}
@@ -96,8 +96,8 @@ int connect_connections(const struct settings *settings, const struct client_req
 
 			assert ( s != INVALID_SOCKET );
 
-			client [ *clients ] = s;
-			(*clients)++;
+			*client++ = s; // Add socket s to the end of the array and move along
+			(*clients)++; // Increment the count of clients
 
 			i--;
 			continue;
