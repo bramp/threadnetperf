@@ -375,11 +375,10 @@ void *server_thread(void *data) {
 	start_time = get_microseconds();
 
 	while ( req->bRunning ) {
-		struct timeval waittime = {1, 0}; // 1 second
 		int ret, len;
 
 #ifdef USE_EPOLL
-		ret = epoll_wait(readFD_epoll, events, clients, 1000);
+		ret = epoll_wait(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
 
 		//fprintf(stderr, "MF: num_fds fired %d on line %d\n", num_fds, __LINE__);
 		for ( i = 0; i < ret; i++ ) {
@@ -391,6 +390,7 @@ void *server_thread(void *data) {
 				continue;
 			}
 #else
+		struct timeval waittime = {TRANSFER_TIMEOUT / 1000, 0}; // 1 second
 		ret = select( nfds, &readFD, NULL, NULL, &waittime);
 
 		if ( ret == 0 && !req->bRunning )
