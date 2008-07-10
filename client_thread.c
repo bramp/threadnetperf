@@ -205,6 +205,9 @@ void* client_thread(void *data) {
 
 		if ( (int)s > nfds )
 			nfds = (int)s;
+
+		assert ( FD_ISSET(s, readFD ) );
+		assert ( FD_ISSET(s, writeFD ) );
 	}
 
 	nfds = nfds + 1;
@@ -336,6 +339,7 @@ void* client_thread(void *data) {
 				FD_SET( s, &writeFD);
 			}
 		}
+		// We have now looped over each socket, If we are here ret MUST be zero
 		assert(ret == 0);
 	}
 
