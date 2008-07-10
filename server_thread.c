@@ -446,7 +446,7 @@ void *server_thread(void *data) {
 							break;
 					}
 
-					ASSERT ( c != &client[clients] );
+					assert ( c != &client[clients] );
 #endif
 
 					// Move back
