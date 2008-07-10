@@ -196,7 +196,7 @@ void get_timespec_now(struct timespec *ts) {
 	GetSystemTimeAsFileTime(&ft);
 	filetime_to_timespec( &ft, ts );
 #else
-	clock_gettime(CLOCK_REALTIME, &ts);
+	clock_gettime(CLOCK_REALTIME, ts);
 #endif
 }
 
