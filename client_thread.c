@@ -131,8 +131,9 @@ void* client_thread(void *data) {
 	unsigned long long next_send_time = 0;
 
 	// Array of client sockets
-	SOCKET client [ FD_SETSIZE ];
+	SOCKET *client;
 	unsigned int clients = 0; // The number of clients
+	unsigned int clients_temp = 0; // The number of clients
 
 	SOCKET *c = NULL;
 
@@ -146,35 +147,49 @@ void* client_thread(void *data) {
 	assert ( req != NULL );
 	assert ( details != NULL );
 
+	// Malloc the client array after we find out how many clients there are
+	while ( details != NULL ) {
+		clients += details->n;
+		details  = details->next;
+	}
+
+	client = calloc(clients, sizeof(*client));
+
 	// Blank client before we start
-	for ( c = client; c < &client[ sizeof(client) / sizeof(*client) ]; c++)
+	for ( c = client; c < &client[ clients ]; c++)
 		*c = INVALID_SOCKET;
 
 	if ( settings.verbose )
 		printf("Core %d: Started client thread\n", req->cores);
 
-	if ( connect_connections(&settings, req, client, &clients) ) {
+	if ( connect_connections(&settings, req, client, &clients_temp) ) {
 		goto cleanup;
 	}
 
-	assert ( clients <= sizeof(client) / sizeof(*client) );
+	if ( clients != clients_temp ) {
+		fprintf(stderr, "%s:%d Requested number of clients does not match actual clients (%d != %d)\n", __FILE__, __LINE__, clients, clients_temp );
+		goto cleanup;
+	}
 
 	buffer = malloc( settings.message_size );
 	memset( buffer, (int)BUFFER_FILL, settings.message_size ); // TODO fix 32bit linux compile problem
 
-	nfds = (int)client[0];
-	FD_ZERO ( &readFD ); FD_ZERO ( &writeFD );
+	nfds = (int)*client;
+	FD_ZERO ( &readFD ); 
+	FD_ZERO ( &writeFD );
 
 	// Loop all client sockets
 	for (c = client ; c < &client [ clients ] ; c++) {
-		assert ( *c != INVALID_SOCKET );
+		SOCKET s = *c;
+
+		assert ( s != INVALID_SOCKET );
 
 		// Add them to FD sets
-		FD_SET( *c, &readFD);
-		FD_SET( *c, &writeFD);
+		FD_SET( s, &readFD);
+		FD_SET( s, &writeFD);
 
-		if ( (int)*c > nfds )
-			nfds = (int)*c;
+		if ( (int)s > nfds )
+			nfds = (int)s;
 	}
 
 	nfds = nfds + 1;
@@ -203,7 +218,7 @@ void* client_thread(void *data) {
 
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 
-		if ( ret ==  SOCKET_ERROR ) {
+		if ( ret == SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
@@ -315,9 +330,10 @@ cleanup:
 
 	// Shutdown client sockets
 	for (c = client ; c < &client [ clients ] ; c++) {
-		if ( *c != INVALID_SOCKET ) {
-			shutdown ( *c, SHUT_RDWR );
-			closesocket( *c );
+		SOCKET s = *c;
+		if ( s != INVALID_SOCKET ) {
+			shutdown ( s, SHUT_RDWR );
+			closesocket( s );
 		}
 	}
 

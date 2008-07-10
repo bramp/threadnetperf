@@ -153,7 +153,7 @@ SOCKET highest_socket(SOCKET *s, size_t len) {
 		return SOCKET_ERROR;
 
 	// Update the nfds
-	max = *s;
+	max = *s++;
 
 	// Loop all client sockets
 	for ( ; s < s_max ; s++) {
