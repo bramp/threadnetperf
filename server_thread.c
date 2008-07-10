@@ -171,8 +171,6 @@ void *server_thread(void *data) {
 
 	struct sockaddr_in addr; // Address to listen on
 
-	struct timespec waittime = {0, 100000000}; // 100 milliseconds
-
 	long long start_time; // The time we started
 	long long end_time; // The time we ended
 
@@ -366,8 +364,12 @@ void *server_thread(void *data) {
 
 	// Wait for the go
 	while ( req->bRunning && !bGo ) {
-		// TODO FIX WATITIME, it is absolute time, not relative
-		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
+		struct timespec abstime;
+
+		get_timespec_now(&abstime);
+		abstime.tv_sec += 1;
+
+		pthread_cond_timedwait( &go_cond, &go_mutex, &abstime);
 	}
 	pthread_mutex_unlock( &go_mutex );
 

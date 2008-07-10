@@ -9,6 +9,8 @@
 
 #ifndef WIN32
 #include <time.h>
+#else
+#include <pthread.h> // for timespec
 #endif
 
 const unsigned int max_cores = 8; // TODO get the real number!
@@ -117,7 +119,12 @@ void move_down ( SOCKET *arr, SOCKET *arr_end ) {
 	}
 }
 
-// Returns the number of microseconds since a epoch
+/**
+	Returns the number of microseconds since a epoch
+		On windows the epoch is January 1, 1601 (UTC)
+		On linux the eopoch is January 1, 1970 (UTC)
+**/
+
 unsigned long long get_microseconds() {
 	unsigned long long microseconds = 0;
 
@@ -150,7 +157,7 @@ unsigned long long get_nanoseconds() {
 
 	GetSystemTimeAsFileTime(&ft);
 
-	nanoseconds |= ft.dwHighDateTime;
+	nanoseconds  = ft.dwHighDateTime;
 	nanoseconds <<= 32;
 	nanoseconds |= ft.dwLowDateTime;
 
@@ -165,6 +172,32 @@ unsigned long long get_nanoseconds() {
 
 	return nanoseconds;	
 }
+
+#define TIMESPEC_TO_FILETIME_OFFSET (((LONGLONG)27111902 << 32) + (LONGLONG)3577643008)
+
+static void timespec_to_filetime(const struct timespec *ts, FILETIME *ft) {
+	*(LONGLONG *)ft = ts->tv_sec * 10000000 + (ts->tv_nsec + 50) / 100 + TIMESPEC_TO_FILETIME_OFFSET;
+}
+
+static void filetime_to_timespec(const FILETIME *ft, struct timespec *ts) {
+	ts->tv_sec = (int)((*(LONGLONG *)ft - TIMESPEC_TO_FILETIME_OFFSET) / 10000000);
+	ts->tv_nsec = (int)((*(LONGLONG *)ft - TIMESPEC_TO_FILETIME_OFFSET - ((LONGLONG)ts->tv_sec * (LONGLONG)10000000)) * 100);
+}
+
+/**
+	Returns now as a timespec value
+**/
+void get_timespec_now(struct timespec *ts) {
+#ifdef WIN32
+	FILETIME ft;
+
+	GetSystemTimeAsFileTime(&ft);
+	filetime_to_timespec( &ft, ts );
+#else
+	clock_gettime(CLOCK_REALTIME, &ts);
+#endif
+}
+
 
 void free_2D(void **data, size_t x) {
 	// TODO make it so we don't need a x or y

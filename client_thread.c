@@ -138,7 +138,6 @@ void* client_thread(void *data) {
 	SOCKET *c = NULL;
 
 	char *buffer = NULL;
-	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 	int nfds;
 
 	fd_set readFD;
@@ -204,7 +203,12 @@ void* client_thread(void *data) {
 
 	// Wait for the go
 	while ( req->bRunning && !bGo ) {
-		pthread_cond_timedwait( &go_cond, &go_mutex, &waittime);
+		struct timespec abstime;
+
+		get_timespec_now(&abstime);
+		abstime.tv_sec += 1;
+
+		pthread_cond_timedwait( &go_cond, &go_mutex, &abstime);
 	}
 	pthread_mutex_unlock( &go_mutex );
 

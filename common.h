@@ -97,6 +97,8 @@ unsigned long long get_microseconds();
 
 unsigned long long get_nanoseconds();
 
+void get_timespec_now(struct timespec *ts);
+
 void stop_all();
 
 double calc_confidence(double confidence_lvl, double mean, double variance, unsigned int n, int verbose);
