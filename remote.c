@@ -27,13 +27,13 @@ int start_daemon(const struct settings * settings) {
 	listen_socket = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
 
 	if ( listen_socket == INVALID_SOCKET ) {
-		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto bail;
 	}
 
 	// SO_REUSEADDR
 	if ( setsockopt(listen_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto bail;
 	}
 
@@ -44,13 +44,13 @@ int start_daemon(const struct settings * settings) {
 
 	// Bind
 	if ( bind(listen_socket, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
-		fprintf(stderr, "%s:%d bind() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d bind() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto bail;
 	}
 
 	// Listen
 	if ( listen(listen_socket, SOMAXCONN) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d listen() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto bail;
 	}
 
@@ -82,12 +82,12 @@ SOCKET connect_daemon(const struct settings *settings) {
 
 	s = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if ( s == INVALID_SOCKET ) {
-		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
 	if ( set_socket_timeout(s, CONTROL_TIMEOUT) ) {
-		fprintf(stderr, "%s:%d set_socket_timeout() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d set_socket_timeout() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
@@ -110,7 +110,7 @@ SOCKET connect_daemon(const struct settings *settings) {
 	}
 
 	if ( connect(s, (struct sockaddr *)&addr, sizeof(addr) ) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
@@ -132,7 +132,7 @@ int send_test( SOCKET s, const struct settings *settings) {
 	assert ( settings != NULL );
 
 	if ( send_settings(s, settings) ) {
-		fprintf(stderr, "%s:%d send_settings() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d send_settings() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		return -1;
 	}
 
@@ -150,17 +150,17 @@ SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings) {
 
 	s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
 	if ( s == INVALID_SOCKET) {
-		fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d accept() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
 	if ( set_socket_timeout(s, CONTROL_TIMEOUT) ) {
-		fprintf(stderr, "%s:%d set_socket_timeout() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d set_socket_timeout() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
 	if ( read_settings ( s, recv_settings ) ) {
-		fprintf(stderr, "%s:%d read_settings() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d read_settings() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
@@ -283,7 +283,7 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 		struct stats stats;
 
 		if ( read_results( s, &stats ) ) {
-			fprintf(stderr, "%s:%d read_results() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d read_results() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return -1;
 		}
 

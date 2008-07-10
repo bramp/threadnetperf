@@ -46,19 +46,19 @@ int connect_connections(const struct settings *settings, const struct client_req
 
 			s = socket( AF_INET, settings->type, settings->protocol);
 			if ( s == INVALID_SOCKET ) {
-				fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				return -1;
 			}
 
 	 		send_socket_size = set_socket_send_buffer( s, settings->socket_size );
 			if ( send_socket_size < 0 ) {
-				fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				goto cleanup;
 			}
 
 	 		recv_socket_size = set_socket_recv_buffer( s, settings->socket_size );
 			if ( send_socket_size < 0 ) {
-				fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d set_socket_recv_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				goto cleanup;
 			}
 
@@ -69,7 +69,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 
 			if ( settings->disable_nagles ) {
 				if ( disable_nagle( s ) == SOCKET_ERROR ) {
-					fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+					fprintf(stderr, "%s:%d disable_nagle() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 					goto cleanup;
 				}
 
@@ -80,18 +80,18 @@ int connect_connections(const struct settings *settings, const struct client_req
 			}
 
 			if ( set_socket_timeout(s, CONTROL_TIMEOUT) ) {
-				fprintf(stderr, "%s:%d set_socket_timeout() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d set_socket_timeout() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				goto cleanup;
 			}
 
 			if ( connect( s, (const struct sockaddr *)&details->addr, (int)details->addr_len ) == SOCKET_ERROR ) {
-				fprintf(stderr, "%s:%d connect() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				goto cleanup;
 			}
 
 			// Always disable blocking (to work around linux bug)
 			if ( disable_blocking(s) == SOCKET_ERROR ) {
-				fprintf(stderr, "%s:%d disable_blocking() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d disable_blocking() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				goto cleanup;
 			}
 
@@ -202,7 +202,7 @@ void* client_thread(void *data) {
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 
 		if ( ret ==  SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
 
@@ -232,7 +232,7 @@ void* client_thread(void *data) {
 
 				if ( len == SOCKET_ERROR ) {
 					if ( ERRNO != ECONNRESET ) {
-						fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, ERRNO );
+						fprintf(stderr, "%s:%d recv() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 						goto cleanup;
 					}
 				}
@@ -289,7 +289,7 @@ void* client_thread(void *data) {
 
 				if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
 					if ( ERRNO != EWOULDBLOCK && ERRNO != EPIPE ) {
-						fprintf(stderr, "%s:%d send() error %d\n", __FILE__, __LINE__, ERRNO );
+						fprintf(stderr, "%s:%d send() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 						goto cleanup;
 					}
 				}

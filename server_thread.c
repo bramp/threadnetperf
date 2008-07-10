@@ -53,7 +53,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
 		if ( ret <= 0 ) {
 			if (ERRNO != 0)
-				fprintf(stderr, "%s:%d select() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
 
@@ -67,29 +67,29 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		s = accept( listen, (struct sockaddr *)&addr, &addr_len );
 
 		if ( s == INVALID_SOCKET ) {
-			fprintf(stderr, "%s:%d accept() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d accept() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
 
 		send_socket_size = set_socket_send_buffer( s, settings->socket_size );
 		if ( send_socket_size < 0 ) {
-			fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
 
 		recv_socket_size = set_socket_recv_buffer( s, settings->socket_size );
 		if ( send_socket_size < 0 ) {
-			fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d set_socket_recv_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
 
 		if ( settings->disable_nagles ) {
 			if ( disable_nagle( s ) == SOCKET_ERROR ) {
-				fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d disable_nagle() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				return 1;
 			}
 		//	if ( enable_maxseq ( s , settings->message_size) == SOCKET_ERROR ) {
-		//		fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
+		//		fprintf(stderr, "%s:%d enable_maxseq() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		//		return 1;
 		//	}
 		}
@@ -97,7 +97,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 #ifndef WIN32
 		if ( settings->timestamp ) {
 			if ( enable_timestamp(s) == SOCKET_ERROR ) {
-				fprintf(stderr, "%s:%d enable_timestamp() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d enable_timestamp() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				return 1;
 			}
 		}
@@ -105,7 +105,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 		// Always disable blocking (to work around linux bug)
 		if ( disable_blocking(s) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d disable_blocking() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d disable_blocking() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
 
@@ -200,29 +200,29 @@ void *server_thread(void *data) {
 	s = socket( PF_INET, settings.type, settings.protocol);
 
 	if ( s == INVALID_SOCKET ) {
-		fprintf(stderr, "%s:%d socket() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
 	send_socket_size = set_socket_send_buffer( s, settings.socket_size );
 	if ( send_socket_size < 0 ) {
-		fprintf(stderr, "%s:%d set_socket_send_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
 	recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
 	if ( recv_socket_size < 0 ) {
-		fprintf(stderr, "%s:%d set_socket_recv_buffer() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d set_socket_recv_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
 	if ( settings.disable_nagles ) {
 		if ( disable_nagle( s ) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d disable_nagle() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d disable_nagle() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
 //		if ( enable_maxseq ( s , settings.message_size) == SOCKET_ERROR ) {
-//			fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
+//			fprintf(stderr, "%s:%d enable_maxseq() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 //			goto cleanup;
 //		}
 	}
@@ -230,7 +230,7 @@ void *server_thread(void *data) {
 #ifndef WIN32	
 	if ( settings.timestamp  ) {
 		if ( enable_timestamp(s) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d enable_timestamp() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d enable_timestamp() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
 	}
@@ -238,7 +238,7 @@ void *server_thread(void *data) {
 
 	// SO_REUSEADDR
 	if ( setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
@@ -249,14 +249,14 @@ void *server_thread(void *data) {
 
 	// Bind
 	if ( bind( s, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
-		fprintf(stderr, "%s:%d bind() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d bind() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
 	// Listen
 	if ( (settings.type == SOCK_STREAM || settings.type==SOCK_SEQPACKET) ) {
 		if ( listen(s, SOMAXCONN) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d listen() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d listen() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
 	}
@@ -284,7 +284,7 @@ void *server_thread(void *data) {
 	// Setup the buffer
 	buf = malloc( settings.message_size );
 	if ( buf == NULL ) {
-		fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d malloc() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
@@ -292,7 +292,7 @@ void *server_thread(void *data) {
 #ifdef USE_EPOLL
 	readFD_epoll = epoll_create(clients);
 	if(readFD_epoll == -1) {
-		fprintf(stderr, "%s:%d epoll_create() error %d\n", __FILE__, __LINE__, ERRNO );
+		fprintf(stderr, "%s:%d epoll_create() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 	events = malloc( sizeof(*events) * clients);
@@ -312,7 +312,7 @@ void *server_thread(void *data) {
 		msg_control_len = 1024;
 		msgs.msg_control = malloc( msg_control_len );
 		if ( msgs.msg_control == NULL ) {
-			fprintf(stderr, "%s:%d malloc() error %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d malloc() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
 	} else {
@@ -341,7 +341,7 @@ void *server_thread(void *data) {
 		assert ( *c != INVALID_SOCKET );
 
 		if (epoll_ctl(readFD_epoll, EPOLL_CTL_ADD, *c, &event) == -1) {
-			fprintf(stderr, "%s:%d epoll() error adding server %d\n", __FILE__, __LINE__, ERRNO );
+			fprintf(stderr, "%s:%d epoll() error adding server (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
 #else
@@ -384,7 +384,7 @@ void *server_thread(void *data) {
 		for ( i = 0; i < ret; i++ ) {
 			SOCKET s = events[i].data.fd;
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
-				fprintf(stderr, "%s:%d epoll() error %d\n", __FILE__, __LINE__, ERRNO );
+				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				//Closing a file descriptor automagically removes it from the epoll fd set.
 				close( s );
 				continue;
@@ -428,7 +428,7 @@ void *server_thread(void *data) {
 							continue;
 
 						else if ( lastErr != ECONNRESET ) {
-							fprintf(stderr, "%s:%d recv() error %d\n", __FILE__, __LINE__, lastErr );
+							fprintf(stderr, "%s:%d recv() error (%d) %s\n", __FILE__, __LINE__, lastErr, strerror(lastErr) );
 							goto cleanup;
 						}
 					}
