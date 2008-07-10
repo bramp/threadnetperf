@@ -204,6 +204,10 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 
 int read_results( SOCKET s, struct stats * stats ) {
 	struct network_stats net_stats;
+
+	char *p = &net_stats;
+	size_t p_len = sizeof(net_stats);
+
 	int ret;
 
 	assert ( s != INVALID_SOCKET );
@@ -211,10 +215,15 @@ int read_results( SOCKET s, struct stats * stats ) {
 
 	memset( &net_stats, 0, sizeof(net_stats) );
 
-	ret = recv(s, (char *)&net_stats, sizeof(net_stats), 0);
-	if ( ret != sizeof(net_stats) ) {
-		return -1;
-	}
+	// Keep looping until the full net_stat struct is read
+	do {
+		ret = recv(s, p, p_len, 0);
+		if ( ret <= 0 )
+			return -1;
+
+		p_len -= ret;
+		p += ret;
+	} while ( p_len != 0 );
 
 	// TODO find a 64bit ntohl
 	stats->cores          = ntohl(net_stats.cores);
