@@ -387,20 +387,18 @@ void *server_thread(void *data) {
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
 				fprintf(stderr, "%s:%d epoll() error %d\n", __FILE__, __LINE__, ERRNO );
 				//Closing a file descriptor automagically removes it from the epoll fd set.
-				close(events[i].data.fd);
+				close( s );
 				continue;
 			}
 #else
 		ret = select( nfds, &readFD, NULL, NULL, &waittime);
 
+		if ( ret == 0 && !req->bRunning )
+			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
+
 		// Figure out which sockets have fired
 		for (c = client; c < &client [ clients ]; c++ ) {
 			SOCKET s = *c;
-
-			#ifdef _DEBUG
-			if ( ret == 0 && !req->bRunning )
-				fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
-			#endif
 
 			assert ( s != INVALID_SOCKET );
 
@@ -441,8 +439,18 @@ void *server_thread(void *data) {
 					// Invalidate this client
 					closesocket( s );
 
+#ifdef USE_EPOLL
+					// Because we don't know which index within the client array, we have to search to find it
+					for (c = client; c < &client [ clients ]; c++ ) {
+						if ( *c == s )
+							break;
+					}
+
+					ASSERT ( c != &client[clients] );
+#endif
+
 					// Move back
-					move_down ( c, &client[ clients  ] );
+					move_down ( c, &client[ clients ] );
 					c--;
 
 					clients--;
