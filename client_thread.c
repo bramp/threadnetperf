@@ -48,7 +48,7 @@ int connect_connections(const struct settings *settings, const struct client_req
 #ifndef USE_EPOLL
 			// In GNU world, a socket can't be >= FD_SETSIZE, otherwise it can't be placed into a set
 			if ( s >= FD_SETSIZE ) {
-				fprintf(stderr, "%s:%d socket() value too large for fd_set (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+				fprintf(stderr, "%s:%d socket() value too large for fd_set (%d >= %d) %s\n", __FILE__, __LINE__, s, FD_SETSIZE );
 				return -1;
 			}
 #endif
