@@ -312,13 +312,14 @@ void *server_thread(void *data) {
 
 	// If we need the control messages we should set them up
 	if ( settings.timestamp ) {
-		msg_control_len = 1024;
 		msgs.msg_control = malloc( msg_control_len );
 		if ( msgs.msg_control == NULL ) {
 			fprintf(stderr, "%s:%d malloc() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
+		msg_control_len = 1024;
 	} else {
+		msgs.msg_control = NULL;
 		msg_control_len = 0;
 	}
 #endif
