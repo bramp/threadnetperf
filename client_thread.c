@@ -44,6 +44,14 @@ int connect_connections(const struct settings *settings, const struct client_req
 				return -1;
 			}
 
+#ifndef WIN32 & USE_EPOLL
+			// In GNU world, a socket can't be >= FD_SETSIZE, otherwise it can't be placed into a set
+			if ( s >= FD_SETSIZE ) {
+				fprintf(stderr, "%s:%d socket() value too large for fd_set (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+				return -1;
+			}
+#endif
+
 	 		send_socket_size = set_socket_send_buffer( s, settings->socket_size );
 			if ( send_socket_size < 0 ) {
 				fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -155,7 +163,7 @@ void* client_thread(void *data) {
 
 	if ( clients > FD_SETSIZE ) {
 		fprintf(stderr, "%s:%d Client thread can have no more than %d connections\n", __FILE__, __LINE__, FD_SETSIZE );
-		return -1;
+		goto cleanup;
 	}
 
 	client = calloc(clients, sizeof(*client));
