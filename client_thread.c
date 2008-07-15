@@ -144,10 +144,16 @@ void* client_thread(void *data) {
 	SOCKET *c = NULL;
 
 	char *buffer = NULL;
+
+#ifdef USE_EPOLL
+	int	readFD_epoll;
+	struct epoll_event *events;
+#else
 	int nfds;
 
 	fd_set readFD;
 	fd_set writeFD;
+#endif
 
 	assert ( req != NULL );
 	assert ( details != NULL );
@@ -200,28 +206,55 @@ void* client_thread(void *data) {
 
 	memset( buffer, (int)BUFFER_FILL, settings.message_size ); // TODO fix 32bit linux compile problem
 
+#ifdef USE_EPOLL
+	readFD_epoll = epoll_create(clients);
+	if(readFD_epoll == -1) {
+		fprintf(stderr, "%s:%d epoll_create() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		goto cleanup;
+	}
+
+	events = calloc( clients, sizeof(*events) );
+	if ( events == NULL ) {
+		fprintf(stderr, "%s:%d calloc error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+#else
 	nfds = (int)*client;
 	FD_ZERO ( &readFD ); 
 	FD_ZERO ( &writeFD );
+#endif
 
 	// Loop all client sockets
 	for (c = client ; c < &client [ clients ] ; c++) {
 		SOCKET s = *c;
 
+#ifdef USE_EPOLL
+		struct epoll_event event = {0};
+		
+		assert ( s != INVALID_SOCKET );
+
+		event.events = EPOLLIN | EPOLLOUT ;
+		event.data.fd = s;
+
+		if (epoll_ctl(readFD_epoll, EPOLL_CTL_ADD, s, &event) == -1) {
+			fprintf(stderr, "%s:%d epoll() error adding client (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			goto cleanup;
+		}
+#else
 		assert ( s != INVALID_SOCKET );
 
 		// Add them to FD sets
 		FD_SET( s, &readFD);
 		FD_SET( s, &writeFD);
 
-		if ( (int)s > nfds )
-			nfds = (int)s;
+		if ( (int)s >= nfds )
+			nfds = (int)s + 1;
 
 		assert ( FD_ISSET(s, &readFD ) );
 		assert ( FD_ISSET(s, &writeFD ) );
-	}
+#endif
 
-	nfds = nfds + 1;
+	}
 
 	pthread_mutex_lock( &go_mutex );
 	unready_threads--;
@@ -248,7 +281,21 @@ void* client_thread(void *data) {
 	while ( req->bRunning ) {
 
 		int ret;
-		struct timeval waittime = {1, 0}; // 1 second
+		
+
+#ifdef USE_EPOLL
+		ret = epoll_wait(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
+
+		for ( i = 0; i < ret; i++ ) {
+			SOCKET s = events[i].data.fd;
+			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
+				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+				closesocket( s );
+				continue;
+			}
+			assert ( s != INVALID_SOCKET );
+#else
+		struct timeval waittime = {TRANSFER_TIMEOUT / 1000, 0}; // 1 second
 
 		ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 
@@ -257,10 +304,8 @@ void* client_thread(void *data) {
 			goto cleanup;
 		}
 
-		#ifdef _DEBUG
 		if ( ret == 0 )
 			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
-		#endif
 
 		// Figure out which sockets have fired
 		for (c = client ; c < &client [ clients ]; c++ ) {
@@ -277,9 +322,8 @@ void* client_thread(void *data) {
 
 			// Check for reads
 			if ( FD_ISSET( s, &readFD) ) {
+#endif
 				int len = recv( s, buffer, settings.message_size, 0);
-
-				ret--;
 
 				if ( len == SOCKET_ERROR ) {
 					if ( ERRNO != ECONNRESET ) {
@@ -288,37 +332,43 @@ void* client_thread(void *data) {
 					}
 				}
 
+#ifndef USE_EPOLL
+				ret--;
+#endif
 				// The socket has closed
 				if ( len <= 0 ) {
 
+					if ( settings.verbose )
+						printf("  Client: %d Removed client (%d/%d)\n", req->cores, (int)((c - client) / sizeof(*c)) + 1, clients );
+
+#ifndef USE_EPOLL
 					// Quickly check if this client was in the write set
 					if ( FD_ISSET( s, &writeFD) ) {
 						FD_CLR( s, &writeFD );
 						ret--;
 					}
 
-					if ( settings.verbose )
-						printf("  Client: %d Removed client (%d/%d)\n", req->cores, (int)((c - client) / sizeof(*c)) + 1, clients );
-
 					// Unset me from the set
 					FD_CLR( s, &readFD );
 
+					// Move this back
+					move_down ( c, &client[ clients ] );
+					c--;
+#endif
+
 					// Invalid this client
 					closesocket( s );
-					move_down ( c, &client[ clients ] );
 					clients--;
-
-					// Move this back
-					c--;
 
 					// If this is the last client then just give up!
 					if ( clients == 0 )
 						goto cleanup;
 
+#ifndef USE_EPOLL
 					// Update the nfds
 					nfds = (int)highest_socket(client, clients) + 1;
-
 					continue;
+
 				}
 			} else {
 				// Set the socket on this FD, to save us doing it at the beginning of each loop
@@ -328,7 +378,7 @@ void* client_thread(void *data) {
 			// Check if we are ready to write
 			if ( FD_ISSET( s, &writeFD) ) {
 				ret--;
-
+#endif
 				if ( time_between_sends > 0 ) {
 					const unsigned long long now = get_microseconds();
 
