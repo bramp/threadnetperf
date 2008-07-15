@@ -394,7 +394,7 @@ void *server_thread(void *data) {
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
 				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				//Closing a file descriptor automagically removes it from the epoll fd set.
-				close( s );
+				closesocket( s );
 				continue;
 			}
 #else
@@ -447,20 +447,11 @@ void *server_thread(void *data) {
 					// Invalidate this client
 					closesocket( s );
 
-#ifdef USE_EPOLL
-					// Because we don't know which index within the client array, we have to search to find it
-					for (c = client; c < &client [ clients ]; c++ ) {
-						if ( *c == s )
-							break;
-					}
-
-					assert ( c != &client[clients] );
-#endif
-
+#ifndef USE_EPOLL
 					// Move back
 					move_down ( c, &client[ clients ] );
 					c--;
-
+#endif
 					clients--;
 
 					// If this is the last client then just give up!
