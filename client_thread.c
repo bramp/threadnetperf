@@ -256,12 +256,11 @@ void* client_thread(void *data) {
 		FD_SET( s, &writeFD);
 
 		if ( (int)s >= nfds )
-		nfds = (int)s + 1;
+			nfds = (int)s + 1;
 
 		assert ( FD_ISSET(s, &readFD ) );
 		assert ( FD_ISSET(s, &writeFD ) );
 #endif
-
 	}
 
 	pthread_mutex_lock( &go_mutex );
@@ -288,26 +287,26 @@ void* client_thread(void *data) {
 	// Now start the main loop
 	while ( req->bRunning ) {
 
-		int ret;
-
 #ifdef USE_EPOLL
 		int i;
-		ret = epoll_wait(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
+		int ready = epoll_wait(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
 
-		for ( i = 0; i < ret; i++ ) {
+		for ( i = 0; i < ready; i++ ) {
 			SOCKET s = events[i].data.fd;
+
+			assert ( s != INVALID_SOCKET );
+
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
 				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				closesocket( s );
 				continue;
 			}
-			assert ( s != INVALID_SOCKET );
 
 			if( events[i].events & EPOLLIN) {
 #else
 				struct timeval waittime = {TRANSFER_TIMEOUT / 1000, 0}; // 1 second
 
-				ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
+				int ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 
 				if ( ret == SOCKET_ERROR ) {
 					fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -315,7 +314,7 @@ void* client_thread(void *data) {
 				}
 
 				if ( ret == 0 )
-				fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
+					fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 
 				// Figure out which sockets have fired
 				for (c = client; c < &client [ clients ]; c++ ) {
@@ -333,7 +332,6 @@ void* client_thread(void *data) {
 					// Check for reads
 					if ( FD_ISSET( s, &readFD) ) {
 #endif
-
 						int len = recv( s, buffer, settings.message_size, 0);
 
 						if ( len == SOCKET_ERROR ) {
@@ -350,7 +348,7 @@ void* client_thread(void *data) {
 						if ( len <= 0 ) {
 
 							if ( settings.verbose )
-							printf("  Client: %d Removed client (%d/%d)\n", req->cores, (int)((c - client) / sizeof(*c)) + 1, clients );
+								printf("  Client: %d Removed client (%d/%d)\n", req->cores, (int)((c - client) / sizeof(*c)) + 1, clients );
 
 #ifndef USE_EPOLL
 							// Quickly check if this client was in the write set
@@ -373,7 +371,7 @@ void* client_thread(void *data) {
 
 							// If this is the last client then just give up!
 							if ( clients == 0 )
-							goto cleanup;
+								goto cleanup;
 
 #ifndef USE_EPOLL
 							// Update the nfds
@@ -389,26 +387,26 @@ void* client_thread(void *data) {
 					// Check if we are ready to write
 					if ( FD_ISSET( s, &writeFD) ) {
 						ret--;
+#else
+					}
+					if( events[i].events & EPOLLOUT) {
 #endif
-					
-#ifdef USE_EPOLL
-					}	if( events[i].events & EPOLLOUT) {
-#endif
-							if ( time_between_sends> 0 ) {
-								const unsigned long long now = get_microseconds();
+						// Rate limiting code
+						if ( time_between_sends> 0 ) {
+							const unsigned long long now = get_microseconds();
 
-								if ( next_send_time> now )
+							if ( next_send_time > now )
 								continue;
 
-								next_send_time += time_between_sends;
-							}
+							next_send_time += time_between_sends;
+						}
 
-							if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
-								if ( ERRNO != EWOULDBLOCK && ERRNO != EPIPE ) {
-									fprintf(stderr, "%s:%d send() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-									goto cleanup;
-								}
+						if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
+							if ( ERRNO != EWOULDBLOCK && ERRNO != EPIPE ) {
+								fprintf(stderr, "%s:%d send() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+								goto cleanup;
 							}
+						}
 #ifdef USE_EPOLL
 					}
 #endif
@@ -422,19 +420,16 @@ void* client_thread(void *data) {
 					assert(ret == 0);
 				}
 #else
-}
-}
+			}
+		}
 #endif
 	
-	
-
-	cleanup:
+cleanup:
 
 	// Force a stop
 	stop_all();
 
 	// Cleanup
-	if ( buffer )
 	free( buffer );
 
 	// Shutdown client sockets
@@ -445,6 +440,12 @@ void* client_thread(void *data) {
 			closesocket( s );
 		}
 	}
+
+#ifdef USE_EPOLL
+	close(readFD_epoll);
+	free( events );
+#endif
+
 
 	free ( client );
 

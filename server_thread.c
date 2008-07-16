@@ -542,14 +542,12 @@ cleanup:
 	stop_all();
 
 	// Cleanup
-	if ( buf )
-		free( buf );
+	free( buf );
 
 #ifndef WIN32
 #ifdef USE_EPOLL
 	close(readFD_epoll);
-	if ( events )
-		free( events );
+	free( events );
 #else
 	if ( msgs.msg_control )
 		free ( msgs.msg_control );
