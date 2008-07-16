@@ -365,6 +365,9 @@ void* client_thread(void *data) {
 							// Move this back
 							move_down ( c, &client[ clients ] );
 							c--;
+
+							// Update the nfds
+							nfds = (int)highest_socket(client, clients - 1) + 1;
 #endif
 
 							// Invalid this client
@@ -375,11 +378,8 @@ void* client_thread(void *data) {
 							if ( clients == 0 )
 								goto cleanup;
 
-#ifndef USE_EPOLL
-							// Update the nfds
-							nfds = (int)highest_socket(client, clients) + 1;
+							// This socket is now closed, so lets go back up to the loop
 							continue;
-#endif
 						}
 #ifndef USE_EPOLL
 					} else {
@@ -435,11 +435,13 @@ cleanup:
 	free( buffer );
 
 	// Shutdown client sockets
-	for (c = client; c < &client [ clients ]; c++) {
-		SOCKET s = *c;
-		if ( s != INVALID_SOCKET ) {
-			shutdown ( s, SHUT_RDWR );
-			closesocket( s );
+	if ( client != NULL ) {
+		for (c = client; c < &client [ clients ]; c++) {
+			SOCKET s = *c;
+			if ( s != INVALID_SOCKET ) {
+				shutdown ( s, SHUT_RDWR );
+				closesocket( s );
+			}
 		}
 	}
 

@@ -5,13 +5,13 @@
 	Note, this app is very rough, and needs cleaning up, but it works!
 	TODO Add flag to output bandwidth at set intervals during the experiment
 	TODO fix assert error when listen socket is already bound by someone else
-	TODO lookup host names of address past with -H
 	TODO make server/client loop faster by removing unneed checks for rate limits, and others
 	TODO check UDP ends without error
 	TODO change the rate to be in mb/sec not packet/sec
 	TODO allow it to connect to different endpoints
 	TODO Allow the connections to mimic BitTorrent/HTTP/NNTP/IRC/etc
 	TODO Add the error msg "server_thread() error Server thread can have no more than %d connections (%d specified)\n"
+	TODO Output time taken to set-up
 */
 
 #include "common.h"
