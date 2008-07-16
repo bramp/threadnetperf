@@ -177,10 +177,12 @@ void* client_thread(void *data) {
 		fprintf(stderr, "%s:%d Must have more than zero clients!\n", __FILE__, __LINE__ );goto cleanup;
 	}
 
+#ifndef USE_EPOLL
 	if ( clients> FD_SETSIZE ) {
 		fprintf(stderr, "%s:%d Client thread can have no more than %d connections\n", __FILE__, __LINE__, FD_SETSIZE );
 		goto cleanup;
 	}
+#endif
 
 	client = calloc(clients, sizeof(*client));
 
