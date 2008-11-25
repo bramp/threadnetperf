@@ -280,7 +280,16 @@ void *server_thread(void *data) {
 	// By this point all the clients have connected, but the test hasn't started yet
 
 	// Setup the buffer
+#ifdef MF_VALLOC
+        int page_size = getpagesize();
+        if(settings.message_size < page_size )
+        	buf = valloc( page_size );
+       	else
+       		buf = valloc( settings.message_size );
+#else
 	buf = malloc( settings.message_size );
+#endif
+
 	if ( buf == NULL ) {
 		fprintf(stderr, "%s:%d malloc() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;

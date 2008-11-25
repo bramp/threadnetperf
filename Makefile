@@ -2,7 +2,7 @@
 #INCLUDES = -I
 CC = gcc
 CFLAGS = -g -O0 -c -W -Wall -Wconversion -Wshadow -Wcast-qual -Wwrite-strings  $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
-CFLAGS = -g -O0 -c -Wall  $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG -DUSE_EPOLL
+CFLAGS = -g -O0 -c -Wall  $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG -DUSE_EPOLL -DMF_VALLOC
 #CFLAGS = -O3 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT
 LDFLAGS = -pthread -lm -lrt
 
