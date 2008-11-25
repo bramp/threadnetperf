@@ -18,6 +18,8 @@
 	#include <unistd.h>
 #endif
 
+#define roundup(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
+
 // Count of how many threads are not listening
 volatile unsigned int server_listen_unready = 0;
 
@@ -30,7 +32,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 	unsigned int n = req->n;
 	int connected = 0;
-	
+
 	fd_set readFD;
 
 	assert ( listen != INVALID_SOCKET );
@@ -47,7 +49,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		socklen_t addr_len = sizeof(addr);
 		SOCKET s;
 		int send_socket_size, recv_socket_size;
-		
+
 		FD_SET( listen, &readFD);
 
 		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
@@ -282,10 +284,8 @@ void *server_thread(void *data) {
 	// Setup the buffer
 #ifdef MF_VALLOC
         int page_size = getpagesize();
-        if(settings.message_size < page_size )
-        	buf = valloc( page_size );
-       	else
-       		buf = valloc( settings.message_size );
+        int num_pages = roundup(settings.message_size, page_size);
+       	buf = valloc( num_pages );
 #else
 	buf = malloc( settings.message_size );
 #endif
