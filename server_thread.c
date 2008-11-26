@@ -34,6 +34,10 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	int connected = 0;
 
 	fd_set readFD;
+	
+#ifdef MF_FLIPPAGE
+	int flippage = 1;
+#endif
 
 	assert ( listen != INVALID_SOCKET );
 	assert ( clients != NULL );
@@ -67,6 +71,11 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 		// Accept a new client socket
 		s = accept( listen, (struct sockaddr *)&addr, &addr_len );
+#ifdef MF_FLIPPAGE
+		// Turn on the flippage socket option
+		// TODO: MF: Fix the "99" - it should be SOCK_FLIPPAGE
+		s = setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage));
+#endif
 
 		if ( s == INVALID_SOCKET ) {
 			fprintf(stderr, "%s:%d accept() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -169,6 +178,10 @@ void *server_thread(void *data) {
 #ifndef USE_EPOLL
 	fd_set readFD;
 	int nfds = 0;
+#endif
+
+#ifdef MF_FLIPPAGE
+	int page_size, num_pages;
 #endif
 
 	struct sockaddr_in addr; // Address to listen on
@@ -283,8 +296,8 @@ void *server_thread(void *data) {
 
 	// Setup the buffer
 #ifdef MF_FLIPPAGE
-        int page_size = getpagesize();
-        int num_pages = roundup(settings.message_size, page_size);
+        page_size = getpagesize();
+        num_pages = roundup(settings.message_size, page_size);
        	buf = valloc( num_pages );
 #else
 	buf = malloc( settings.message_size );
