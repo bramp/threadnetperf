@@ -282,7 +282,7 @@ void *server_thread(void *data) {
 	// By this point all the clients have connected, but the test hasn't started yet
 
 	// Setup the buffer
-#ifdef MF_VALLOC
+#ifdef MF_FLIPPAGE
         int page_size = getpagesize();
         int num_pages = roundup(settings.message_size, page_size);
        	buf = valloc( num_pages );
