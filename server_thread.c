@@ -71,11 +71,6 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 		// Accept a new client socket
 		s = accept( listen, (struct sockaddr *)&addr, &addr_len );
-#ifdef MF_FLIPPAGE
-		// Turn on the flippage socket option
-		// TODO: MF: Fix the "99" - it should be SOCK_FLIPPAGE
-		s = setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage));
-#endif
 
 		if ( s == INVALID_SOCKET ) {
 			fprintf(stderr, "%s:%d accept() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -119,6 +114,16 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			fprintf(stderr, "%s:%d disable_blocking() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
+
+#ifdef MF_FLIPPAGE
+		// Turn on the flippage socket option
+		// TODO: MF: Fix the "99" - it should be SOCK_FLIPPAGE
+		if ( setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage)) == SOCKET_ERROR) {
+			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			return 1;
+
+		}
+#endif
 
 		assert ( *clients == INVALID_SOCKET );
 		*clients = s;
