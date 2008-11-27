@@ -303,6 +303,8 @@ void *server_thread(void *data) {
 #ifdef MF_FLIPPAGE
         page_size = getpagesize();
         num_pages = roundup(settings.message_size, page_size);
+        if( settings.verbose )
+        	printf("vallocing of buffer of %d bytes\n", num_pages);
        	buf = valloc( num_pages );
 #else
 	buf = malloc( settings.message_size );
