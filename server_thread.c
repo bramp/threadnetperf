@@ -34,7 +34,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	int connected = 0;
 
 	fd_set readFD;
-	
+
 #ifdef MF_FLIPPAGE
 	int flippage = 1;
 #endif
@@ -330,7 +330,12 @@ void *server_thread(void *data) {
 	}
 #endif
 
+#ifdef MF_FLIPPAGE
+	msg_iov.iov_len = num_pages;
+#else
 	msg_iov.iov_len = settings.message_size;
+#endif
+
 	msg_iov.iov_base = buf;
 
 	msgs.msg_name = NULL;
@@ -365,7 +370,7 @@ void *server_thread(void *data) {
 		struct epoll_event event = {0};
 		/*
 		 * MF: THIS IS THE PROBLEM CODE!
-		 * 
+		 *
 		 * | EPOLLET
 		 */
 		event.events = EPOLLIN ;
@@ -386,7 +391,7 @@ void *server_thread(void *data) {
 #endif
 	}
 
-	//At this point we've populated the fd_set we need for either select() or epoll() 
+	//At this point we've populated the fd_set we need for either select() or epoll()
 
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
