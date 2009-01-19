@@ -187,6 +187,7 @@ void *server_thread(void *data) {
 
 #ifdef MF_FLIPPAGE
 	int page_size, num_pages;
+	int flippage = 1;
 #endif
 
 	struct sockaddr_in addr; // Address to listen on
@@ -198,6 +199,7 @@ void *server_thread(void *data) {
 
 	unsigned int i = 0;
 	const int one = 1;
+	int recv_size = 0;
 
 	if ( settings.verbose )
 		printf("Core %d: Started server thread port %d\n", req->cores, req->port );
@@ -245,7 +247,7 @@ void *server_thread(void *data) {
 //		}
 	}
 
-#ifndef WIN32	
+#ifndef WIN32
 	if ( settings.timestamp  ) {
 		if ( enable_timestamp(s) == SOCKET_ERROR ) {
 			fprintf(stderr, "%s:%d enable_timestamp() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -293,6 +295,15 @@ void *server_thread(void *data) {
 
 	// If this is a DGRAM, then we don't have a connection per client, but instead one server socket
 	} else if ( settings.type == SOCK_DGRAM ) {
+#ifdef MF_FLIPPAGE
+                // Turn on the flippage socket option
+		// TODO: MF: Fix the "99" - it should be SOCK_FLIPPAGE
+		if ( setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage)) == SOCKET_ERROR) {
+			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n",__FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			goto cleanup;
+		 }
+#endif
+
 		*client = s;
 		clients = 1;
 	}
@@ -300,15 +311,16 @@ void *server_thread(void *data) {
 	// By this point all the clients have connected, but the test hasn't started yet
 
 	// Setup the buffer
-#ifdef MF_FLIPPAGE
+//#ifdef MF_FLIPPAGE
         page_size = getpagesize();
         num_pages = roundup(settings.message_size, page_size);
         if( settings.verbose )
         	printf("vallocing of buffer of %d bytes\n", num_pages);
        	buf = valloc( num_pages );
-#else
-	buf = malloc( settings.message_size );
-#endif
+//#else
+//	buf = malloc( settings.message_size );
+//#endif
+	recv_size = num_pages;
 
 	if ( buf == NULL ) {
 		fprintf(stderr, "%s:%d malloc() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -330,12 +342,7 @@ void *server_thread(void *data) {
 	}
 #endif
 
-#ifdef MF_FLIPPAGE
-	msg_iov.iov_len = num_pages;
-#else
-	msg_iov.iov_len = settings.message_size;
-#endif
-
+	msg_iov.iov_len = recv_size;
 	msg_iov.iov_base = buf;
 
 	msgs.msg_name = NULL;
@@ -454,7 +461,7 @@ void *server_thread(void *data) {
 #endif
 
 #ifdef WIN32
-				len = recv( s, buf, settings.message_size, 0 );
+				len = recv( s, buf, recv_size, 0 );
 #else
 				msgs.msg_controllen = msg_control_len;
 				len = recvmsg( s, &msgs, 0);

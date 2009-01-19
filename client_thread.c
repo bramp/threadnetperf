@@ -425,7 +425,7 @@ void* client_thread(void *data) {
 			}
 		}
 #endif
-	
+
 cleanup:
 
 	// Force a stop
