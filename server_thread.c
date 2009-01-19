@@ -185,8 +185,9 @@ void *server_thread(void *data) {
 	int nfds = 0;
 #endif
 
-#ifdef MF_FLIPPAGE
+
 	int page_size, num_pages;
+#ifdef MF_FLIPPAGE
 	int flippage = 1;
 #endif
 
