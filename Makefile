@@ -4,8 +4,9 @@ CC = gcc
 #CFLAGS = -g -O0 -c -W -Wall -Wconversion -Wshadow -Wcast-qual -Wwrite-strings  $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG
 #CFLAGS = -g -O0 -c -Wall  $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -D_DEBUG -DUSE_EPOLL 
 #-DMF_FLIPPAGE
-CFLAGS = -O3 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT 
-#-DMF_FLIPPAGE
+CFLAGS = -O3 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -DUSE_EPOLL -DMF_FLIPPAGE 
+#CFLAGS = -O3 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -DUSE_EPOLL -DMF_NOCOPY
+CFLAGS = -O3 -c -Wall $(INCLUDES) -DTHREAD_SAFE -D_REENTRANT -DUSE_EPOLL
 LDFLAGS = -pthread -lm -lrt
 
 SOURCES =	threadnetperf.c common.c server_thread.c client_thread.c server.c client.c print.c remote.c serialise.c threads.c parse.c netlib.c

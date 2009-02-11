@@ -39,6 +39,10 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	int flippage = 1;
 #endif
 
+#ifdef MF_NOCOPY
+	int nocopy = 1;
+#endif
+
 	assert ( listen != INVALID_SOCKET );
 	assert ( clients != NULL );
 	assert ( req->n > 0 );
@@ -122,6 +126,13 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 
+		}
+#endif
+
+#ifdef MF_NOCOPY
+		if ( setsockopt(s, SOL_SOCKET, 98, &nocopy, sizeof(nocopy)) == SOCKET_ERROR) {
+			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			return 1;
 		}
 #endif
 
