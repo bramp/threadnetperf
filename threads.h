@@ -23,7 +23,7 @@ void cpu_setup( cpu_set_t *cpu, unsigned int cores );
 int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void * data), void *data);
 
 int thread_join_all ();
-int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset );
+int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset, int threaded_model );
 
 // Allocate space for this many threads
 int thread_alloc(size_t count);

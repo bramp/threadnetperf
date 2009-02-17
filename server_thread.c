@@ -20,6 +20,20 @@
 
 #define roundup(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
 
+
+pthread_cond_t ready_cond; // Signals control thread when a worker thread is ready
+pthread_mutex_t ready_mutex;
+
+pthread_cond_t go_cond; // Signal all threads when they are ready to start
+pthread_mutex_t go_mutex;
+
+const unsigned int max_cores; // The number of CPU cores this machine has
+unsigned int unready_threads; // Count of how many threads are not ready
+
+volatile int bRunning; // Flag to indidcate if we are still running
+volatile int bGo; // Flag to indidcate if we can start the test
+
+
 // Count of how many threads are not listening
 volatile unsigned int server_listen_unready = 0;
 
@@ -185,8 +199,8 @@ void *server_thread(void *data) {
 	size_t msg_control_len = 1024; // TODO what does 1024 mean?
 
 #ifdef USE_EPOLL
-	int		readFD_epoll;
-	struct epoll_event *events;
+	int		readFD_epoll = 0;
+	struct epoll_event *events = NULL;
 #endif
 
 #endif
@@ -214,7 +228,7 @@ void *server_thread(void *data) {
 	int recv_size = 0;
 
 	if ( settings.verbose )
-		printf("Core %d: Started server thread port %d\n", req->cores, req->port );
+		printf("Core %d: Started server thread port %d from pid (%d)\n", req->cores, req->port , getpid());
 
 	// Malloc client space for many of the arrays
 	client = calloc(clients, sizeof(*client));
@@ -278,17 +292,17 @@ void *server_thread(void *data) {
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons( req->port );
-
+	
 	// Bind
 	if ( bind( s, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
-		fprintf(stderr, "%s:%d bind() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		fprintf(stderr, "%s:%d bind() error (%d) %s from pid (%d)\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO), getpid() );
 		goto cleanup;
 	}
 
 	// Listen
 	if ( (settings.type == SOCK_STREAM || settings.type==SOCK_SEQPACKET) ) {
 		if ( listen(s, SOMAXCONN) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d listen() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			fprintf(stderr, "%s:%d listen() error (%d) %s from pid (%d)\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO), getpid() );
 			goto cleanup;
 		}
 	}
@@ -308,7 +322,7 @@ void *server_thread(void *data) {
 	// If this is a DGRAM, then we don't have a connection per client, but instead one server socket
 	} else if ( settings.type == SOCK_DGRAM ) {
 #ifdef MF_FLIPPAGE
-                // Turn on the flippage socket option
+		// Turn on the flippage socket option
 		// TODO: MF: Fix the "99" - it should be SOCK_FLIPPAGE
 		if ( setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage)) == SOCKET_ERROR) {
 			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n",__FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -323,15 +337,12 @@ void *server_thread(void *data) {
 	// By this point all the clients have connected, but the test hasn't started yet
 
 	// Setup the buffer
-//#ifdef MF_FLIPPAGE
-        page_size = getpagesize();
-        num_pages = roundup(settings.message_size, page_size);
-        if( settings.verbose )
-        	printf("vallocing of buffer of %d bytes\n", num_pages);
-       	buf = valloc( num_pages );
-//#else
-//	buf = malloc( settings.message_size );
-//#endif
+	page_size = getpagesize();
+	num_pages = roundup(settings.message_size, page_size);
+	if( settings.verbose )
+		printf("vallocing of buffer of %d bytes\n", num_pages);
+	buf = valloc( num_pages );
+
 	recv_size = num_pages;
 
 	if ( buf == NULL ) {

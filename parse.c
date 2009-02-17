@@ -33,6 +33,7 @@ void print_usage() {
 	fprintf(stderr, "	-H host    Set the remote host(and port) to connect to\n");
 	fprintf(stderr, "	-h         Display this help\n");
 	fprintf(stderr, "	-i min,max Set the minimum and maximum iterations\n");
+	fprintf(stderr, "	-m [t,p]   What programming model to use, [thread or process]\n" );
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
@@ -122,7 +123,7 @@ good:
 
 int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	int c;
-	const char *optstring = "DhvVtTeuns:d:p:c:i:H:r:";
+	const char *optstring = "DhvVtTeuns:d:p:c:i:H:r:m:";
 
 	assert ( settings != NULL );
 
@@ -142,6 +143,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	settings->confidence_int = 0.0;
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
+	settings->threaded_model = 1;
 
 	settings->type = SOCK_STREAM;
 	settings->protocol = IPPROTO_TCP;
@@ -162,7 +164,6 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			case 'D':
 				settings->deamon = 1;
 				break;
-
 			case 'h':
 				print_usage();
 				return -1;
@@ -289,6 +290,25 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 				settings->disable_nagles = 1;
 				break;
 
+			case 'm' :
+				if ( settings->deamon ) {
+					fprintf(stdout, "Unable to set threading model when in Deamon mode\n");
+					return -1;
+				}
+				
+				if(strcmp(optarg, "p")==0)
+					settings->threaded_model = 0;
+				else if( strcmp(optarg, "t")==0)
+					settings->threaded_model = 1;
+				else {
+					fprintf(stderr, "Invalid threading model set (%s)\n", optarg );
+					return -1;
+				}
+
+				if( settings->verbose )
+					printf("Seting model to (%s)\n", optarg);
+
+				break;
 			// Parse the message size
 			case 's':
 

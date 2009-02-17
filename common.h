@@ -60,6 +60,7 @@ struct settings {
 	unsigned int dirty           :1;
 	unsigned int timestamp       :1;
 	unsigned int disable_nagles  :1;
+	unsigned int threaded_model  :1;
 
 	double confidence_lvl;
 	double confidence_int;

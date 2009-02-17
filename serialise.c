@@ -37,6 +37,7 @@ struct network_settings {
 	uint8_t dirty;
 	uint8_t timestamp;
 	uint8_t disable_nagles;
+	uint8_t threaded_model;
 	
 	
 	uint32_t message_size;
@@ -99,6 +100,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->dirty          = net_settings.dirty;
 	settings->timestamp      = net_settings.timestamp;
 	settings->disable_nagles = net_settings.disable_nagles;
+	settings->threaded_model = net_settings.threaded_model;
 
 	settings->message_size   = ntohl( net_settings.message_size );
 	settings->socket_size    = ntohl( net_settings.socket_size );
@@ -116,6 +118,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
 	settings->server_host    = NULL;
+	
 
 	// Create space for all the tests
 	settings->test = calloc( settings->tests, sizeof(*settings->test) );
@@ -171,6 +174,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	net_settings.dirty          = settings->dirty;
 	net_settings.timestamp      = settings->timestamp;
 	net_settings.disable_nagles = settings->disable_nagles;
+	net_settings.threaded_model = settings->threaded_model;
 
 	net_settings.message_size   = htonl( settings->message_size );
 	net_settings.socket_size    = htonl( settings->socket_size );

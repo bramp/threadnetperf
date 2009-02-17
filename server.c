@@ -23,7 +23,7 @@ int prepare_servers(const struct settings * settings, void *data) {
 	assert ( sreq == NULL );
 	assert ( sreq_size == 0 );
 
-
+	printf("Need to create %d servers\n", settings->servercores);
 	// Malloc one space for each core combination
 	sreq_size = settings->servercores;
 
@@ -79,14 +79,15 @@ int create_servers(const struct settings *settings, void *data) {
 	for (i = 0; i < sreq_size; i++) {
 
 		cpu_set_t cpus;
-
+	
 		// Don't bother if we don't have a server on this core
 		assert ( sreq[i].bRunning );
 
 		// Set which CPU this thread should be on
 		cpu_setup( &cpus, sreq[i].cores );
+		
 
-		if ( create_thread( server_thread, &sreq [i] , sizeof(cpus), &cpus) ) {
+		if ( create_thread( server_thread, &sreq[i] , sizeof(cpus), &cpus, settings->threaded_model) ) {
 			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
 			return -1;
 		}

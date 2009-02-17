@@ -1,14 +1,24 @@
 #include "threads.h"
-#include "common.h" // for struct settings
+#include "common.h"    // for struct settings
 #include "serialise.h" // for send_results
 
 #include <assert.h>
 #include <malloc.h>
 #include <string.h> // for malloc
-#include <stdio.h> // for printf
+#include <stdio.h>  // for printf
+#include <stdlib.h> // for exit
+
+#include <unistd.h>   //for fork
+#include <sys/wait.h> //for waitpid
 
  // Array to handle thread handles
-pthread_t *thread = NULL;
+union thread_ids
+{
+   pthread_t 	tid;
+   pid_t		pid;
+};
+
+union thread_ids *thread;
 
  // Total number of threads
 size_t thread_count = 0;
@@ -48,6 +58,34 @@ void cpu_setup( cpu_set_t *cpu, unsigned int cores ) {
 	}
 }
 
+/* 
+ * Create a process on a specific core
+ */ 
+int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
+	
+	*pid = fork();
+	if( *pid == 0) {
+		*pid = getpid();
+		sched_setaffinity(*pid, cpusetsize, cpuset);
+		printf("Created child process %d (parents pid is %d)\n", *pid, getppid());
+		//Call start_routing
+		(*start_routine)(arg);
+		exit(0);
+	}
+	else if (*pid == -1 )
+		return -1;
+
+/*
+		int rv;
+		printf("Parent process is %d With child %d \n", getpid(), *pid);
+		wait(&rv);
+		printf("Child exited with %d", WEXITSTATUS(rv));
+	}
+*/
+
+	return 0;
+}
+
 /**
 	Create a thread on a specific core(s)
 */
@@ -85,7 +123,7 @@ cleanup:
 
 
 // Creates a new thread and adds it to the thread array
-int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset ) {
+int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset, int threaded_model ) {
 	int ret;
 
 	assert (start_routine != NULL);
@@ -93,7 +131,13 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 	if ( thread_count >= thread_max_count )
 		return -1;
 
-	ret = pthread_create_on( &thread[thread_count], NULL, start_routine, arg , cpusetsize, cpuset);
+	// TODO give threaded_model hash define names, and then use a switch statement
+	if ( threaded_model )
+		ret = pthread_create_on( &thread[thread_count].tid, NULL, start_routine, arg , cpusetsize, cpuset);
+	else if ( threaded_model == 0 )
+		ret = process_create_on( &thread[thread_count].pid, start_routine, arg, cpusetsize, cpuset);
+	else
+		assert ( 0 );
 
 	if ( !ret )
         thread_count++;
@@ -102,11 +146,19 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 }
 
 // Join all these threads
-int thread_join_all() {
+int thread_join_all(int threaded_model) {
 	while (thread_count > 0) {
 		thread_count--;
-		pthread_join( thread[thread_count], NULL );
-	}
+		if(threaded_model) {
+			
+			pthread_join( thread[thread_count].tid, NULL );
+		} else {
+			int status;
+			waitpid(thread[thread_count].pid, &status, 0);
+			if(WIFEXITED(status))
+				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
+		}
+	} 
 	assert ( thread_count == 0 );
 	return 0;
 }
@@ -122,7 +174,13 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 		void * stats_void = NULL;
 
 		thread_count--;
-		pthread_join( thread[thread_count], &stats_void );
+		if( settings->threaded_model ) {
+			pthread_join( thread[thread_count].tid, &stats_void );
+		} else {
+			//TODO: Add a pipe to the send the states across.
+			int status;
+			waitpid( thread[thread_count].pid , &status, 0);
+		}
 
 		stats = (struct stats *) stats_void;
 
@@ -152,7 +210,8 @@ int thread_alloc(size_t count) {
 	assert ( thread == NULL );
 	assert ( thread_count == 0 );
 
-	thread = calloc( count, sizeof(*thread) );
+	thread = calloc(count, sizeof(*thread));
+	
 	if ( !thread )
 		return -1;
 
@@ -163,7 +222,8 @@ int thread_alloc(size_t count) {
 }
 
 void threads_clear() {
-	free( thread );
+	free ( thread );
+
 	thread = NULL;
 	thread_count = 0;
 	thread_max_count = 0;

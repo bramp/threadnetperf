@@ -267,7 +267,7 @@ cleanup:
 	// Make sure we are not running anymore
 	stop_all();
 
-	thread_join_all();
+	thread_join_all(settings->threaded_model);
 	threads_clear();
 
 	cleanup_clients();
