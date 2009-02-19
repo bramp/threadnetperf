@@ -64,6 +64,7 @@ void cpu_setup( cpu_set_t *cpu, unsigned int cores ) {
 int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
 	
 	*pid = fork();
+	thread_count++;
 	if( *pid == 0) {
 		*pid = getpid();
 		sched_setaffinity(*pid, cpusetsize, cpuset);
@@ -72,17 +73,11 @@ int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, siz
 		(*start_routine)(arg);
 		exit(0);
 	}
-	else if (*pid == -1 )
-		return -1;
-
-/*
-		int rv;
-		printf("Parent process is %d With child %d \n", getpid(), *pid);
-		wait(&rv);
-		printf("Child exited with %d", WEXITSTATUS(rv));
+	else if (*pid == -1 ) {
+		printf("Error creating process %d\n", errno);
+		exit(errno);
 	}
-*/
-
+	
 	return 0;
 }
 
@@ -131,17 +126,20 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 	if ( thread_count >= thread_max_count )
 		return -1;
 
-	// TODO give threaded_model hash define names, and then use a switch statement
-	if ( threaded_model )
-		ret = pthread_create_on( &thread[thread_count].tid, NULL, start_routine, arg , cpusetsize, cpuset);
-	else if ( threaded_model == 0 )
-		ret = process_create_on( &thread[thread_count].pid, start_routine, arg, cpusetsize, cpuset);
-	else
-		assert ( 0 );
-
+	switch ( threaded_model ) {
+		case MODEL_THREADED :
+			ret = pthread_create_on( &thread[thread_count].tid, NULL, start_routine, arg , cpusetsize, cpuset);
+			break;
+		case MODEL_PROCESS :
+			ret = process_create_on( &thread[thread_count].pid, start_routine, arg, cpusetsize, cpuset);
+			break;
+		default: 
+			assert( 0 );
+	}
+	
 	if ( !ret )
-        thread_count++;
-
+		thread_count++;
+	
 	return ret;
 }
 
@@ -149,7 +147,7 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 int thread_join_all(int threaded_model) {
 	while (thread_count > 0) {
 		thread_count--;
-		if(threaded_model) {
+		if( threaded_model == MODEL_THREADED ) {
 			
 			pthread_join( thread[thread_count].tid, NULL );
 		} else {
@@ -174,7 +172,7 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 		void * stats_void = NULL;
 
 		thread_count--;
-		if( settings->threaded_model ) {
+		if( settings->threaded_model == MODEL_THREADED ) {
 			pthread_join( thread[thread_count].tid, &stats_void );
 		} else {
 			//TODO: Add a pipe to the send the states across.
@@ -227,4 +225,39 @@ void threads_clear() {
 	thread = NULL;
 	thread_count = 0;
 	thread_max_count = 0;
+}
+
+void threads_signal_parent(int type, int threaded_model) {
+	union sigval v;
+	int pid = 0;
+	
+	v.sival_int = type;
+	
+	if ( threaded_model == MODEL_PROCESS )
+		pid = getppid();
+	else if ( threaded_model == MODEL_THREADED )
+		pid = getpid();
+	else
+		assert ( 1 );
+		
+	printf("Sending signal type %d to %d pid\n", type, pid);
+	sigqueue(pid, SIGUSR1, v);
+	
+}
+
+void threads_signal_all(int type, int threaded_model) {
+	int i=0;
+	union sigval v; 
+	v.sival_int = type;
+	
+	printf("Sending signal type %d to %d threads\n", type, (int)thread_count);
+	if(	threaded_model == MODEL_PROCESS ) {
+		for(;i<thread_count; i++) {
+					
+			printf("I'm telling %d to %d\n", type, thread[i].pid);
+			sigqueue(thread[i].pid, SIGUSR1, v);
+		}
+	} else {
+		sigqueue(getpid(), SIGUSR1, v);
+	}
 }

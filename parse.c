@@ -143,7 +143,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	settings->confidence_int = 0.0;
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
-	settings->threaded_model = 1;
+	settings->threaded_model = MODEL_THREADED;
 
 	settings->type = SOCK_STREAM;
 	settings->protocol = IPPROTO_TCP;
@@ -297,11 +297,11 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 				}
 				
 				if(strcmp(optarg, "p")==0)
-					settings->threaded_model = 0;
+					settings->threaded_model = MODEL_PROCESS;
 				else if( strcmp(optarg, "t")==0)
-					settings->threaded_model = 1;
+					settings->threaded_model = MODEL_THREADED;
 				else {
-					fprintf(stderr, "Invalid threading model set (%s)\n", optarg );
+					fprintf(stderr, "Invalid threading model set to (%s)\n", optarg );
 					return -1;
 				}
 

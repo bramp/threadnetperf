@@ -1,11 +1,7 @@
 #include "common.h"
 
-extern volatile unsigned int server_listen_unready;
-
 // Struct to pass to a client thread
 struct client_request {
-
-	volatile int bRunning; // Flag to indicate if the client should be running
 
 	unsigned int cores; // Which cores this client is running on
 

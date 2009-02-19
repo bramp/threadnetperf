@@ -95,8 +95,7 @@ int connect_connections(const struct settings *settings,
 				goto cleanup;
 			}
 
-			if (connect(s, (const struct sockaddr *)&details->addr,
-					(int)details->addr_len ) == SOCKET_ERROR) {
+			if (connect(s, (const struct sockaddr *)&details->addr, (int)details->addr_len ) == SOCKET_ERROR) {
 				fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
 				goto cleanup;
 			}
@@ -174,7 +173,8 @@ void* client_thread(void *data) {
 	}
 
 	if (clients == 0) {
-		fprintf(stderr, "%s:%d Must have more than zero clients!\n", __FILE__, __LINE__ );goto cleanup;
+		fprintf(stderr, "%s:%d Must have more than zero clients!\n", __FILE__, __LINE__ );
+		goto cleanup;
 	}
 
 #ifndef USE_EPOLL
@@ -264,17 +264,13 @@ void* client_thread(void *data) {
 		assert ( FD_ISSET(s, &writeFD ) );
 #endif
 	}
-
-	pthread_mutex_lock( &go_mutex );
-	unready_threads--;
-
-	// Signal we are ready
-	pthread_mutex_lock( &ready_mutex );
-	pthread_cond_signal( &ready_cond );
-	pthread_mutex_unlock( &ready_mutex );
-
+	
+	 // Signal we are ready
+	threads_signal_parent(SIGNAL_READY_TO_GO, settings.threaded_model);
+	
 	// Wait for the go
-	while ( req->bRunning && !bGo ) {
+	pthread_mutex_lock( &go_mutex );
+	while ( bRunning && !bGo ) {
 		struct timespec abstime;
 
 		get_timespec_now(&abstime);
@@ -287,7 +283,7 @@ void* client_thread(void *data) {
 	next_send_time = get_microseconds();
 
 	// Now start the main loop
-	while ( req->bRunning ) {
+	while ( bRunning ) {
 
 #ifdef USE_EPOLL
 		int i;

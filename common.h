@@ -125,4 +125,12 @@ void free_2D(void **data, size_t x);
 // How long the server waits for a connection (in milliseconds)
 #define TRANSFER_TIMEOUT 1000
 
+#define SIGNAL_READY_TO_ACCEPT		1
+#define SIGNAL_READY_TO_GO			2
+#define SIGNAL_GO					3
+#define SIGNAL_STOP					4
+
+#define MODEL_THREADED 	0
+#define MODEL_PROCESS 	1
+
 #endif

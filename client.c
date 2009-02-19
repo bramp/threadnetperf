@@ -30,7 +30,7 @@ int prepare_clients(const struct settings * settings, void *data) {
 		return -1;
 	}
 
-	// Loop through clientserver looking for each server we need to create
+	// Loop through clientserver looking for each client we need to create
 	for ( i = 0; i < settings->tests; i++) {
 		const struct test * test = &settings->test[i];
 		struct client_request *c;
@@ -38,18 +38,16 @@ int prepare_clients(const struct settings * settings, void *data) {
 
 		// find an exisiting sreq with this core combo
 		for ( c = creq; c < &creq[creq_size]; c++) {
-			if ( c->bRunning == 0 || c->cores == test->clientcores )
+			if ( c->settings == NULL || c->cores == test->clientcores )
 				break;
 		}
 		assert ( c < &creq[creq_size] );
 
 		// Check if we haven't set up this client thread yet
-		if ( c->bRunning == 0 ) {
-			c->bRunning = 1;
+		if ( c->settings == NULL ) {
 			c->settings = settings;
 			c->cores = test->clientcores;
-
-			unready_threads++;
+			
 			clientthreads++;
 		}
 
@@ -69,10 +67,10 @@ int prepare_clients(const struct settings * settings, void *data) {
 		details->addr_len = test->addr_len;
 	}
 
-	// Double check we made the correct number of servers
-	assert ( creq[creq_size - 1].bRunning == 1 );
+	// Double check we made the correct number of clients
+	assert ( creq[creq_size - 1].settings != NULL );
 
-	return 0;
+	return clientthreads;
 }
 
 int create_clients(const struct settings *settings, void *data) {
@@ -84,10 +82,11 @@ int create_clients(const struct settings *settings, void *data) {
 	for (i = 0; i < creq_size; i++) {
 		cpu_set_t cpus;
 
-		assert ( creq[i].bRunning );
+		assert ( creq[i].settings != NULL );
 
 		cpu_setup( &cpus, creq[i].cores );
 
+		//For now let's keep the client using the threaded model 
 		if ( create_thread( client_thread, &creq [i] , sizeof(cpus), &cpus, settings->threaded_model) ) {
 			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
 			return -1;
@@ -98,15 +97,8 @@ int create_clients(const struct settings *settings, void *data) {
 }
 
 void stop_all_clients() {
-	if ( creq ) {
-		unsigned int i = 0;
-
-		assert ( creq_size != 0 );
-
-		for (; i < creq_size; i++) {
-			creq[i].bRunning = 0;
-		}
-	}
+	//TODO Change MODEL_PROCESS to variable
+	threads_signal_all(SIGNAL_STOP, MODEL_PROCESS );
 }
 
 void cleanup_clients() {

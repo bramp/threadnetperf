@@ -306,10 +306,6 @@ int remote_send_results (const struct settings *settings, const struct stats *st
 	return send_results(s, stats);
 }
 
-#define SIGNAL_READY 1
-#define SIGNAL_GO 2
-#define SIGNAL_STOP 3
-
 int signal_remote( SOCKET s, unsigned char code ) {
 	assert ( s != INVALID_SOCKET );
 	return send(s, &code, 1, 0) != 1;
@@ -331,7 +327,7 @@ int signal_ready( const struct settings *settings, void *data ) {
 	s = ((struct remote_data*)data)->s;
 	assert ( s != INVALID_SOCKET );
 
-	return signal_remote( s, SIGNAL_READY );
+	return signal_remote( s, SIGNAL_READY_TO_GO );
 }
 
 int signal_go( const struct settings *settings, void *data ) {
@@ -349,7 +345,7 @@ int wait_ready( const struct settings *settings, void *data ) {
 	s = ((struct remote_data*)data)->s;
 	assert ( s != INVALID_SOCKET );
 
-	return wait_remote( s, SIGNAL_READY );
+	return wait_remote( s, SIGNAL_READY_TO_GO );
 }
 
 int wait_go ( const struct settings *settings, void *data ) {

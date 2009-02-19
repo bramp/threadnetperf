@@ -20,22 +20,7 @@
 
 #define roundup(x, y) ((((x) + ((y) - 1)) / (y)) * (y))
 
-
-pthread_cond_t ready_cond; // Signals control thread when a worker thread is ready
-pthread_mutex_t ready_mutex;
-
-pthread_cond_t go_cond; // Signal all threads when they are ready to start
-pthread_mutex_t go_mutex;
-
 const unsigned int max_cores; // The number of CPU cores this machine has
-unsigned int unready_threads; // Count of how many threads are not ready
-
-volatile int bRunning; // Flag to indidcate if we are still running
-volatile int bGo; // Flag to indidcate if we can start the test
-
-
-// Count of how many threads are not listening
-volatile unsigned int server_listen_unready = 0;
 
 /**
 	Wait for and accept N connections
@@ -62,9 +47,10 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	assert ( req->n > 0 );
 
 	FD_ZERO(&readFD);
+	
 
 	// Wait for all connections
-	while ( req->bRunning && n > 0 ) {
+	while ( bRunning && n > 0 ) {
 		struct timeval waittime = {CONTROL_TIMEOUT / 1000, 0};
 		int ret;
 		struct sockaddr_storage addr;
@@ -73,22 +59,25 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		int send_socket_size, recv_socket_size;
 
 		FD_SET( listen, &readFD);
-
+		
 		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
+
 		if ( ret <= 0 ) {
 			if (ERRNO != 0)
 				fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
-
+		
 		// Did the listen socket fire?
 		if ( ! FD_ISSET(listen, &readFD) ) {
 			fprintf(stderr, "%s:%d FD_ISSET() has an invalid socket firing\n", __FILE__, __LINE__ );
 			return 1;
 		}
 
+		
 		// Accept a new client socket
 		s = accept( listen, (struct sockaddr *)&addr, &addr_len );
+
 
 		if ( s == INVALID_SOCKET ) {
 			fprintf(stderr, "%s:%d accept() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -308,9 +297,7 @@ void *server_thread(void *data) {
 	}
 
 	// We are now listening and waiting
-	pthread_mutex_lock( &go_mutex );
-	server_listen_unready--;
-	pthread_mutex_unlock( &go_mutex );
+	threads_signal_parent ( SIGNAL_READY_TO_ACCEPT, settings.threaded_model );
 
 	// If this is a STREAM then accept each connection
 	if ( settings.type == SOCK_STREAM ) {
@@ -423,17 +410,12 @@ void *server_thread(void *data) {
 
 	//At this point we've populated the fd_set we need for either select() or epoll()
 
+	 // Signal we are ready
+	threads_signal_parent( SIGNAL_READY_TO_GO, settings.threaded_model );
+
 	// Wait for the go
 	pthread_mutex_lock( &go_mutex );
-	unready_threads--;
-
-	 // Signal we are ready
-	pthread_mutex_lock( &ready_mutex );
-	pthread_cond_signal( &ready_cond );
-	pthread_mutex_unlock( &ready_mutex );
-
-	// Wait for the go
-	while ( req->bRunning && !bGo ) {
+	while ( bRunning && !bGo ) {
 		struct timespec abstime;
 
 		get_timespec_now(&abstime);
@@ -446,7 +428,7 @@ void *server_thread(void *data) {
 	// Start timing
 	start_time = get_microseconds();
 
-	while ( req->bRunning ) {
+	while ( bRunning ) {
 		int ret, len;
 
 #ifdef USE_EPOLL
@@ -465,7 +447,7 @@ void *server_thread(void *data) {
 		struct timeval waittime = {TRANSFER_TIMEOUT / 1000, 0}; // 1 second
 		ret = select( nfds, &readFD, NULL, NULL, &waittime);
 
-		if ( ret == 0 && !req->bRunning )
+		if ( ret == 0 && !bRunning )
 			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 
 		// Figure out which sockets have fired

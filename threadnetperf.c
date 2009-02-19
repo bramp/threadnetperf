@@ -44,15 +44,16 @@ pthread_mutex_t ready_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t go_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-
 // Flag to indidcate if we are still running
-volatile int bRunning = 1;
+int bRunning = 1;
 
 // Flag to indidcate if we can start the test
-volatile int bGo = 0;
+int bGo = 0;
 
 // Count of how many threads are not ready
 unsigned int unready_threads = 0;
+
+int server_listen_unready = 0;
 
 int null_func(const struct settings *settings, void * data) { return 0; };
 int null_func2(struct settings *settings, void ** data) { return 0; };
@@ -64,6 +65,7 @@ struct run_functions {
 	int (*prepare_servers)(const struct settings *, void *);
 	int (*prepare_clients)(const struct settings *, void *);
 
+	// returns the number of servers created or negative on error.
 	int (*create_servers)(const struct settings *, void *);
 	int (*create_clients)(const struct settings *, void *);
 
@@ -163,34 +165,85 @@ void pause_for_duration(const struct settings *settings) {
 	printf("\n");
 }
 
+void signal_handler(int sig, siginfo_t *siginfo, void* context) {
+	union sigval param = siginfo->si_value;
+
+	printf("pid %d Received %d\n", getpid(), param.sival_int);
+	
+	switch(param.sival_int) {
+		//Received by controller
+		case SIGNAL_READY_TO_ACCEPT :
+			
+			server_listen_unready--;
+			printf("(%d) Number of unready servers %d\n", getpid(), server_listen_unready);
+			break;
+		//Received by controller
+		case SIGNAL_READY_TO_GO :
+			unready_threads--;
+			pthread_mutex_lock  ( &ready_mutex );
+			pthread_cond_signal ( &ready_cond  );
+			pthread_mutex_unlock( &ready_mutex );
+			break;
+		
+		//Received by server threads (start_threads) 
+		case SIGNAL_GO :
+			pthread_mutex_lock( &go_mutex );
+			bGo = 1;
+			pthread_cond_broadcast( &go_cond );
+			pthread_mutex_unlock( &go_mutex );
+			break;
+			
+		//Received by server threads
+		case SIGNAL_STOP:
+			bRunning = 0;
+			break;
+	}
+
+}
+
+/* 
+ * Setup our signal handler to point to signal_handler
+ * - Make sure we use the right signal handler
+ * @param - signum is the signal number we want to listen for
+ */
+int setup_signals(int signum)	{
+   struct sigaction act;
+   act.sa_sigaction     = signal_handler;
+   act.sa_flags         = SA_SIGINFO;
+   return sigaction(signum, &act, NULL);	
+}
+
 // Wait until every thread signals a ready
 void wait_for_threads() {
-	struct timespec waittime = {0, 100000000}; // 100 milliseconds
+	//struct timespec waittime = {0, 100000000}; // 100 milliseconds
 
 	pthread_mutex_lock( &go_mutex );
 	while ( bRunning && unready_threads > 0 ) {
-		pthread_mutex_unlock( &go_mutex );
+//		pthread_mutex_unlock( &go_mutex );
 
-		pthread_mutex_lock( &ready_mutex );
-		pthread_cond_timedwait( &ready_cond, &ready_mutex, &waittime);
-		pthread_mutex_unlock( &ready_mutex );
+//		pthread_mutex_lock( &ready_mutex );
+//		pthread_cond_timedwait( &ready_cond, &ready_mutex, &waittime);
+//		pthread_mutex_unlock( &ready_mutex );
 
-		pthread_mutex_lock( &go_mutex );
+//		pthread_mutex_lock( &go_mutex );
 	}
 	pthread_mutex_unlock( &go_mutex );
 }
 
 // Annonce to everyone to start
-void start_threads() {
-	pthread_mutex_lock( &go_mutex );
-	bGo = 1;
-	pthread_cond_broadcast( &go_cond );
-	pthread_mutex_unlock( &go_mutex );
+void start_threads(int threaded_model) {	
+	
+	//What is this going to signal?
+	threads_signal_all(SIGNAL_GO, threaded_model);	
+	//pthread_cond_broadcast( &go_cond );
+	//pthread_mutex_unlock( &go_mutex );
 }
 
 void run( const struct run_functions * funcs, struct settings *settings, struct stats *total_stats ) {
 
 	void *data = NULL;
+	int	server_threads = 0;
+	int	client_threads = 0;
 
 	assert ( funcs != NULL );
 	assert ( settings != NULL );
@@ -198,26 +251,29 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	bGo = 0;
 	bRunning = 1;
-	unready_threads = 0; // Number of threads not ready
+
 	threads_clear();
 
 	if ( funcs->setup ( settings, &data ) ) {
 		fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-
+	
 	// Setup all the data for each server and client
-	if ( funcs->prepare_servers(settings, data) ) {
+	server_threads = funcs->prepare_servers(settings, data);
+	if ( server_threads < 0  ) {
 		fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
-	if ( funcs->prepare_clients(settings, data) ) {
+	client_threads = funcs->prepare_clients(settings, data);
+	if ( client_threads < 0 ) {
 		fprintf(stderr, "%s:%d prepare_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
-	assert ( unready_threads > 0 );
+	unready_threads	= server_threads + client_threads;
+	
 
 	// A list of threads
 	if ( thread_alloc(unready_threads) ) {
@@ -226,11 +282,20 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	}
 
 	// Create each server/client thread
-	if ( funcs->create_servers(settings, data) ) {
+	server_listen_unready += funcs->create_servers(settings, data);
+	
+	if ( server_listen_unready < 0 ) {
 		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
+	// TODO make this not a spin lock
+	// Wait until all the servers are ready to accept connections
+	while ( bRunning && server_listen_unready > 0 ) {
+		usleep( 1000 );
+	}
+	printf("Ok i've got all the servers ready to accept the clients now\n");
+	
 	if ( funcs->create_clients(settings, data) ) {
 		fprintf(stderr, "%s:%d create_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -239,13 +304,14 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	// Wait for our threads to be created
 	wait_for_threads();
 
+	printf("Finished creating all the threads\n");
 	if ( funcs->wait_for_go(settings, data) ) {
 		fprintf(stderr, "%s:%d wait_for_go() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
 	// Wait and then signal a go!
-	start_threads();
+	start_threads(settings->threaded_model);
 
 	// Pauses for the duration
 	pause_for_duration( settings );
@@ -283,7 +349,7 @@ void run_deamon(const struct settings *settings) {
 	start_daemon(settings);
 
 	// Now loop accepting incoming tests
-	while ( 1 ) {
+	while ( 1 ) {	
 		struct settings remote_settings;
 		struct stats total_stats;
 
@@ -325,6 +391,11 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	}
 
+	if ( setup_signals(SIGUSR1)) {
+		fprintf(stderr, "%s:%d setup_signals() error %d\n", __FILE__, __LINE__ , errno);
+		goto cleanup;
+	}
+	
 	// If we are daemon mode start that
 	if (settings.deamon) {
 		run_deamon(&settings);
@@ -378,10 +449,10 @@ cleanup:
 
 	free( settings.test );
 
-	pthread_cond_destroy( & go_cond );
+	//pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );
 
-	pthread_cond_destroy( & ready_cond );
+	//pthread_cond_destroy( & ready_cond );
 	pthread_mutex_destroy( & ready_mutex );
 
 	pthread_mutex_destroy( & printf_mutex );

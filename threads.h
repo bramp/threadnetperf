@@ -28,6 +28,8 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 // Allocate space for this many threads
 int thread_alloc(size_t count);
 
+void threads_signal_all(int type, int threaded_model);
+void threads_signal_parent(int threaded_model, int pid);
 // Clear all allocated space for the threads
 void threads_clear();
 

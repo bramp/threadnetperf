@@ -147,8 +147,8 @@ int read_settings( SOCKET s, struct settings * settings ) {
 			return -1;
 	}
 
-	settings->servercores  = count_server_cores( settings->test, settings->tests) ;
-	settings->clientcores  = count_client_cores( settings->test, settings->tests) ;
+	settings->servercores  = count_server_cores( settings->test, settings->tests);
+	settings->clientcores  = count_client_cores( settings->test, settings->tests);
 
 	return 0;
 }

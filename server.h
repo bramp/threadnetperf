@@ -1,10 +1,6 @@
 #include "common.h"
 
-extern volatile unsigned int server_listen_unready;
-
 struct server_request {
-
-	volatile int bRunning; // Flag to indicate if the server should be running
 
 	unsigned short port; // The port the server is listening on
 	unsigned int n; // The number of connections to accept
