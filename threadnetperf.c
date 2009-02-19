@@ -122,11 +122,11 @@ struct run_functions remote_client_funcs = {
 };
 
 // Signals all threads to stop
-void stop_all () {
+void stop_all (int threaded_model) {
 	bRunning = 0;
 
-	stop_all_clients();
-	stop_all_servers();
+	stop_all_clients(threaded_model);
+	stop_all_servers(threaded_model);
 }
 
 /**
@@ -316,7 +316,8 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	// Pauses for the duration
 	pause_for_duration( settings );
 
-	stop_all();
+	stop_all(settings->threaded_model);
+	//threads_signal_parent(SIGNAL_STOP, settings->threaded_model);
 
 	if ( funcs->print_headers(settings, data) ) {
 		fprintf(stderr, "%s:%d print_headers() error\n", __FILE__, __LINE__ );
@@ -331,7 +332,8 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 cleanup:
 
 	// Make sure we are not running anymore
-	stop_all();
+	stop_all(settings->threaded_model);
+	//threads_signal_parent(SIGNAL_STOP, settings->threaded_model);
 
 	thread_join_all(settings->threaded_model);
 	threads_clear();

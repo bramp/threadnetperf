@@ -584,8 +584,10 @@ end_loop:
 	return_stats = 1;
 
 cleanup:
+	
 	// Force a stop
-	stop_all();
+	//stop_all(settings.threaded_model);
+
 
 	// Cleanup
 	free( buf );

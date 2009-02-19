@@ -425,7 +425,7 @@ void* client_thread(void *data) {
 cleanup:
 
 	// Force a stop
-	stop_all();
+	//stop_all(settings.threaded_model);
 
 	// Cleanup
 	free( buffer );

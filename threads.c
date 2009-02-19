@@ -253,11 +253,11 @@ void threads_signal_all(int type, int threaded_model) {
 	printf("Sending signal type %d to %d threads\n", type, (int)thread_count);
 	if(	threaded_model == MODEL_PROCESS ) {
 		for(;i<thread_count; i++) {
-					
 			printf("I'm telling %d to %d\n", type, thread[i].pid);
 			sigqueue(thread[i].pid, SIGUSR1, v);
 		}
 	} else {
+		printf("I'm telling %d to %d\n", type, getpid());
 		sigqueue(getpid(), SIGUSR1, v);
 	}
 }

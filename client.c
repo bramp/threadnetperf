@@ -96,9 +96,9 @@ int create_clients(const struct settings *settings, void *data) {
 	return 0;
 }
 
-void stop_all_clients() {
+void stop_all_clients(int threaded_model) {
 	//TODO Change MODEL_PROCESS to variable
-	threads_signal_all(SIGNAL_STOP, MODEL_PROCESS );
+	threads_signal_all(SIGNAL_STOP, threaded_model);
 }
 
 void cleanup_clients() {

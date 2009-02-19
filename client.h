@@ -27,5 +27,5 @@ void *client_thread(void *data);
 int prepare_clients(const struct settings * settings, void * data);
 int create_clients(const struct settings * settings, void * data);
 
-void stop_all_clients();
+void stop_all_clients(int threaded_model);
 void cleanup_clients();

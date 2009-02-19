@@ -90,9 +90,9 @@ int create_servers(const struct settings *settings, void *data) {
 	return sreq_size;
 }
 
-void stop_all_servers() {
+void stop_all_servers(int threaded_model) {
 	//TODO Change MODEL_PROCESS to variable
-	threads_signal_all(SIGNAL_STOP, MODEL_PROCESS );
+	threads_signal_all(SIGNAL_STOP, threaded_model);
 }
 
 void cleanup_servers() {

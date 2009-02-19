@@ -18,6 +18,6 @@ void *server_thread(void *data);
 int prepare_servers(const struct settings * settings, void * data);
 int create_servers(const struct settings * settings, void * data);
 
-void stop_all_servers();
+void stop_all_servers(int threaded_model);
 void cleanup_servers();
 
