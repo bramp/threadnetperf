@@ -23,7 +23,7 @@ int prepare_servers(const struct settings * settings, void *data) {
 	assert ( sreq == NULL );
 	assert ( sreq_size == 0 );
 
-	printf("Need to create %d servers\n", settings->servercores);
+	printf("(%d) Needs to create %d servers\n", getpid(), settings->servercores);
 	// Malloc one space for each core combination
 	sreq_size = settings->servercores;
 
@@ -54,6 +54,7 @@ int prepare_servers(const struct settings * settings, void *data) {
 			// TODO change this from a simple port to a full sockaddr struct
 			s->port = ntohs( ((struct sockaddr_in *)&test->addr)->sin_port );
 			s->n = 0;
+			
 			serverthreads++;
 		}
 
@@ -82,17 +83,12 @@ int create_servers(const struct settings *settings, void *data) {
 		cpu_setup( &cpus, sreq[i].cores );
 
 		if ( create_thread( server_thread, &sreq[i] , sizeof(cpus), &cpus, settings->threaded_model) ) {
-			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
+			fprintf(stderr, "%s:%d create_thread() error %d %s\n", __FILE__, __LINE__ , ERRNO, strerror(ERRNO));
 			return -1;
 		}
 	}
-	printf("(%d) Created %d servers\n", getpid(), sreq_size);
-	return sreq_size;
-}
-
-void stop_all_servers(int threaded_model) {
-	//TODO Change MODEL_PROCESS to variable
-	threads_signal_all(SIGNAL_STOP, threaded_model);
+	printf("(%d) Created %d servers\n", getpid(), (int)sreq_size);
+	return 0;
 }
 
 void cleanup_servers() {

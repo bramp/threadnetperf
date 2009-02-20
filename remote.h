@@ -3,6 +3,11 @@
 // Control port for the deamon, make this a option
 #define CONTROL_PORT 0xABCD
 
+struct remote_data {
+	SOCKET control_socket;  // Connection to client issuing controls
+	SOCKET stats_socket;    // socket used to receive stats from children
+};
+
 // Starts a control daemon
 int start_daemon(const struct settings * settings);
 

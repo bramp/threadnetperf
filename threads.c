@@ -1,6 +1,7 @@
 #include "threads.h"
 #include "common.h"    // for struct settings
 #include "serialise.h" // for send_results
+#include "remote.h"
 
 #include <assert.h>
 #include <malloc.h>
@@ -64,11 +65,10 @@ void cpu_setup( cpu_set_t *cpu, unsigned int cores ) {
 int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
 	
 	*pid = fork();
-	thread_count++;
 	if( *pid == 0) {
 		*pid = getpid();
 		sched_setaffinity(*pid, cpusetsize, cpuset);
-		printf("Created child process %d (parents pid is %d)\n", *pid, getppid());
+		printf("(%d) Created child process %d \n", getppid(), *pid);
 		//Call start_routing
 		(*start_routine)(arg);
 		exit(0);
@@ -76,7 +76,7 @@ int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, siz
 	else if (*pid == -1 ) {
 		printf("Error creating process %d\n", errno);
 		exit(errno);
-	}
+	} 
 	
 	return 0;
 }
@@ -118,24 +118,27 @@ cleanup:
 
 
 // Creates a new thread and adds it to the thread array
-int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset, int threaded_model ) {
+int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset, unsigned int threaded_model ) {
 	int ret;
 
 	assert (start_routine != NULL);
 
-	if ( thread_count >= thread_max_count )
+	if ( thread_count >= thread_max_count ) {
+		printf("(%d) Trying to create %d threads when the max is %d\n", getpid(), thread_count, thread_max_count);
 		return -1;
+	}
 
 	switch ( threaded_model ) {
 		case MODEL_THREADED :
 			ret = pthread_create_on( &thread[thread_count].tid, NULL, start_routine, arg , cpusetsize, cpuset);
 			break;
 		case MODEL_PROCESS :
+			//Process create_on increases the thread_count itself.
 			ret = process_create_on( &thread[thread_count].pid, start_routine, arg, cpusetsize, cpuset);
 			break;
 		default: 
 			assert( 0 );
-	}
+	}	
 	
 	if ( !ret )
 		thread_count++;
@@ -143,7 +146,90 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 	return ret;
 }
 
+void send_stats_from_thread(struct stats stats) {
+	unsigned int sock_len;
+	struct sockaddr_un	ipc_socket;
+	int s;
+	
+	printf("(%d) is attempting to pipe back the results via a socket\n", getpid());
+	
+	// Create the socket to send the details back on
+	s = socket( AF_UNIX, SOCK_DGRAM, 0);
+
+	if ( s == INVALID_SOCKET ) {
+		fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		return;
+	}
+	
+	if ( set_socket_timeout(s, IPC_TIMEOUT) ) {
+		fprintf(stderr, "%s:%d set_socket_timeout() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		goto cleanup;
+	}
+
+	//TODO: change to strncpy
+	//TODO: Make random file name (tmpfile())?
+	ipc_socket.sun_family = AF_UNIX;
+	strcpy(ipc_socket.sun_path, IPC_SOCK_NAME);
+	sock_len = strlen(ipc_socket.sun_path) + sizeof(ipc_socket.sun_family);
+
+	// Bind the IPC SOCKET
+	if ( connect( s,(struct sockaddr *) &ipc_socket, sock_len) == SOCKET_ERROR) {
+		fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
+		goto cleanup;
+	}
+
+	if ( send_results(s, &stats) ) {
+		fprintf(stderr, "%s:%d send_results() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		goto cleanup;
+	}
+
+	printf("(%d) has sent stats\n", getpid());
+	
+cleanup:
+	close(s);
+}
+
+SOCKET create_stats_socket() {
+	struct sockaddr_un	ipc_socket;
+	int sock_len;
+	// Create the socket to receive the stats data
+	SOCKET s = socket( AF_UNIX, SOCK_DGRAM, 0);
+
+	if ( s == INVALID_SOCKET ) {
+		fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		return SOCKET_ERROR;
+	}
+	
+	if ( set_socket_timeout(s, IPC_TIMEOUT) ) {
+		fprintf(stderr, "%s:%d set_socket_timeout() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		goto cleanup;
+	}
+	
+	ipc_socket.sun_family = AF_UNIX;
+	
+	strcpy(ipc_socket.sun_path, IPC_SOCK_NAME);
+	
+	unlink(IPC_SOCK_NAME);
+	sock_len = strlen(ipc_socket.sun_path) + sizeof(ipc_socket.sun_family);
+	
+	// Bind the IPC SOCKET
+	if ( bind( s, &ipc_socket, sock_len) == SOCKET_ERROR) {
+		fprintf(stderr, "%s:%d bind() error (%d) %s from pid (%d)\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO), getpid() );
+		goto cleanup;
+	}
+
+	printf("(%d) Created a stats socket %d\n", getpid(), s);
+
+	return s;
+	
+cleanup:
+	unlink(IPC_SOCK_NAME);
+	close(s);
+	return SOCKET_ERROR;
+}
+
 // Join all these threads
+/*
 int thread_join_all(int threaded_model) {
 	while (thread_count > 0) {
 		thread_count--;
@@ -159,42 +245,40 @@ int thread_join_all(int threaded_model) {
 	} 
 	assert ( thread_count == 0 );
 	return 0;
-}
+}*/
 
 int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void *), void *data) {
 	unsigned int i = 0;
 
 	assert( settings != NULL );
 	assert( total_stats != NULL );
+	
+	printf("(%d) collecting %d results\n", getpid(), thread_count);
 
 	while (thread_count > 0) {
-		struct stats *stats = NULL;
-		void * stats_void = NULL;
+		struct stats stats;
+		struct remote_data* remote_data = (struct remote_data*) data; 
 
+		printf("(%d) has Thread count %d\n", getpid(), thread_count);
 		thread_count--;
-		if( settings->threaded_model == MODEL_THREADED ) {
-			pthread_join( thread[thread_count].tid, &stats_void );
-		} else {
-			//TODO: Add a pipe to the send the states across.
-			int status;
-			waitpid( thread[thread_count].pid , &status, 0);
+		
+		if ( read_results(remote_data->stats_socket, &stats) != 0 ) {
+			fprintf(stderr, "%s:%d read_results() error\n", __FILE__, __LINE__ );
+			return -1;
 		}
 
-		stats = (struct stats *) stats_void;
-
-		if ( stats != NULL ) {
-			if ( print_results(settings, stats, data) ) {
-				fprintf(stderr, "%s:%d print_results() error\n", __FILE__, __LINE__ );
-				return -1;
-			}
-
-			// Now add the values to the total
-			stats_add( total_stats, stats );
-
-			i++;
+		if ( print_results(settings, &stats, data) ) {
+			fprintf(stderr, "%s:%d print_results() error\n", __FILE__, __LINE__ );
+			return -1;
 		}
+
+		// Now add the values to the total
+		stats_add( total_stats, &stats );
+
+		i++;
+
 	}
-
+	
 	// Divide the duration by the # of CPUs used
 	if ( i > 1 )
 		total_stats->duration /= i;
@@ -209,7 +293,7 @@ int thread_alloc(size_t count) {
 	assert ( thread_count == 0 );
 
 	thread = calloc(count, sizeof(*thread));
-	
+
 	if ( !thread )
 		return -1;
 
@@ -227,37 +311,36 @@ void threads_clear() {
 	thread_max_count = 0;
 }
 
-void threads_signal_parent(int type, int threaded_model) {
+void threads_signal(pid_t pid, int type) {
 	union sigval v;
-	int pid = 0;
-	
+
+	memset(&v, 0, sizeof(v));
 	v.sival_int = type;
-	
-	if ( threaded_model == MODEL_PROCESS )
-		pid = getppid();
-	else if ( threaded_model == MODEL_THREADED )
-		pid = getpid();
-	else
-		assert ( 1 );
-		
-	printf("Sending signal type %d to %d pid\n", type, pid);
-	sigqueue(pid, SIGUSR1, v);
-	
+
+	printf("(%d) Sending signal type %d to (%d) pid\n", getpid(), type, pid);
+
+	if ( sigqueue(pid, SIGRTMIN, v) )
+		printf("(%d) Error %d sending signal %d\n", getpid(), ERRNO, type);	
 }
 
-void threads_signal_all(int type, int threaded_model) {
-	int i=0;
-	union sigval v; 
-	v.sival_int = type;
-	
-	printf("Sending signal type %d to %d threads\n", type, (int)thread_count);
+void threads_signal_parent(int type, int threaded_model) {	
+	if ( threaded_model == MODEL_PROCESS )
+		threads_signal(getppid(), type);
+	else if ( threaded_model == MODEL_THREADED )
+		threads_signal(getpid(), type);
+	else
+		assert ( 0 );
+}
+
+void threads_signal_all(int type, int threaded_model) {	
 	if(	threaded_model == MODEL_PROCESS ) {
-		for(;i<thread_count; i++) {
-			printf("I'm telling %d to %d\n", type, thread[i].pid);
-			sigqueue(thread[i].pid, SIGUSR1, v);
+		int i;
+		for(i=0; i<thread_count; i++) {
+			threads_signal(thread[i].pid, type);
 		}
-	} else {
-		printf("I'm telling %d to %d\n", type, getpid());
-		sigqueue(getpid(), SIGUSR1, v);
-	}
+	} else if ( threaded_model == MODEL_THREADED ) {
+		threads_signal(getpid(), type);
+	} else
+		assert ( 0 );
+
 }

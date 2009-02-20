@@ -181,9 +181,6 @@ cleanup:
 	return INVALID_SOCKET;
 }
 
-struct remote_data {
-	SOCKET s;
-};
 
 int remote_setup_data(void** data, SOCKET s) {
 
@@ -201,7 +198,14 @@ int remote_setup_data(void** data, SOCKET s) {
 		return -1;
 	}
 
-	remote_data->s = s;
+	remote_data->control_socket = s;
+	remote_data->stats_socket = create_stats_socket();
+	
+	if( remote_data->stats_socket == SOCKET_ERROR ) {
+		fprintf(stderr, "%s:%d create_stats_socket() error\n", __FILE__, __LINE__ );
+		return -1;
+	}
+	
 	return 0;
 }
 
@@ -251,7 +255,7 @@ int remote_cleanup(const struct settings *settings, void* data) {
 	assert ( settings != NULL );
 
 	if (data) {
-		SOCKET s = ((struct remote_data*)data)->s;
+		SOCKET s = ((struct remote_data*)data)->control_socket;
 
 		if ( s != INVALID_SOCKET ) {
 			// Gracefully shut down to make sure any remaining stats get sent
@@ -276,7 +280,9 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 	// Currently the duration might get screwed up if not zero
 	assert ( total_stats->duration == 0 );
 
-	s = ((struct remote_data*)data)->s;
+	printf("(%d) Remote collecting of results\n", getpid());
+	
+	s = ((struct remote_data*)data)->control_socket;
 	assert ( s != INVALID_SOCKET );
 
 	for ( ; core < settings->servercores; core++ ) {
@@ -284,6 +290,9 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 
 		if ( read_results( s, &stats ) ) {
 			fprintf(stderr, "%s:%d read_results() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			//MF: Is this wrong?
+			close(s);
+			
 			return -1;
 		}
 
@@ -298,7 +307,7 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 }
 
 int remote_send_results (const struct settings *settings, const struct stats *stats, void * data) {
-	SOCKET s = ((struct remote_data*)data)->s;
+	SOCKET s = ((struct remote_data*)data)->control_socket;
 
 	assert ( data != NULL );
 	assert ( s != INVALID_SOCKET );
@@ -324,7 +333,7 @@ int wait_remote( SOCKET s, unsigned char code ) {
 int signal_ready( const struct settings *settings, void *data ) {
 	SOCKET s;
 	assert ( data != NULL );
-	s = ((struct remote_data*)data)->s;
+	s = ((struct remote_data*)data)->control_socket;
 	assert ( s != INVALID_SOCKET );
 
 	return signal_remote( s, SIGNAL_READY_TO_GO );
@@ -333,7 +342,7 @@ int signal_ready( const struct settings *settings, void *data ) {
 int signal_go( const struct settings *settings, void *data ) {
 	SOCKET s;
 	assert ( data != NULL );
-	s = ((struct remote_data*)data)->s;
+	s = ((struct remote_data*)data)->control_socket;
 	assert ( s != INVALID_SOCKET );
 
 	return signal_remote( s, SIGNAL_GO );
@@ -342,7 +351,7 @@ int signal_go( const struct settings *settings, void *data ) {
 int wait_ready( const struct settings *settings, void *data ) {
 	SOCKET s;
 	assert ( data != NULL );
-	s = ((struct remote_data*)data)->s;
+	s = ((struct remote_data*)data)->control_socket;
 	assert ( s != INVALID_SOCKET );
 
 	return wait_remote( s, SIGNAL_READY_TO_GO );
@@ -351,7 +360,7 @@ int wait_ready( const struct settings *settings, void *data ) {
 int wait_go ( const struct settings *settings, void *data ) {
 	SOCKET s;
 	assert ( data != NULL );
-	s = ((struct remote_data*)data)->s;
+	s = ((struct remote_data*)data)->control_socket;
 	assert ( s != INVALID_SOCKET );
 
 	return wait_remote( s, SIGNAL_GO );

@@ -24,6 +24,7 @@
 	#include <netdb.h> // For NI_NUMERICHOST
 	#include <fcntl.h>
 	#include <errno.h> // For errno
+	#include <sys/un.h> // For UNIX sockets
 
 	#define ERRNO errno
 	#define closesocket(s) close(s)

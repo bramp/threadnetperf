@@ -446,7 +446,6 @@ cleanup:
 	free( events );
 #endif
 
-
 	free ( client );
 
 	return NULL;

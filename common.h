@@ -60,7 +60,7 @@ struct settings {
 	unsigned int dirty           :1;
 	unsigned int timestamp       :1;
 	unsigned int disable_nagles  :1;
-	unsigned int threaded_model  :1;
+	
 
 	double confidence_lvl;
 	double confidence_int;
@@ -81,6 +81,8 @@ struct settings {
 	// Helper members, so we don't have to recalc all the time
 	unsigned int clientcores;
 	unsigned int servercores;
+
+	unsigned int threaded_model;
 };
 
 // Works out how many cores the client will use
@@ -122,6 +124,9 @@ void free_2D(void **data, size_t x);
 // How long do control sockets wait for connections (in milliseconds)
 #define CONTROL_TIMEOUT 30000
 
+// How long to wait for IPC socket calls
+#define IPC_TIMEOUT 1000
+
 // How long the server waits for a connection (in milliseconds)
 #define TRANSFER_TIMEOUT 1000
 
@@ -132,5 +137,7 @@ void free_2D(void **data, size_t x);
 
 #define MODEL_THREADED 	0
 #define MODEL_PROCESS 	1
+
+#define IPC_SOCK_NAME "resultspipe"
 
 #endif

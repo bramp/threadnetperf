@@ -4,6 +4,8 @@
 #include "print.h"
 #include "netlib.h"
 
+#include "serialise.h" // To allow us to send the results via the IPC socket.
+
 #include <assert.h>
 #include <stdio.h>
 #include <malloc.h>
@@ -385,11 +387,7 @@ void *server_thread(void *data) {
 	for (c = client ; c < &client [clients] ; c++) {
 #ifdef USE_EPOLL
 		struct epoll_event event = {0};
-		/*
-		 * MF: THIS IS THE PROBLEM CODE!
-		 *
-		 * | EPOLLET
-		 */
+
 		event.events = EPOLLIN ;
 		event.data.fd = *c;
 
@@ -437,6 +435,7 @@ void *server_thread(void *data) {
 		//fprintf(stderr, "MF: num_fds fired %d on line %d\n", num_fds, __LINE__);
 		for ( i = 0; i < ret; i++ ) {
 			SOCKET s = events[i].data.fd;
+			assert ( s != INVALID_SOCKET );
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
 				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				//Closing a file descriptor automagically removes it from the epoll fd set.
@@ -466,10 +465,10 @@ void *server_thread(void *data) {
 #endif
 
 #ifdef WIN32
-				len = recv( s, buf, recv_size, 0 );
+				len = recv(s, buf, recv_size, 0);
 #else
 				msgs.msg_controllen = msg_control_len;
-				len = recvmsg( s, &msgs, 0);
+				len = recvmsg(s, &msgs, 0);
 #endif
 
 				// The socket has closed (or an error has occured)
@@ -482,7 +481,7 @@ void *server_thread(void *data) {
 							continue;
 
 						else if ( lastErr != ECONNRESET ) {
-							fprintf(stderr, "%s:%d recv() error (%d) %s\n", __FILE__, __LINE__, lastErr, strerror(lastErr) );
+							fprintf(stderr, "%s:%d recv(%d) error (%d) %s\n", __FILE__, __LINE__, s, lastErr, strerror(lastErr) );
 							goto cleanup;
 						}
 					}
@@ -583,6 +582,7 @@ end_loop:
 
 	return_stats = 1;
 
+	
 cleanup:
 	
 	// Force a stop
@@ -613,14 +613,16 @@ cleanup:
 		if ( *c != INVALID_SOCKET ) {
 			shutdown ( *c, SHUT_RDWR );
 			closesocket( *c );
+			*c = INVALID_SOCKET;
 		}
 	}
 
 	if ( client )
 		free ( client );
 
-	if ( return_stats )
-		return &req->stats;
-
+	if ( return_stats ) 
+		send_stats_from_thread(req->stats);	
+	else 
+		printf("(%d) is skipping sending of stats\n", getpid());
 	return NULL;
 }

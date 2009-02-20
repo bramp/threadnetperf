@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifdef WIN32
 	typedef signed char             int8_t;
@@ -37,9 +38,9 @@ struct network_settings {
 	uint8_t dirty;
 	uint8_t timestamp;
 	uint8_t disable_nagles;
+
 	uint8_t threaded_model;
-	
-	
+
 	uint32_t message_size;
 	uint32_t socket_size;
 
@@ -220,15 +221,20 @@ int read_results( SOCKET s, struct stats * stats ) {
 	memset( &net_stats, 0, sizeof(net_stats) );
 
 	// Keep looping until the full net_stat struct is read
-	do {
+	do {		
 		ret = recv(s, p, p_len, 0);
+
 		if ( ret <= 0 )
 			return -1;
 
+		assert ( ret <= p_len );
+		
 		p_len -= ret;
 		p += ret;
-	} while ( p_len != 0 );
 
+		printf("(%d) rxing stats %d bytes left\n", getpid(), p_len);
+	} while ( p_len > 0 );
+	
 	// TODO find a 64bit ntohl
 	stats->cores          = ntohl(net_stats.cores);
 	stats->bytes_received = (net_stats.bytes_received);
@@ -258,6 +264,7 @@ int send_results( SOCKET s, const struct stats * stats ) {
 	net_stats.duration       = (stats->duration);
 
 	ret = send(s, (char *)&net_stats, sizeof(net_stats), 0);
+	
 	if ( ret != sizeof(net_stats) ) {
 		return -1;
 	}

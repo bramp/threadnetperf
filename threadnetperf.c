@@ -122,11 +122,10 @@ struct run_functions remote_client_funcs = {
 };
 
 // Signals all threads to stop
-void stop_all (int threaded_model) {
+void stop_all (unsigned int threaded_model) {
+	//Change bRunning here?
 	bRunning = 0;
-
-	stop_all_clients(threaded_model);
-	stop_all_servers(threaded_model);
+	threads_signal_all(SIGNAL_STOP, threaded_model);
 }
 
 /**
@@ -168,21 +167,25 @@ void pause_for_duration(const struct settings *settings) {
 void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	union sigval param = siginfo->si_value;
 
-	printf("pid %d Received %d\n", getpid(), param.sival_int);
+	printf("(%d) Received %d from (%d)\n", getpid(), param.sival_int, siginfo->si_pid);
+
+	assert (sig == SIGRTMIN);
 	
 	switch(param.sival_int) {
 		//Received by controller
 		case SIGNAL_READY_TO_ACCEPT :
-			
+			printf("(%d) Changed the server_listen_unready from %d to ", getpid(), server_listen_unready);
 			server_listen_unready--;
-			printf("(%d) Number of unready servers %d\n", getpid(), server_listen_unready);
+			printf("%d\n", server_listen_unready);
+			assert ( server_listen_unready >= 0 );
+
 			break;
 		//Received by controller
 		case SIGNAL_READY_TO_GO :
 			unready_threads--;
-			pthread_mutex_lock  ( &ready_mutex );
+/*			pthread_mutex_lock  ( &ready_mutex );
 			pthread_cond_signal ( &ready_cond  );
-			pthread_mutex_unlock( &ready_mutex );
+			pthread_mutex_unlock( &ready_mutex );*/
 			break;
 		
 		//Received by server threads (start_threads) 
@@ -195,7 +198,12 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			
 		//Received by server threads
 		case SIGNAL_STOP:
+			printf("(%d) received a stop signal changing bRunning from %d to 0\n", getpid(), bRunning);
 			bRunning = 0;
+			break;
+			
+		default : 
+			printf("(%d) received an unknown signal %d \n", getpid(), param.sival_int);
 			break;
 	}
 
@@ -208,6 +216,8 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
  */
 int setup_signals(int signum)	{
    struct sigaction act;
+   memset(&act, 0, sizeof(act));
+
    act.sa_sigaction     = signal_handler;
    act.sa_flags         = SA_SIGINFO;
    return sigaction(signum, &act, NULL);	
@@ -215,23 +225,23 @@ int setup_signals(int signum)	{
 
 // Wait until every thread signals a ready
 void wait_for_threads() {
-	//struct timespec waittime = {0, 100000000}; // 100 milliseconds
+	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 
 	pthread_mutex_lock( &go_mutex );
 	while ( bRunning && unready_threads > 0 ) {
-//		pthread_mutex_unlock( &go_mutex );
+/*		pthread_mutex_unlock( &go_mutex );
 
-//		pthread_mutex_lock( &ready_mutex );
-//		pthread_cond_timedwait( &ready_cond, &ready_mutex, &waittime);
-//		pthread_mutex_unlock( &ready_mutex );
+		pthread_mutex_lock( &ready_mutex );
+		pthread_cond_timedwait( &ready_cond, &ready_mutex, &waittime);
+		pthread_mutex_unlock( &ready_mutex );
 
-//		pthread_mutex_lock( &go_mutex );
+		pthread_mutex_lock( &go_mutex );*/
 	}
 	pthread_mutex_unlock( &go_mutex );
 }
 
 // Annonce to everyone to start
-void start_threads(int threaded_model) {	
+void start_threads(unsigned int threaded_model) {	
 	
 	//What is this going to signal?
 	threads_signal_all(SIGNAL_GO, threaded_model);	
@@ -272,9 +282,10 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 
+	server_listen_unready = server_threads;
 	unready_threads	= server_threads + client_threads;
 	
-
+	//Note the function below also sets up the struct in to which results are piped
 	// A list of threads
 	if ( thread_alloc(unready_threads) ) {
 		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
@@ -282,8 +293,11 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	}
 
 	// Create each server/client thread
-	server_listen_unready += funcs->create_servers(settings, data);
-	
+	if ( funcs->create_servers(settings, data) ) {
+		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
+		goto cleanup;
+	}
+
 	if ( server_listen_unready < 0 ) {
 		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -294,7 +308,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	while ( bRunning && server_listen_unready > 0 ) {
 		usleep( 1000 );
 	}
-	printf("Ok i've got all the servers ready to accept the clients now\n");
 	
 	if ( funcs->create_clients(settings, data) ) {
 		fprintf(stderr, "%s:%d create_clients() error\n", __FILE__, __LINE__ );
@@ -304,7 +317,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	// Wait for our threads to be created
 	wait_for_threads();
 
-	printf("Finished creating all the threads\n");
 	if ( funcs->wait_for_go(settings, data) ) {
 		fprintf(stderr, "%s:%d wait_for_go() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -315,31 +327,36 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	// Pauses for the duration
 	pause_for_duration( settings );
-
+	
 	stop_all(settings->threaded_model);
-	//threads_signal_parent(SIGNAL_STOP, settings->threaded_model);
 
 	if ( funcs->print_headers(settings, data) ) {
 		fprintf(stderr, "%s:%d print_headers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-
+	
+	printf("(%d) is collecting stats from it's children\n", getpid());
+	
+	
 	if ( funcs->collect_results ( settings, total_stats, funcs->print_results, data) ) {
 		fprintf(stderr, "%s:%d collect_results() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
+	
 
 cleanup:
 
 	// Make sure we are not running anymore
 	stop_all(settings->threaded_model);
-	//threads_signal_parent(SIGNAL_STOP, settings->threaded_model);
-
-	thread_join_all(settings->threaded_model);
+	
+	//thread_join_all(settings->threaded_model);
 	threads_clear();
 
 	cleanup_clients();
 	cleanup_servers();
+	
+	unlink(IPC_SOCK_NAME);
+	close(((struct remote_data *)data)->control_socket);
 
 	funcs->cleanup( settings, data );
 }
@@ -358,8 +375,9 @@ void run_deamon(const struct settings *settings) {
 		if ( settings->verbose ) {
 			printf("Waiting for test...\n");
 		}
-
+		
 		run( &remote_server_funcs, &remote_settings, &total_stats );
+		
 
 		free( remote_settings.test );
 	}
@@ -393,7 +411,7 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	}
 
-	if ( setup_signals(SIGUSR1)) {
+	if ( setup_signals(SIGRTMIN)) {
 		fprintf(stderr, "%s:%d setup_signals() error %d\n", __FILE__, __LINE__ , errno);
 		goto cleanup;
 	}
@@ -451,10 +469,10 @@ cleanup:
 
 	free( settings.test );
 
-	//pthread_cond_destroy( & go_cond );
+	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );
 
-	//pthread_cond_destroy( & ready_cond );
+	pthread_cond_destroy( & ready_cond );
 	pthread_mutex_destroy( & ready_mutex );
 
 	pthread_mutex_destroy( & printf_mutex );
