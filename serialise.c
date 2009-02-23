@@ -222,16 +222,18 @@ int read_results( SOCKET s, struct stats * stats ) {
 
 	// Keep looping until the full net_stat struct is read
 	do {		
-		ret = recv(s, p, p_len, 0);
+		ret = recv(s, p, p_len, MSG_WAITALL);
 
-		if ( ret < 0 ) {
-			fprintf(stderr, "%s:%d recv(%d) error %d %s\n", __FILE__, __LINE__ , s, ret, strerror(ret));
+		if ( ret <= 0 ) {
+			if(EAGAIN == 11) {
+				printf("Socket %d Trying again, resource unavailable\n",s );
+				sleep (1);
+				continue;
+			}
+			fprintf(stderr, "%s:%d recv(%d) error %d %s\n", __FILE__, __LINE__ , s, errno, strerror(errno));
 			return -1;
 		}
-		
-		if (ret == 0 )
-			continue;
-		
+
 		assert ( ret <= p_len );
 		
 		p_len -= ret;
@@ -259,7 +261,7 @@ int send_results( SOCKET s, const struct stats * stats ) {
 	assert (stats != NULL );
 
 	memset( &net_stats, 0, sizeof(net_stats) );
-
+	
 	// TODO find a 64bit htonl
 	net_stats.cores          = htonl(stats->cores);
 	net_stats.bytes_received = (stats->bytes_received);

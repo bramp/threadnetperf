@@ -167,18 +167,15 @@ void pause_for_duration(const struct settings *settings) {
 void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	union sigval param = siginfo->si_value;
 
-	printf("(%d) Received %d from (%d)\n", getpid(), param.sival_int, siginfo->si_pid);
+//	printf("(%d) Received %d from (%d)\n", getpid(), param.sival_int, siginfo->si_pid);
 
 	assert (sig == SIGRTMIN);
 	
 	switch(param.sival_int) {
 		//Received by controller
 		case SIGNAL_READY_TO_ACCEPT :
-			printf("(%d) Changed the server_listen_unready from %d to ", getpid(), server_listen_unready);
 			server_listen_unready--;
-			printf("%d\n", server_listen_unready);
-			assert ( server_listen_unready >= 0 );
-
+			assert ( server_listen_unready >= 0 );	
 			break;
 		//Received by controller
 		case SIGNAL_READY_TO_GO :
@@ -195,7 +192,6 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			
 		//Received by server threads
 		case SIGNAL_STOP:
-			printf("(%d) received a stop signal changing bRunning from %d to 0\n", getpid(), bRunning);
 			bRunning = 0;
 			break;
 			
@@ -358,8 +354,7 @@ cleanup:
 	cleanup_clients();
 	cleanup_servers();
 	
-	unlink(IPC_SOCK_NAME);
-	close(((struct remote_data *)data)->control_socket);
+	closesocket(((struct remote_data *)data)->stats_socket);
 
 	funcs->cleanup( settings, data );
 }

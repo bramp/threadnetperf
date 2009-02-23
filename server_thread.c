@@ -486,7 +486,7 @@ void *server_thread(void *data) {
 						
 						else if ( lastErr == EINTR ) {
 							fprintf( stderr,"%s:%d recv(%d) interrupted by singal\n", __FILE__, __LINE__, s);
-							goto end_loop;
+							continue;
 						}
 
 						else if ( lastErr != ECONNRESET ) {
@@ -632,7 +632,6 @@ cleanup:
 		free ( client );
 
 	if ( return_stats )
-		//printf("(%d) Should be sending stats right now\n", getpid());
 		send_stats_from_thread(req->stats);	
 	else 
 		printf("(%d) is skipping sending of stats\n", getpid());

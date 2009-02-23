@@ -27,6 +27,8 @@ size_t thread_count = 0;
  // Total number of threads
 size_t thread_max_count = 0;
 
+char* ipc_sock_name;
+
 #ifdef WIN32
 // Sleep for a number of microseconds
 int usleep(unsigned int microseconds) {
@@ -169,7 +171,9 @@ void send_stats_from_thread(struct stats stats) {
 	//TODO: change to strncpy
 	//TODO: Make random file name (tmpfile())?
 	ipc_socket.sun_family = AF_UNIX;
-	strcpy(ipc_socket.sun_path, IPC_SOCK_NAME);
+	
+	//strcpy(ipc_socket.sun_path, IPC_SOCK_NAME);
+	sprintf(ipc_socket.sun_path , "%s", ipc_sock_name);
 	sock_len = strlen(ipc_socket.sun_path) + sizeof(ipc_socket.sun_family);
 
 	// Bind the IPC SOCKET
@@ -186,12 +190,13 @@ void send_stats_from_thread(struct stats stats) {
 	printf("(%d) has sent stats to socket %d\n", getpid(), s);
 	
 cleanup:
-	close(s);
+	closesocket(s);
 }
 
 SOCKET create_stats_socket() {
 	struct sockaddr_un	ipc_socket;
 	int sock_len;
+	int one = 1;
 	// Create the socket to receive the stats data
 	SOCKET s = socket( AF_UNIX, SOCK_DGRAM, 0);
 
@@ -207,9 +212,11 @@ SOCKET create_stats_socket() {
 	
 	ipc_socket.sun_family = AF_UNIX;
 	
-	strcpy(ipc_socket.sun_path, IPC_SOCK_NAME);
+	ipc_sock_name = tempnam("/tmp/", "netipc");
 	
-	unlink(IPC_SOCK_NAME);
+	sprintf(ipc_socket.sun_path, "%s", ipc_sock_name);
+	
+	unlink(ipc_socket.sun_path);
 	sock_len = strlen(ipc_socket.sun_path) + sizeof(ipc_socket.sun_family);
 	
 	// Bind the IPC SOCKET
@@ -223,8 +230,8 @@ SOCKET create_stats_socket() {
 	return s;
 	
 cleanup:
-	unlink(IPC_SOCK_NAME);
-	close(s);
+	unlink(ipc_sock_name);
+	closesocket(s);
 	return SOCKET_ERROR;
 }
 
@@ -242,6 +249,9 @@ int thread_join_all(int threaded_model) {
 //				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
 		}
 	} 
+	
+	unlink(ipc_sock_name);
+	free(ipc_sock_name);
 	assert ( thread_count == 0 );
 	return 0;
 }
@@ -318,8 +328,6 @@ void threads_signal(__pid_t pid, int type) {
 
 	memset(&v, 0, sizeof(v));
 	v.sival_int = type;
-
-	printf("(%d) Sending signal type %d to (%d) pid\n", getpid(), type, pid);
 
 	if ( sigqueue(pid, SIGRTMIN, v) )
 		printf("(%d) Error %d sending signal %d\n", getpid(), ERRNO, type);	

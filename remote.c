@@ -287,10 +287,11 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 
 	for ( ; core < settings->servercores; core++ ) {
 		struct stats stats;
-
-		if ( read_results( s, &stats ) ) {
+		int read_bytes = 0;
+		memset(&stats, 0 , sizeof(stats));
+ 
+		if ( read_results( s, &stats )< 0) {
 			fprintf(stderr, "%s:%d read_results() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-		
 			return -1;
 		}
 

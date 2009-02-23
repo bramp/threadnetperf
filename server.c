@@ -87,7 +87,7 @@ int create_servers(const struct settings *settings, void *data) {
 			return -1;
 		}
 	}
-	printf("(%d) Created %d servers\n", getpid(), (int)sreq_size);
+	
 	return 0;
 }
 
