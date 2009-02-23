@@ -183,17 +183,14 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 		//Received by controller
 		case SIGNAL_READY_TO_GO :
 			unready_threads--;
-/*			pthread_mutex_lock  ( &ready_mutex );
-			pthread_cond_signal ( &ready_cond  );
-			pthread_mutex_unlock( &ready_mutex );*/
 			break;
 		
 		//Received by server threads (start_threads) 
 		case SIGNAL_GO :
-			pthread_mutex_lock( &go_mutex );
+//			pthread_mutex_lock( &go_mutex );
 			bGo = 1;
-			pthread_cond_broadcast( &go_cond );
-			pthread_mutex_unlock( &go_mutex );
+//			pthread_cond_broadcast( &go_cond );
+//			pthread_mutex_unlock( &go_mutex );
 			break;
 			
 		//Received by server threads
@@ -220,6 +217,8 @@ int setup_signals(int signum)	{
 
    act.sa_sigaction     = signal_handler;
    act.sa_flags         = SA_SIGINFO;
+   sigemptyset(&act.sa_mask);
+   //siginterrupt(signum, 0);
    return sigaction(signum, &act, NULL);	
 }
 
@@ -329,6 +328,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	pause_for_duration( settings );
 	
 	stop_all(settings->threaded_model);
+	
 
 	if ( funcs->print_headers(settings, data) ) {
 		fprintf(stderr, "%s:%d print_headers() error\n", __FILE__, __LINE__ );
@@ -343,6 +343,9 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 	
+	//If we don't join here, then we may leave zombie processes
+	//Zombies like brains.
+	thread_join_all(settings->threaded_model);
 
 cleanup:
 

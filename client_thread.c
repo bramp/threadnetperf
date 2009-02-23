@@ -287,7 +287,11 @@ void* client_thread(void *data) {
 
 #ifdef USE_EPOLL
 		int i;
+		//This has been changed to re-try the epoll if we fail.
 		int ready = epoll_wait(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
+		
+		if( ready < 0)
+			ready = 0;
 
 		for ( i = 0; i < ready; i++ ) {
 			SOCKET s = events[i].data.fd;
@@ -295,7 +299,7 @@ void* client_thread(void *data) {
 			assert ( s != INVALID_SOCKET );
 
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
-				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+				//fprintf(stderr, "%s:%d epoll() error (%d) %s on socket %d\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) , s);
 				closesocket( s );
 				continue;
 			}
@@ -307,8 +311,12 @@ void* client_thread(void *data) {
 				int ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
 
 				if ( ret == SOCKET_ERROR ) {
-					fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-					goto cleanup;
+					if( ERRNO == EINTR ) {
+						ret = 0;
+					} else {
+						fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+						goto cleanup;
+					}
 				}
 
 				if ( ret == 0 )

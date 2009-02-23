@@ -71,7 +71,7 @@ int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, siz
 		printf("(%d) Created child process %d \n", getppid(), *pid);
 		//Call start_routing
 		(*start_routine)(arg);
-		exit(0);
+		_exit(0);
 	}
 	else if (*pid == -1 ) {
 		printf("Error creating process %d\n", errno);
@@ -183,7 +183,7 @@ void send_stats_from_thread(struct stats stats) {
 		goto cleanup;
 	}
 
-	printf("(%d) has sent stats\n", getpid());
+	printf("(%d) has sent stats to socket %d\n", getpid(), s);
 	
 cleanup:
 	close(s);
@@ -229,7 +229,7 @@ cleanup:
 }
 
 // Join all these threads
-/*
+
 int thread_join_all(int threaded_model) {
 	while (thread_count > 0) {
 		thread_count--;
@@ -239,13 +239,13 @@ int thread_join_all(int threaded_model) {
 		} else {
 			int status;
 			waitpid(thread[thread_count].pid, &status, 0);
-			if(WIFEXITED(status))
-				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
+//			if(WIFEXITED(status))
+//				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
 		}
 	} 
 	assert ( thread_count == 0 );
 	return 0;
-}*/
+}
 
 int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void *), void *data) {
 	unsigned int i = 0;
@@ -254,14 +254,15 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 	assert( total_stats != NULL );
 	
 	printf("(%d) collecting %d results\n", getpid(), thread_count);
-
-	while (thread_count > 0) {
+	
+	//while (thread_count > 0) { is not used as we need to keep thread_count in tact for later.
+	while ( i < thread_count) {
 		struct stats stats;
-		struct remote_data* remote_data = (struct remote_data*) data; 
+		struct remote_data* remote_data = (struct remote_data*) data;
 
-		printf("(%d) has Thread count %d\n", getpid(), thread_count);
-		thread_count--;
 		
+		printf("(%d) has Thread count %d\n", getpid(), thread_count);
+				
 		if ( read_results(remote_data->stats_socket, &stats) != 0 ) {
 			fprintf(stderr, "%s:%d read_results() error\n", __FILE__, __LINE__ );
 			return -1;
@@ -279,11 +280,13 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 
 	}
 	
+	printf("(%d) looped %d times collecting \n", getpid(), i);
+	
 	// Divide the duration by the # of CPUs used
 	if ( i > 1 )
 		total_stats->duration /= i;
 
-	assert ( thread_count == 0 );
+//	assert ( thread_count == 0 );
 
 	return 0;
 }
@@ -311,7 +314,7 @@ void threads_clear() {
 	thread_max_count = 0;
 }
 
-void threads_signal(pid_t pid, int type) {
+void threads_signal(__pid_t pid, int type) {
 	union sigval v;
 
 	memset(&v, 0, sizeof(v));
@@ -342,5 +345,4 @@ void threads_signal_all(int type, int threaded_model) {
 		threads_signal(getpid(), type);
 	} else
 		assert ( 0 );
-
 }

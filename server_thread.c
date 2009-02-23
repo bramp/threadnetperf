@@ -390,7 +390,7 @@ void *server_thread(void *data) {
 
 		event.events = EPOLLIN ;
 		event.data.fd = *c;
-
+		
 		assert ( *c != INVALID_SOCKET );
 
 		if (epoll_ctl(readFD_epoll, EPOLL_CTL_ADD, *c, &event) == -1) {
@@ -405,8 +405,6 @@ void *server_thread(void *data) {
 			nfds = (int)*c + 1;
 #endif
 	}
-
-	//At this point we've populated the fd_set we need for either select() or epoll()
 
 	 // Signal we are ready
 	threads_signal_parent( SIGNAL_READY_TO_GO, settings.threaded_model );
@@ -425,16 +423,22 @@ void *server_thread(void *data) {
 
 	// Start timing
 	start_time = get_microseconds();
-
+	
 	while ( bRunning ) {
 		int ret, len;
 
 #ifdef USE_EPOLL
+		
 		ret = epoll_wait(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
+		
+		if ( ret < 0 ) {
+			//fprintf(stderr, "%s:%d epoll_wait() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			ret = 0;
+		}
 
 		//fprintf(stderr, "MF: num_fds fired %d on line %d\n", num_fds, __LINE__);
 		for ( i = 0; i < ret; i++ ) {
-			SOCKET s = events[i].data.fd;
+			SOCKET s = events[i].data.fd;	
 			assert ( s != INVALID_SOCKET );
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
 				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -479,11 +483,17 @@ void *server_thread(void *data) {
 						// If it is a blocking error just continue
 						if ( lastErr == EWOULDBLOCK )
 							continue;
+						
+						else if ( lastErr == EINTR ) {
+							fprintf( stderr,"%s:%d recv(%d) interrupted by singal\n", __FILE__, __LINE__, s);
+							goto end_loop;
+						}
 
 						else if ( lastErr != ECONNRESET ) {
 							fprintf(stderr, "%s:%d recv(%d) error (%d) %s\n", __FILE__, __LINE__, s, lastErr, strerror(lastErr) );
+							printf("(%d) has %d clients left\n", getpid(), clients);
 							goto cleanup;
-						}
+						} 
 					}
 
 					if ( settings.verbose )
@@ -491,6 +501,7 @@ void *server_thread(void *data) {
 
 					// Invalidate this client
 					closesocket( s );
+					
 
 #ifndef USE_EPOLL
 					// Move back
@@ -586,7 +597,7 @@ end_loop:
 cleanup:
 	
 	// Force a stop
-	//stop_all(settings.threaded_model);
+	stop_all(settings.threaded_model);
 
 
 	// Cleanup
@@ -620,7 +631,8 @@ cleanup:
 	if ( client )
 		free ( client );
 
-	if ( return_stats ) 
+	if ( return_stats )
+		//printf("(%d) Should be sending stats right now\n", getpid());
 		send_stats_from_thread(req->stats);	
 	else 
 		printf("(%d) is skipping sending of stats\n", getpid());

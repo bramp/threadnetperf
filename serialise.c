@@ -224,9 +224,14 @@ int read_results( SOCKET s, struct stats * stats ) {
 	do {		
 		ret = recv(s, p, p_len, 0);
 
-		if ( ret <= 0 )
+		if ( ret < 0 ) {
+			fprintf(stderr, "%s:%d recv(%d) error %d %s\n", __FILE__, __LINE__ , s, ret, strerror(ret));
 			return -1;
-
+		}
+		
+		if (ret == 0 )
+			continue;
+		
 		assert ( ret <= p_len );
 		
 		p_len -= ret;

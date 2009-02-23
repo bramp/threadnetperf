@@ -290,9 +290,7 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 
 		if ( read_results( s, &stats ) ) {
 			fprintf(stderr, "%s:%d read_results() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			//MF: Is this wrong?
-			close(s);
-			
+		
 			return -1;
 		}
 

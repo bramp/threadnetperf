@@ -22,16 +22,17 @@ void cpu_setup( cpu_set_t *cpu, unsigned int cores );
 
 int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void * data), void *data);
 
-int thread_join_all ();
+int thread_join_all (int threaded_model);
 int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset, unsigned int threaded_model );
 
 // Allocate space for this many threads
 int thread_alloc(size_t count);
 
 void threads_signal_all(int type, int threaded_model);
-void threads_signal_parent(int threaded_model, int pid);
+void threads_signal_parent(int threaded_model, __pid_t pid);
 // Clear all allocated space for the threads
 void threads_clear();
+void wait_all(int threaded_model);
 
 SOCKET create_stats_socket(); 
 // Send the stats to an IPC
