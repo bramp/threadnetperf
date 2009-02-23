@@ -221,7 +221,6 @@ int setup_signals(int signum)	{
 // Wait until every thread signals a ready
 void wait_for_threads() {
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
-
 	
 	while ( bRunning && unready_threads > 0 ) {
 		pthread_mutex_unlock( &go_mutex );
