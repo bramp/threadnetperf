@@ -234,7 +234,6 @@ int thread_join_all(int threaded_model) {
 	while (thread_count > 0) {
 		thread_count--;
 		if( threaded_model == MODEL_THREADED ) {
-			
 			pthread_join( thread[thread_count].tid, NULL );
 		} else {
 			int status;
