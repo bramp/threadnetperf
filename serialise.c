@@ -225,7 +225,8 @@ int read_results( SOCKET s, struct stats * stats ) {
 		ret = recv(s, p, p_len, MSG_WAITALL);
 
 		if ( ret <= 0 ) {
-			if(EAGAIN == 11) {
+			//TODO: Remote this.
+			if(EAGAIN == errno) {
 				printf("Socket %d Trying again, resource unavailable\n",s );
 				sleep (1);
 				continue;

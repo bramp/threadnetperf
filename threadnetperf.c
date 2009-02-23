@@ -167,7 +167,7 @@ void pause_for_duration(const struct settings *settings) {
 void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	union sigval param = siginfo->si_value;
 
-//	printf("(%d) Received %d from (%d)\n", getpid(), param.sival_int, siginfo->si_pid);
+	printf("(%d) Received %d from (%d)\n", getpid(), param.sival_int, siginfo->si_pid);
 
 	assert (sig == SIGRTMIN);
 	
@@ -222,17 +222,17 @@ int setup_signals(int signum)	{
 void wait_for_threads() {
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 
-	pthread_mutex_lock( &go_mutex );
+	
 	while ( bRunning && unready_threads > 0 ) {
-/*		pthread_mutex_unlock( &go_mutex );
+		pthread_mutex_unlock( &go_mutex );
 
 		pthread_mutex_lock( &ready_mutex );
 		pthread_cond_timedwait( &ready_cond, &ready_mutex, &waittime);
 		pthread_mutex_unlock( &ready_mutex );
 
-		pthread_mutex_lock( &go_mutex );*/
+		pthread_mutex_lock( &go_mutex );
 	}
-	pthread_mutex_unlock( &go_mutex );
+	
 }
 
 // Annonce to everyone to start
