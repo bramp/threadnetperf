@@ -324,7 +324,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	pause_for_duration( settings );
 	
 	stop_all(settings->threaded_model);
-	
 
 	if ( funcs->print_headers(settings, data) ) {
 		fprintf(stderr, "%s:%d print_headers() error\n", __FILE__, __LINE__ );
