@@ -473,7 +473,6 @@ void *server_thread(void *data) {
 				msgs.msg_controllen = msg_control_len;
 				len = recvmsg(s, &msgs, 0);
 #endif
-
 				// The socket has closed (or an error has occured)
 				if ( len <= 0 ) {
 					if ( len == SOCKET_ERROR ) {
@@ -591,7 +590,6 @@ end_loop:
 	req->stats.timestamps     += timestamps;
 
 	return_stats = 1;
-
 	
 cleanup:
 	

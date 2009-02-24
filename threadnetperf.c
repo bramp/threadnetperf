@@ -167,8 +167,6 @@ void pause_for_duration(const struct settings *settings) {
 void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	union sigval param = siginfo->si_value;
 
-	printf("(%d) Received %d from (%d)\n", getpid(), param.sival_int, siginfo->si_pid);
-
 	assert (sig == SIGRTMIN);
 	
 	switch(param.sival_int) {
@@ -181,7 +179,6 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 		case SIGNAL_READY_TO_GO :
 			unready_threads--;
 			break;
-		
 		//Received by server threads (start_threads) 
 		case SIGNAL_GO :
 //			pthread_mutex_lock( &go_mutex );
@@ -189,17 +186,14 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 //			pthread_cond_broadcast( &go_cond );
 //			pthread_mutex_unlock( &go_mutex );
 			break;
-			
 		//Received by server threads
 		case SIGNAL_STOP:
 			bRunning = 0;
 			break;
-			
-		default : 
-			printf("(%d) received an unknown signal %d \n", getpid(), param.sival_int);
+		default :
+			fprintf(stderr, "%s:%d signal_handler() unknown sigval\n", __FILE__, __LINE__ );
 			break;
 	}
-
 }
 
 /* 

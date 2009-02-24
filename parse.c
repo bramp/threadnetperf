@@ -148,7 +148,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	settings->type = SOCK_STREAM;
 	settings->protocol = IPPROTO_TCP;
 
-	settings->test = malloc(0);
+	settings->test = NULL;
 	settings->tests = 0;
 
 	if ( argc == 1 ) {
