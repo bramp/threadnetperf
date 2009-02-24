@@ -286,14 +286,14 @@ void *server_thread(void *data) {
 	
 	// Bind
 	if ( bind( s, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
-		fprintf(stderr, "%s:%d bind() error (%d) %s from pid (%d)\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO), getpid() );
+		fprintf(stderr, "%s:%d bind() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
 	// Listen
 	if ( (settings.type == SOCK_STREAM || settings.type==SOCK_SEQPACKET) ) {
 		if ( listen(s, SOMAXCONN) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d listen() error (%d) %s from pid (%d)\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO), getpid() );
+			fprintf(stderr, "%s:%d listen() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			goto cleanup;
 		}
 	}
@@ -479,17 +479,11 @@ void *server_thread(void *data) {
 						int lastErr = ERRNO;
 
 						// If it is a blocking error just continue
-						if ( lastErr == EWOULDBLOCK )
+						if ( lastErr == EWOULDBLOCK ||  lastErr == EINTR )
 							continue;
-						
-						else if ( lastErr == EINTR ) {
-							fprintf( stderr,"%s:%d recv(%d) interrupted by singal\n", __FILE__, __LINE__, s);
-							continue;
-						}
 
 						else if ( lastErr != ECONNRESET ) {
 							fprintf(stderr, "%s:%d recv(%d) error (%d) %s\n", __FILE__, __LINE__, s, lastErr, strerror(lastErr) );
-							printf("(%d) has %d clients left\n", getpid(), clients);
 							goto cleanup;
 						} 
 					}
@@ -630,7 +624,6 @@ cleanup:
 
 	if ( return_stats )
 		send_stats_from_thread(req->stats);	
-	else 
-		printf("(%d) is skipping sending of stats\n", getpid());
+
 	return NULL;
 }

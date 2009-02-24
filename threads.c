@@ -70,16 +70,15 @@ int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, siz
 	if( *pid == 0) {
 		*pid = getpid();
 		sched_setaffinity(*pid, cpusetsize, cpuset);
-		printf("(%d) Created child process %d \n", getppid(), *pid);
 		//Call start_routing
 		(*start_routine)(arg);
 		_exit(0);
 	}
 	else if (*pid == -1 ) {
-		printf("Error creating process %d\n", errno);
-		exit(errno);
+		fprintf(stderr, "%s:%d process_create_on() error (%d) %s\n", __FILE__, __LINE__, errno, strerror(errno));
+		return -1;
 	} 
-	
+
 	return 0;
 }
 
@@ -126,7 +125,7 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 	assert (start_routine != NULL);
 
 	if ( thread_count >= thread_max_count ) {
-		printf("(%d) Trying to create %d threads when the max is %d\n", getpid(), thread_count, thread_max_count);
+		fprintf(stderr, "%s:%d create_thread() can only creat %d threads\n", __FILE__, __LINE__, thread_max_count );
 		return -1;
 	}
 
@@ -152,8 +151,6 @@ void send_stats_from_thread(struct stats stats) {
 	unsigned int sock_len;
 	struct sockaddr_un	ipc_socket;
 	int s;
-	
-	printf("(%d) is attempting to pipe back the results via a socket\n", getpid());
 	
 	// Create the socket to send the details back on
 	s = socket( AF_UNIX, SOCK_DGRAM, 0);
@@ -186,8 +183,6 @@ void send_stats_from_thread(struct stats stats) {
 		fprintf(stderr, "%s:%d send_results() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
-
-	printf("(%d) has sent stats to socket %d\n", getpid(), s);
 	
 cleanup:
 	closesocket(s);
@@ -221,14 +216,12 @@ SOCKET create_stats_socket() {
 	
 	// Bind the IPC SOCKET
 	if ( bind( s, &ipc_socket, sock_len) == SOCKET_ERROR) {
-		fprintf(stderr, "%s:%d bind() error (%d) %s from pid (%d)\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO), getpid() );
+		fprintf(stderr, "%s:%d bind() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 
-	printf("(%d) Created a stats socket %d\n", getpid(), s);
-
 	return s;
-	
+
 cleanup:
 	unlink(ipc_sock_name);
 	closesocket(s);
@@ -262,15 +255,10 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 	assert( settings != NULL );
 	assert( total_stats != NULL );
 	
-	printf("(%d) collecting %d results\n", getpid(), thread_count);
-	
 	//while (thread_count > 0) { is not used as we need to keep thread_count in tact for later.
 	while ( i < thread_count) {
 		struct stats stats;
 		struct remote_data* remote_data = (struct remote_data*) data;
-
-		
-		printf("(%d) has Thread count %d\n", getpid(), thread_count);
 				
 		if ( read_results(remote_data->stats_socket, &stats) != 0 ) {
 			fprintf(stderr, "%s:%d read_results() error\n", __FILE__, __LINE__ );
@@ -288,9 +276,7 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 		i++;
 
 	}
-	
-	printf("(%d) looped %d times collecting \n", getpid(), i);
-	
+		
 	// Divide the duration by the # of CPUs used
 	if ( i > 1 )
 		total_stats->duration /= i;

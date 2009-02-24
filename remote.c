@@ -279,8 +279,6 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 
 	// Currently the duration might get screwed up if not zero
 	assert ( total_stats->duration == 0 );
-
-	printf("(%d) Remote collecting of results\n", getpid());
 	
 	s = ((struct remote_data*)data)->control_socket;
 	assert ( s != INVALID_SOCKET );

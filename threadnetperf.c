@@ -322,10 +322,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		fprintf(stderr, "%s:%d print_headers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-	
-	printf("(%d) is collecting stats from it's children\n", getpid());
-	
-	
+
 	if ( funcs->collect_results ( settings, total_stats, funcs->print_results, data) ) {
 		fprintf(stderr, "%s:%d collect_results() error\n", __FILE__, __LINE__ );
 		goto cleanup;

@@ -221,35 +221,22 @@ int read_results( SOCKET s, struct stats * stats ) {
 	memset( &net_stats, 0, sizeof(net_stats) );
 
 	// Keep looping until the full net_stat struct is read
-	do {		
-		printf("(%d) rxing stats %d bytes left\n", getpid(), p_len);
+	do {
 		ret = recv(s, p, p_len, MSG_WAITALL);
 
 		if ( ret <= 0 ) {
-			//Store the err number here, just in case something else changes the errno
-			int err = errno;
-			
-			if( err == EAGAIN ) {
-				printf("Socket %d Trying again, resource unavailable\n",s );
+
+			if( errno == EAGAIN || errno == EINTR )
 				continue;
-			}
-			
-			if ( err == EINTR ) {
-				printf("Socket %d interrupted by signal, trying again rx bytes %d\n", s, net_stats.bytes_received);
-				continue;
-			}
 			
 			fprintf(stderr, "%s:%d recv(%d) error %d %s\n", __FILE__, __LINE__ , s, errno, strerror(errno));
 			return -1;
 		}
-
-		printf("Socket %d received %d\n", s, ret);
 		assert ( ret <= p_len );
 		
 		p_len -= ret;
 		p += ret;
 
-		printf("(%d) rxing stats %d bytes left\n", getpid(), p_len);
 	} while ( p_len > 0 );
 	
 	// TODO find a 64bit ntohl
@@ -260,7 +247,6 @@ int read_results( SOCKET s, struct stats * stats ) {
 	stats->timestamps     = (net_stats.timestamps);
 	stats->duration       = (net_stats.duration);
 
-	printf("(%d) rxed %d bytes duration %d\n", getpid(), stats->bytes_received, stats->duration);
 	return 0;
 }
 

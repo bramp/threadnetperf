@@ -23,7 +23,6 @@ int prepare_servers(const struct settings * settings, void *data) {
 	assert ( sreq == NULL );
 	assert ( sreq_size == 0 );
 
-	printf("(%d) Needs to create %d servers\n", getpid(), settings->servercores);
 	// Malloc one space for each core combination
 	sreq_size = settings->servercores;
 

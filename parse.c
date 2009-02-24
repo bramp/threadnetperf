@@ -304,10 +304,6 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 					fprintf(stderr, "Invalid threading model set to (%s)\n", optarg );
 					return -1;
 				}
-
-				if( settings->verbose )
-					printf("Seting model to (%s)\n", optarg);
-
 				break;
 			// Parse the message size
 			case 's':
