@@ -1,6 +1,6 @@
 /***
 	A multi-threaded network benchmark tool
-	by Andrew Brampton (2007-2008)
+	by Andrew Brampton (2007-2009)
 
 	Note, this app is very rough, and needs cleaning up, but it works!
 	TODO Add flag to output bandwidth at set intervals during the experiment
@@ -12,6 +12,9 @@
 	TODO Allow the connections to mimic BitTorrent/HTTP/NNTP/IRC/etc
 	TODO Add the error msg "server_thread() error Server thread can have no more than %d connections (%d specified)\n"
 	TODO Output time taken to set-up
+	TODO Stop server/client threads spinlocking on bGo, instead use a mutex
+	TODO Change AF_UNIX to socketpair isntead of socket (TODO don't use tmpnam())
+	TODO set sock option in receive stats to wait for a whole struct per recv 
 */
 
 #include "common.h"
