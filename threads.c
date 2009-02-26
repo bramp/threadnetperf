@@ -309,14 +309,14 @@ void threads_clear() {
 	thread_max_count = 0;
 }
 
-void threads_signal(__pid_t pid, int type) {
+void threads_signal(pid_t pid, int type) {
 	union sigval v;
 
 	memset(&v, 0, sizeof(v));
 	v.sival_int = type;
 
 	if ( sigqueue(pid, SIGRTMIN, v) )
-		printf("(%d) Error %d sending signal %d\n", getpid(), ERRNO, type);	
+		printf("(%d) Error %d %s sending signal %d\n", getpid(), ERRNO, strerror(errno), type);	
 }
 
 void threads_signal_parent(int type, int threaded_model) {	
