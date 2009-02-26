@@ -130,7 +130,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	// Default arguments
 	settings->deamon = 0;
 	settings->message_size = 1024;
-	settings->socket_size = 262144;
+	settings->socket_size = 375000;
 	settings->rate = ~0;
 	settings->disable_nagles = 0;
 	settings->duration = 10;
