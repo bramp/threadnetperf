@@ -97,6 +97,11 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			return 1;
 		}
 
+		if( settings->verbose ) {
+			printf("Recv Buffer set to %d Send Buffer set to %d", send_socket_size, recv_socket_size);
+		}
+
+
 		if ( settings->disable_nagles ) {
 			if ( disable_nagle( s ) == SOCKET_ERROR ) {
 				fprintf(stderr, "%s:%d disable_nagle() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
