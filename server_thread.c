@@ -85,6 +85,10 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			return 1;
 		}
 
+		if( settings->verbose ) {
+			printf("Trying to set Recv Buffer to %d and Send Buffer to %d", settings->socket_size, settings->socket_size);
+		}
+
 		send_socket_size = set_socket_send_buffer( s, settings->socket_size );
 		if ( send_socket_size < 0 ) {
 			fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
