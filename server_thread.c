@@ -85,10 +85,6 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			return 1;
 		}
 
-		if( settings->verbose ) {
-			printf("Trying to set Recv Buffer to %d and Send Buffer to %d", settings->socket_size, settings->socket_size);
-		}
-
 		send_socket_size = set_socket_send_buffer( s, settings->socket_size );
 		if ( send_socket_size < 0 ) {
 			fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -100,11 +96,6 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			fprintf(stderr, "%s:%d set_socket_recv_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
-
-		if( settings->verbose ) {
-			printf("Recv Buffer set to %d Send Buffer set to %d", send_socket_size, recv_socket_size);
-		}
-
 
 		if ( settings->disable_nagles ) {
 			if ( disable_nagle( s ) == SOCKET_ERROR ) {
