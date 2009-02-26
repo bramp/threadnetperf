@@ -79,7 +79,6 @@ int disable_blocking(SOCKET s) {
 }
 
 int set_socket_buffer( SOCKET s, int opt, int size ) {
-
     int new_size;
     socklen_t new_size_len = sizeof(new_size);
 

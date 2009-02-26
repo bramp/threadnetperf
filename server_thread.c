@@ -49,7 +49,6 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 	assert ( req->n > 0 );
 
 	FD_ZERO(&readFD);
-	
 
 	// Wait for all connections
 	while ( bRunning && n > 0 ) {
@@ -61,7 +60,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		int send_socket_size, recv_socket_size;
 
 		FD_SET( listen, &readFD);
-		
+
 		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
 
 		if ( ret <= 0 ) {
@@ -69,14 +68,14 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 				fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
 		}
-		
+
 		// Did the listen socket fire?
 		if ( ! FD_ISSET(listen, &readFD) ) {
 			fprintf(stderr, "%s:%d FD_ISSET() has an invalid socket firing\n", __FILE__, __LINE__ );
 			return 1;
 		}
 
-		
+
 		// Accept a new client socket
 		s = accept( listen, (struct sockaddr *)&addr, &addr_len );
 
