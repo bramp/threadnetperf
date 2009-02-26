@@ -87,12 +87,11 @@ int create_clients(const struct settings *settings, void *data) {
 		cpu_setup( &cpus, creq[i].cores );
 
 		//For now let's keep the client using the threaded model 
-		if ( create_thread( client_thread, &creq [i] , sizeof(cpus), &cpus, MODEL_THREADED) ) {
+		if ( create_thread( client_thread, &creq [i] , sizeof(cpus), &cpus, settings->threaded_model) ) {
 			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
 			return -1;
 		}
 	}
-
 	return 0;
 }
 

@@ -206,9 +206,7 @@ SOCKET create_stats_socket() {
 	}
 	
 	ipc_socket.sun_family = AF_UNIX;
-	
 	ipc_sock_name = tempnam("/tmp/", "netipc");
-	
 	sprintf(ipc_socket.sun_path, "%s", ipc_sock_name);
 	
 	unlink(ipc_socket.sun_path);

@@ -9,7 +9,6 @@
 #include <assert.h>
 
 int set_opt(SOCKET s, int level, int optname, int one) {
-
 	if ( s == INVALID_SOCKET )
 		return SOCKET_ERROR;
 
