@@ -130,7 +130,6 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		if ( setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage)) == SOCKET_ERROR) {
 			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return 1;
-
 		}
 #endif
 

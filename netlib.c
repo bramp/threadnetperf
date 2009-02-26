@@ -13,7 +13,7 @@ int set_opt(SOCKET s, int level, int optname, int one) {
 	if ( s == INVALID_SOCKET )
 		return SOCKET_ERROR;
 
-	return setsockopt(s, level, optname, (char *)&one, sizeof(one));	
+	return setsockopt(s, level, optname, (char *)&one, sizeof(one));
 }
 
 int enable_nagle(SOCKET s) {
@@ -26,7 +26,7 @@ int disable_nagle(SOCKET s) {
 
 #ifndef WIN32
 int enable_maxseq(SOCKET s, int size) {
-	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, size + 52);	
+	return set_opt(s, IPPROTO_TCP, TCP_MAXSEG, size + 52);
 }
 
 int disable_maxseq(SOCKET s) {

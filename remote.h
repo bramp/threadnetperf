@@ -2,7 +2,8 @@
 
 // Control port for the deamon, make this a option
 #define CONTROL_PORT 0xABCD
-
+//#define CONTROL_PORT 0x1F48
+//#define CONTROL_PORT 0x593
 struct remote_data {
 	SOCKET control_socket;  // Connection to client issuing controls
 	SOCKET stats_socket;    // socket used to receive stats from children
