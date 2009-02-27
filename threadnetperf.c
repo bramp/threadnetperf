@@ -216,7 +216,7 @@ int setup_signals(int signum)	{
 }
 
 // Wait until every thread signals a ready
-void wait_for_threads() {
+/*void wait_for_threads() {
 	struct timespec waittime = {0, 100000000}; // 100 milliseconds
 	
 	while ( bRunning && unready_threads > 0 ) {
@@ -225,11 +225,10 @@ void wait_for_threads() {
 		pthread_mutex_lock( &ready_mutex );
 		pthread_cond_timedwait( &ready_cond, &ready_mutex, &waittime);
 		pthread_mutex_unlock( &ready_mutex );
-
 		pthread_mutex_lock( &go_mutex );
 	}
 	
-}
+} */
 
 // Annonce to everyone to start
 void start_threads(unsigned int threaded_model) {	
@@ -306,7 +305,10 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	}
 
 	// Wait for our threads to be created
-	wait_for_threads();
+//	wait_for_threads();
+	while ( bRunning && unready_threads > 0 ) {
+		usleep ( 1000 ) ;
+	}
 
 	if ( funcs->wait_for_go(settings, data) ) {
 		fprintf(stderr, "%s:%d wait_for_go() error\n", __FILE__, __LINE__ );
