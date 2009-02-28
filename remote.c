@@ -291,12 +291,15 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 			return -1;
 		}
 
-		print_results(settings, &stats, data);
+		if ( print_results(settings, &stats, data) ) {
+			fprintf(stderr, "%s:%d print_results() error\n", __FILE__, __LINE__ );
+			return -1;
+		}
 
 		stats_add( total_stats, &stats );
 	}
 
-	total_stats->duration  /= settings->servercores;
+	total_stats->duration /= settings->servercores;
 
 	return 0;
 }

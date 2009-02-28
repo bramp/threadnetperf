@@ -14,7 +14,8 @@
 	TODO Output time taken to set-up
 	TODO Change AF_UNIX to socketpair isntead of socket (TODO don't use tmpnam())
 	TODO set sock option in receive stats to wait for a whole struct per recv
-	TODO Don't send verbose across the network 
+	TODO Don't send verbose across the network
+	TODO both thread_collect_results and remote_collect_results look very similar
 */
 
 #include "common.h"

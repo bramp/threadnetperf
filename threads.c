@@ -246,23 +246,23 @@ int thread_join_all(int threaded_model) {
 
 int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void *), void *data) {
 	unsigned int i = 0;
-	unsigned int servers;
+	SOCKET s;
 	
 	assert( settings != NULL );
 	assert( total_stats != NULL );
-	
-	servers = count_server_cores( settings->test , settings->tests);
-	
+
+	s = ((struct remote_data*)data)->stats_socket;
+	assert ( s != INVALID_SOCKET );
+
 	if ( settings->verbose )
-		printf("Collecting %u results\n",  servers);
+		printf("Collecting %u results\n",  settings->servercores);
 	
-	for ( ; i<servers; i++ ) {
+	for ( ; i < settings->servercores; i++ ) {
 		struct stats stats;
-		struct remote_data* remote_data = (struct remote_data*) data;
-				
+
 		assert ( remote_data != NULL );
-		
-		if ( read_results(remote_data->stats_socket, &stats) != 0 ) {
+
+		if ( read_results(s, &stats) != 0 ) {
 			fprintf(stderr, "%s:%d read_results() error\n", __FILE__, __LINE__ );
 			return -1;
 		}
@@ -275,10 +275,10 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 		// Now add the values to the total
 		stats_add( total_stats, &stats );
 	}
-		
+
 	// Divide the duration by the # of CPUs used
-	if ( servers > 1 )
-		total_stats->duration /= servers;
+	if ( settings->servercores > 1 )
+		total_stats->duration /= settings->servercores;
 
 	return 0;
 }
