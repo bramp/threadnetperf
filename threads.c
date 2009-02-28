@@ -205,12 +205,12 @@ SOCKET create_stats_socket() {
 	}
 	
 	ipc_socket.sun_family = AF_UNIX;
-	ipc_sock_name = tempnam("/tmp/", "netipc");
+	ipc_sock_name = tempnam("/tmp/", "threadnetperf");
 	sprintf(ipc_socket.sun_path, "%s", ipc_sock_name);
-	
-	unlink(ipc_socket.sun_path);
+
 	sock_len = strlen(ipc_socket.sun_path) + sizeof(ipc_socket.sun_family);
-	
+	unlink(ipc_socket.sun_path);
+
 	// Bind the IPC SOCKET
 	if ( bind( s, &ipc_socket, sock_len) == SOCKET_ERROR) {
 		fprintf(stderr, "%s:%d bind() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -239,9 +239,7 @@ int thread_join_all(int threaded_model) {
 //				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
 		}
 	} 
-	
-	unlink(ipc_sock_name);
-	free(ipc_sock_name);
+
 	assert ( thread_count == 0 );
 	return 0;
 }

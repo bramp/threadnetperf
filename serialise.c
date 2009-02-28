@@ -229,12 +229,12 @@ int read_results( SOCKET s, struct stats * stats ) {
 			return -1;
 		}
 		assert ( ret <= p_len );
-		
+
 		p_len -= ret;
 		p += ret;
 
 	} while ( p_len > 0 );
-	
+
 	// TODO find a 64bit ntohl
 	stats->cores          = ntohl(net_stats.cores);
 	stats->bytes_received = (net_stats.bytes_received);
