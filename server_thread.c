@@ -61,7 +61,7 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 
 		FD_SET( listen, &readFD);
 
-		ret = select ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
+		ret = select_ign_signal ( (int)listen + 1, &readFD, NULL, NULL, &waittime );
 
 		if ( ret <= 0 ) {
 			if (ERRNO != 0)
@@ -75,10 +75,8 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			return 1;
 		}
 
-
 		// Accept a new client socket
 		s = accept( listen, (struct sockaddr *)&addr, &addr_len );
-
 
 		if ( s == INVALID_SOCKET ) {
 			fprintf(stderr, "%s:%d accept() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -198,7 +196,6 @@ void *server_thread(void *data) {
 	fd_set readFD;
 	int nfds = 0;
 #endif
-
 
 	int page_size, num_pages;
 #ifdef MF_FLIPPAGE
@@ -385,9 +382,9 @@ void *server_thread(void *data) {
 #ifdef USE_EPOLL
 		struct epoll_event event = {0};
 
-		event.events = EPOLLIN ;
+		event.events = EPOLLIN;
 		event.data.fd = *c;
-		
+
 		assert ( *c != INVALID_SOCKET );
 
 		if (epoll_ctl(readFD_epoll, EPOLL_CTL_ADD, *c, &event) == -1) {
