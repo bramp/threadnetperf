@@ -188,7 +188,6 @@ int remote_setup_data(void** data, SOCKET s) {
 
 	assert ( data != NULL );
 	assert ( *data == NULL );
-	assert ( s != INVALID_SOCKET );
 
 	// Malloc some space for the new data
 	remote_data = malloc( sizeof( *remote_data) );
@@ -285,7 +284,6 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 
 	for ( ; core < settings->servercores; core++ ) {
 		struct stats stats;
-		int read_bytes = 0;
 		memset(&stats, 0 , sizeof(stats));
  
 		if ( read_results( s, &stats )< 0) {

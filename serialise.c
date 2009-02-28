@@ -226,7 +226,7 @@ int read_results( SOCKET s, struct stats * stats ) {
 
 		if ( ret <= 0 ) {
 
-			if( errno == EAGAIN || errno == EINTR )
+			if( errno == EINTR )
 				continue;
 			
 			fprintf(stderr, "%s:%d recv(%d) error %d %s\n", __FILE__, __LINE__ , s, errno, strerror(errno));

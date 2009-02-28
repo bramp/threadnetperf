@@ -12,9 +12,9 @@
 	TODO Allow the connections to mimic BitTorrent/HTTP/NNTP/IRC/etc
 	TODO Add the error msg "server_thread() error Server thread can have no more than %d connections (%d specified)\n"
 	TODO Output time taken to set-up
-	TODO Stop server/client threads spinlocking on bGo, instead use a mutex
 	TODO Change AF_UNIX to socketpair isntead of socket (TODO don't use tmpnam())
-	TODO set sock option in receive stats to wait for a whole struct per recv 
+	TODO set sock option in receive stats to wait for a whole struct per recv
+	TODO Don't send verbose across the network 
 */
 
 #include "common.h"
@@ -39,27 +39,32 @@
 #endif
 
 
-// Condition Variable that is signaled each time a thread is ready
-pthread_cond_t ready_cond = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t ready_mutex = PTHREAD_MUTEX_INITIALIZER;
+// Condition Variable to signal when ready to accept
+static pthread_cond_t ready_to_accept_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t ready_to_accept_mtx = PTHREAD_MUTEX_INITIALIZER;
 
-// Condition Variable to indicate when all the threads are connected and ready to go
+// Condition Variable to signal when we are ready to go
+static pthread_cond_t ready_to_go_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t ready_to_go_mtx = PTHREAD_MUTEX_INITIALIZER;
+
+// Condition Variable to signal when we should go
 pthread_cond_t go_cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Flag to indidcate if we are still running
-int bRunning = 1;
+volatile int bRunning = 1;
 
 // Flag to indidcate if we can start the test
 int bGo = 0;
 
 // Count of how many threads are not ready
-unsigned int unready_threads = 0;
+int unready_threads = 0;
 
 int server_listen_unready = 0;
 
 int null_func(const struct settings *settings, void * data) { return 0; };
 int null_func2(struct settings *settings, void ** data) { return 0; };
+int setup(struct settings *, void ** data);
 
 // List of functions which run() uses
 struct run_functions {
@@ -84,7 +89,7 @@ struct run_functions {
 
 // The run sequence for a local test
 struct run_functions local_funcs = {
-	null_func2,            //setup
+	setup,                 //setup
 	prepare_servers,       //prepare_servers
 	prepare_clients,       //prepare_clients
 	create_servers,        //create_servers
@@ -170,31 +175,42 @@ void pause_for_duration(const struct settings *settings) {
 void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	union sigval param = siginfo->si_value;
 
-	assert (sig == SIGRTMIN);
+	assert (sig == SIGNUM );
 	
 	switch(param.sival_int) {
 		//Received by controller
 		case SIGNAL_READY_TO_ACCEPT :
+			pthread_mutex_lock( &ready_to_accept_mtx );
 			server_listen_unready--;
-			assert ( server_listen_unready >= 0 );	
+			assert ( server_listen_unready >= 0 );
+			if ( server_listen_unready == 0 ) {
+				pthread_cond_broadcast( &ready_to_accept_cond );
+			}
+			pthread_mutex_unlock( &ready_to_accept_mtx );
 			break;
 		//Received by controller
 		case SIGNAL_READY_TO_GO :
+			pthread_mutex_lock( &ready_to_go_mtx );
 			unready_threads--;
+			assert ( unready_threads >= 0 );
+			if ( unready_threads == 0 ) {
+				pthread_cond_broadcast( &ready_to_go_cond );
+			}
+			pthread_mutex_unlock( &ready_to_go_mtx );
 			break;
 		//Received by server threads (start_threads) 
 		case SIGNAL_GO :
-//			pthread_mutex_lock( &go_mutex );
+			pthread_mutex_lock( &go_mutex );
 			bGo = 1;
-//			pthread_cond_broadcast( &go_cond );
-//			pthread_mutex_unlock( &go_mutex );
+			pthread_cond_broadcast( &go_cond );
+			pthread_mutex_unlock( &go_mutex );
 			break;
 		//Received by server threads
 		case SIGNAL_STOP:
 			bRunning = 0;
 			break;
 		default :
-			fprintf(stderr, "%s:%d signal_handler() unknown sigval\n", __FILE__, __LINE__ );
+			fprintf(stderr, "%s:%d signal_handler() unknown sigval %d:%d\n", __FILE__, __LINE__, sig, param.sival_int );
 			break;
 	}
 }
@@ -215,28 +231,27 @@ int setup_signals(int signum)	{
    return sigaction(signum, &act, NULL);	
 }
 
-// Wait until every thread signals a ready
-void wait_for_threads() {
-	struct timespec waittime = {0, 100000000}; // 100 milliseconds
-	
-	while ( bRunning && unready_threads > 0 ) {
-		pthread_mutex_unlock( &go_mutex );
+// Wait for a condition to be true
+void wait_for( pthread_mutex_t* mutex, pthread_cond_t* cond, int* cond_variable ) {
+	pthread_mutex_lock( mutex );
+	while ( bRunning && *cond_variable > 0 ) {
+		struct timespec abstime;
 
-		pthread_mutex_lock( &ready_mutex );
-		pthread_cond_timedwait( &ready_cond, &ready_mutex, &waittime);
-		pthread_mutex_unlock( &ready_mutex );
-		pthread_mutex_lock( &go_mutex );
+		get_timespec_now(&abstime);
+		abstime.tv_sec += 1;
+		pthread_cond_timedwait( cond, mutex, &abstime);
 	}
-	
+	pthread_mutex_unlock( mutex );
 } 
 
 // Annonce to everyone to start
 void start_threads(unsigned int threaded_model) {	
-	
 	//What is this going to signal?
-	threads_signal_all(SIGNAL_GO, threaded_model);	
-	//pthread_cond_broadcast( &go_cond );
-	//pthread_mutex_unlock( &go_mutex );
+	threads_signal_all(SIGNAL_GO, threaded_model);
+}
+
+int setup(struct settings * settings, void ** data) {
+	return remote_setup_data( data, INVALID_SOCKET);
 }
 
 void run( const struct run_functions * funcs, struct settings *settings, struct stats *total_stats ) {
@@ -255,7 +270,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	threads_clear();
 
 	if ( funcs->setup ( settings, &data ) ) {
-		fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
+		fprintf(stderr, "%s:%d setup() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 	
@@ -272,43 +287,45 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 
+	pthread_mutex_lock ( &ready_to_accept_mtx );
 	server_listen_unready = server_threads;
+	pthread_mutex_unlock ( &ready_to_accept_mtx );
+	
+	pthread_mutex_lock( &ready_to_go_mtx );
 	unready_threads	= server_threads + client_threads;
 	
 	//Note the function below also sets up the struct in to which results are piped
 	// A list of threads
 	if ( thread_alloc(unready_threads) ) {
 		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
+		pthread_mutex_unlock( &ready_to_go_mtx );
 		goto cleanup;
 	}
-
+	pthread_mutex_unlock( &ready_to_go_mtx );
+	
 	// Create each server/client thread
 	if ( funcs->create_servers(settings, data) ) {
 		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
+	pthread_mutex_lock ( &ready_to_accept_mtx );
 	if ( server_listen_unready < 0 ) {
 		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
+		pthread_mutex_unlock ( &ready_to_accept_mtx );
 		goto cleanup;
 	}
-
-	// TODO make this not a spin lock
-	// Wait until all the servers are ready to accept connections
-	while ( bRunning && server_listen_unready > 0 ) {
-		usleep( 1000 );
-	}
 	
+	pthread_mutex_unlock ( &ready_to_accept_mtx );
+	wait_for( &ready_to_accept_mtx, &ready_to_accept_cond, &server_listen_unready);
+
 	if ( funcs->create_clients(settings, data) ) {
 		fprintf(stderr, "%s:%d create_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
 	// Wait for our threads to be created
-	wait_for_threads();
-//	while ( bRunning && unready_threads > 0 ) {
-//		usleep ( 1000 ) ;
-//	}
+	wait_for( &ready_to_go_mtx, &ready_to_go_cond, &unready_threads);
 
 	if ( funcs->wait_for_go(settings, data) ) {
 		fprintf(stderr, "%s:%d wait_for_go() error\n", __FILE__, __LINE__ );
@@ -403,7 +420,7 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	}
 
-	if ( setup_signals(SIGRTMIN)) {
+	if ( setup_signals(SIGNUM)) {
 		fprintf(stderr, "%s:%d setup_signals() error %d\n", __FILE__, __LINE__ , errno);
 		goto cleanup;
 	}
@@ -464,8 +481,8 @@ cleanup:
 	pthread_cond_destroy( & go_cond );
 	pthread_mutex_destroy( & go_mutex );
 
-	pthread_cond_destroy( & ready_cond );
-	pthread_mutex_destroy( & ready_mutex );
+	pthread_cond_destroy( & ready_to_go_cond );
+	pthread_mutex_destroy( & ready_to_go_mtx );
 
 	pthread_mutex_destroy( & printf_mutex );
 

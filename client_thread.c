@@ -95,9 +95,15 @@ int connect_connections(const struct settings *settings,
 				goto cleanup;
 			}
 
-			if (connect(s, (const struct sockaddr *)&details->addr, (int)details->addr_len ) == SOCKET_ERROR) {
-				fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
-				goto cleanup;
+			while ( 1 ) {
+				if (connect(s, (const struct sockaddr *)&details->addr, (int)details->addr_len ) == SOCKET_ERROR) {
+					if (errno == EINTR) 
+						continue;
+				
+					fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
+					goto cleanup;
+				}
+				break;
 			}
 
 			// Always disable blocking (to work around linux bug)
@@ -154,8 +160,8 @@ void* client_thread(void *data) {
 	char *buffer= NULL;
 
 #ifdef USE_EPOLL
-	int readFD_epoll;
-	struct epoll_event *events;
+	int readFD_epoll = -1;
+	struct epoll_event *events = NULL;
 #else
 	int nfds;
 
@@ -266,19 +272,19 @@ void* client_thread(void *data) {
 	}
 	
 	 // Signal we are ready
-	threads_signal_parent(SIGNAL_READY_TO_GO, settings.threaded_model);
+	threads_signal_parent ( SIGNAL_READY_TO_GO, settings.threaded_model );
 	
 	// Wait for the go
-//	pthread_mutex_lock( &go_mutex );
+	pthread_mutex_lock( &go_mutex );
 	while ( bRunning && !bGo ) {
-//		struct timespec abstime;
+		struct timespec abstime;
 
-//		get_timespec_now(&abstime);
-//		abstime.tv_sec += 1;
+		get_timespec_now(&abstime);
+		abstime.tv_sec += 1;
 
-//		pthread_cond_timedwait( &go_cond, &go_mutex, &abstime);
+		pthread_cond_timedwait( &go_cond, &go_mutex, &abstime);
 	}
-//	pthread_mutex_unlock( &go_mutex );
+	pthread_mutex_unlock( &go_mutex );
 
 	next_send_time = get_microseconds();
 

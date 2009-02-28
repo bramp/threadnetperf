@@ -30,6 +30,7 @@ int signal_go   ( const struct settings *settings, void *data );
 int wait_ready( const struct settings *settings, void *data );
 int wait_go   ( const struct settings *settings, void *data );
 
+int remote_setup_data(void** data, SOCKET s);
 int remote_accept(struct settings *settings, void **data);
 int remote_connect(struct settings *settings, void** data);
 int remote_cleanup(const struct settings *settings, void* data);

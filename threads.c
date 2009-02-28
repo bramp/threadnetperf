@@ -24,6 +24,7 @@ union thread_ids *thread;
  // Total number of threads
 size_t thread_count = 0;
 
+
  // Total number of threads
 size_t thread_max_count = 0;
 
@@ -125,7 +126,7 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 	assert (start_routine != NULL);
 
 	if ( thread_count >= thread_max_count ) {
-		fprintf(stderr, "%s:%d create_thread() can only creat %d threads\n", __FILE__, __LINE__, thread_max_count );
+		fprintf(stderr, "%s:%d create_thread() can only create %ud threads\n", __FILE__, __LINE__, (unsigned int) thread_max_count );
 		return -1;
 	}
 
@@ -165,8 +166,7 @@ void send_stats_from_thread(struct stats stats) {
 		goto cleanup;
 	}
 
-	//TODO: change to strncpy
-	//TODO: Make random file name (tmpfile())?
+
 	ipc_socket.sun_family = AF_UNIX;
 	
 	//strcpy(ipc_socket.sun_path, IPC_SOCK_NAME);
@@ -191,7 +191,6 @@ cleanup:
 SOCKET create_stats_socket() {
 	struct sockaddr_un	ipc_socket;
 	int sock_len;
-	int one = 1;
 	// Create the socket to receive the stats data
 	SOCKET s = socket( AF_UNIX, SOCK_DGRAM, 0);
 
@@ -249,15 +248,22 @@ int thread_join_all(int threaded_model) {
 
 int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void *), void *data) {
 	unsigned int i = 0;
-
+	unsigned int servers;
+	
 	assert( settings != NULL );
 	assert( total_stats != NULL );
 	
-	//while (thread_count > 0) { is not used as we need to keep thread_count in tact for later.
-	while ( i < thread_count) {
+	servers = count_server_cores( settings->test , settings->tests);
+	
+	if ( settings->verbose )
+		printf("Collecting %u results\n",  servers);
+	
+	for ( ; i<servers; i++ ) {
 		struct stats stats;
 		struct remote_data* remote_data = (struct remote_data*) data;
 				
+		assert ( remote_data != NULL );
+		
 		if ( read_results(remote_data->stats_socket, &stats) != 0 ) {
 			fprintf(stderr, "%s:%d read_results() error\n", __FILE__, __LINE__ );
 			return -1;
@@ -270,16 +276,11 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 
 		// Now add the values to the total
 		stats_add( total_stats, &stats );
-
-		i++;
-
 	}
 		
 	// Divide the duration by the # of CPUs used
-	if ( i > 1 )
-		total_stats->duration /= i;
-
-//	assert ( thread_count == 0 );
+	if ( servers > 1 )
+		total_stats->duration /= servers;
 
 	return 0;
 }
@@ -313,7 +314,7 @@ void threads_signal(pid_t pid, int type) {
 	memset(&v, 0, sizeof(v));
 	v.sival_int = type;
 
-	if ( sigqueue(pid, SIGRTMIN, v) )
+	if ( sigqueue(pid, SIGNUM, v) )
 		printf("(%d) Error %d %s sending signal %d\n", getpid(), ERRNO, strerror(errno), type);	
 }
 
