@@ -222,7 +222,7 @@ int read_results( SOCKET s, struct stats * stats ) {
 
 	// Keep looping until the full net_stat struct is read
 	do {
-		ret = recv_ign_signal(s, p, p_len, MSG_WAITALL);
+		ret = recv_ign_signal(s, p, p_len, 0);
 
 		if ( ret <= 0 ) {
 			fprintf(stderr, "%s:%d recv(%d) error %d %s\n", __FILE__, __LINE__ , s, errno, strerror(errno));
