@@ -246,7 +246,7 @@ inline ssize_t recv_ign_signal(int s, void *buf, size_t len, int flags) {
 inline ssize_t recvmsg_ign_signal(int s, struct msghdr *msg, int flags) {
 	int len;
 	while ( 1 ) {
-		len = recvmsg_ign_signal(s, msg, flags);
+		len = recvmsg(s, msg, flags);
 		if ( len == SOCKET_ERROR && ERRNO == EINTR )
 			continue;
 		return len;

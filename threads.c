@@ -205,7 +205,7 @@ SOCKET create_stats_socket() {
 	}
 	
 	ipc_socket.sun_family = AF_UNIX;
-	ipc_sock_name = tempnam("/tmp/", "threadnetperf");
+	ipc_sock_name = tempnam(NULL, "threadnetperf");
 	sprintf(ipc_socket.sun_path, "%s", ipc_sock_name);
 
 	sock_len = strlen(ipc_socket.sun_path) + sizeof(ipc_socket.sun_family);
