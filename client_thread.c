@@ -95,15 +95,9 @@ int connect_connections(const struct settings *settings,
 				goto cleanup;
 			}
 
-			while ( 1 ) {
-				if (connect(s, (const struct sockaddr *)&details->addr, (int)details->addr_len ) == SOCKET_ERROR) {
-					if (errno == EINTR) 
-						continue;
-				
-					fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
-					goto cleanup;
-				}
-				break;
+			if (connect_ign_signal(s, (const struct sockaddr *)&details->addr, (int)details->addr_len ) == SOCKET_ERROR) {
+				fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
+				goto cleanup;
 			}
 
 			// Always disable blocking (to work around linux bug)
@@ -121,7 +115,7 @@ int connect_connections(const struct settings *settings,
 			i--;
 			continue;
 
-			cleanup:
+cleanup:
 			// This cleanup section is within the loop so we can cleanup s
 			closesocket(s);
 			return -1;
@@ -294,11 +288,8 @@ void* client_thread(void *data) {
 #ifdef USE_EPOLL
 		int i;
 		//This has been changed to re-try the epoll if we fail.
-		int ready = epoll_wait(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
+		int ready =  epoll_wait_ign_signal(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
 		
-		if( ready < 0)
-			ready = 0;
-
 		for ( i = 0; i < ready; i++ ) {
 			SOCKET s = events[i].data.fd;
 
@@ -314,19 +305,15 @@ void* client_thread(void *data) {
 #else
 				struct timeval waittime = {TRANSFER_TIMEOUT / 1000, 0}; // 1 second
 
-				int ret = select(nfds, &readFD, &writeFD, NULL, &waittime);
-
-				if ( ret == SOCKET_ERROR ) {
-					if( ERRNO == EINTR ) {
-						ret = 0;
-					} else {
-						fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-						goto cleanup;
-					}
-				}
-
+				int ret = selectt_ign_signal(nfds, &readFD, &writeFD, NULL, &waittime);
+				
 				if ( ret == 0 )
 					fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
+
+				else if ( ret == SOCKET_ERROR ) {{
+					fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+					goto cleanup;
+				}
 
 				// Figure out which sockets have fired
 				for (c = client; c < &client [ clients ]; c++ ) {
@@ -344,7 +331,7 @@ void* client_thread(void *data) {
 					// Check for reads
 					if ( FD_ISSET( s, &readFD) ) {
 #endif
-						int len = recv( s, buffer, settings.message_size, 0);
+						int len = recv_ign_signal( s, buffer, settings.message_size, 0);
 
 						if ( len == SOCKET_ERROR ) {
 							if ( ERRNO != ECONNRESET ) {
@@ -381,7 +368,7 @@ void* client_thread(void *data) {
 #endif
 
 							// Invalid this client
-							closesocket( s );
+							closesocket_ign_signal( s );
 							clients--;
 
 							// If this is the last client then just give up!
@@ -412,9 +399,8 @@ void* client_thread(void *data) {
 
 							next_send_time += time_between_sends;
 						}
-						
 
-						if ( send( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
+						if ( send_ign_signal( s, buffer, settings.message_size, 0 ) == SOCKET_ERROR ) {
 							if ( ERRNO != EWOULDBLOCK && ERRNO != EPIPE ) {
 								fprintf(stderr, "%s:%d send() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 								goto cleanup;
@@ -439,9 +425,6 @@ void* client_thread(void *data) {
 
 cleanup:
 
-	// Force a stop
-	//stop_all(settings.threaded_model);
-
 	// Cleanup
 	free( buffer );
 
@@ -451,13 +434,13 @@ cleanup:
 			SOCKET s = *c;
 			if ( s != INVALID_SOCKET ) {
 				shutdown ( s, SHUT_RDWR );
-				closesocket( s );
+				closesocket_ign_signal( s );
 			}
 		}
 	}
 
 #ifdef USE_EPOLL
-	close(readFD_epoll);
+	close_ign_signal(readFD_epoll);
 	free( events );
 #endif
 

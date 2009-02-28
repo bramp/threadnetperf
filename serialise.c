@@ -84,7 +84,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 
 	memset( &net_settings, 0, sizeof(net_settings) );
 
-	ret = recv(s, (char *)&net_settings, sizeof(net_settings), 0);
+	ret = recv_ign_signal(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) || net_settings.version != ntohl(SETTINGS_VERSION) ) {
 		if ( ret > 0 )
 			fprintf(stderr, "Invalid setting struct received (size:%d vs %d, ver:%d vs %d\n", ret, (int)sizeof(net_settings), net_settings.version, ntohl(SETTINGS_VERSION) );
@@ -133,12 +133,12 @@ int read_settings( SOCKET s, struct settings * settings ) {
 		char buffer[ 256 ];
 		unsigned char buflen;
 
-		ret = recv(s, &buflen, sizeof(buflen), 0);
+		ret = recv_ign_signal(s, &buflen, sizeof(buflen), 0);
 		if ( ret != sizeof(buflen) ) {
 			return -1;
 		}
 
-		ret = recv(s, buffer, buflen, 0);
+		ret = recv_ign_signal(s, buffer, buflen, 0);
 		if ( ret != buflen ) {
 			return -1;
 		}
@@ -185,7 +185,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 
 	net_settings.tests          = settings->tests;
 
-	ret = send(s, (char *)&net_settings, sizeof(net_settings), 0);
+	ret = send_ign_signal(s, (char *)&net_settings, sizeof(net_settings), 0);
 	if ( ret != sizeof(net_settings) ) {
 		return -1;
 	}
@@ -198,7 +198,7 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 		assert ( strlen(&buffer[1]) < 256 );
 		buffer[0] = (char)strlen(&buffer[1]);
 
-		ret = send(s, buffer, *buffer + 1, 0);
+		ret = send_ign_signal(s, buffer, *buffer + 1, 0);
 		if ( ret != *buffer + 1 ) {
 			return -1;
 		}
@@ -222,7 +222,7 @@ int read_results( SOCKET s, struct stats * stats ) {
 
 	// Keep looping until the full net_stat struct is read
 	do {
-		ret = recv(s, p, p_len, MSG_WAITALL);
+		ret = recv_ign_signal(s, p, p_len, MSG_WAITALL);
 
 		if ( ret <= 0 ) {
 
@@ -267,7 +267,7 @@ int send_results( SOCKET s, const struct stats * stats ) {
 	net_stats.timestamps     = (stats->timestamps);
 	net_stats.duration       = (stats->duration);
 
-	ret = send(s, (char *)&net_stats, sizeof(net_stats), 0);
+	ret = send_ign_signal(s, (char *)&net_stats, sizeof(net_stats), 0);
 	
 	if ( ret != sizeof(net_stats) ) {
 		return -1;

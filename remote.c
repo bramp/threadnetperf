@@ -67,7 +67,7 @@ int start_daemon(const struct settings * settings) {
 
 bail:
 
-	closesocket(listen_socket);
+	closesocket_ign_signal(listen_socket);
 	listen_socket = INVALID_SOCKET;
 
 	return -1;
@@ -109,7 +109,7 @@ SOCKET connect_daemon(const struct settings *settings) {
 		printf("Connecting to deamon %s\n", addr_str);
 	}
 
-	if ( connect(s, (struct sockaddr *)&addr, sizeof(addr) ) == SOCKET_ERROR ) {
+	if ( connect_ign_signal(s, (struct sockaddr *)&addr, sizeof(addr) ) == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d connect() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
@@ -118,12 +118,12 @@ SOCKET connect_daemon(const struct settings *settings) {
 
 cleanup:
 
-	closesocket(s);
+	closesocket_ign_signal(s);
 	return INVALID_SOCKET;
 }
 
 void close_daemon( ) {
-	closesocket(listen_socket);
+	closesocket_ign_signal(listen_socket);
 	listen_socket = INVALID_SOCKET;
 }
 
@@ -148,7 +148,7 @@ SOCKET accept_test( SOCKET listen_socket, struct settings *recv_settings) {
 	assert ( listen_socket != INVALID_SOCKET );
 	assert ( recv_settings != NULL );
 
-	s = accept(listen_socket, (struct sockaddr *)&addr, &addr_len);
+	s = accept_ign_signal(listen_socket, (struct sockaddr *)&addr, &addr_len);
 	if ( s == INVALID_SOCKET) {
 		fprintf(stderr, "%s:%d accept() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
@@ -259,7 +259,7 @@ int remote_cleanup(const struct settings *settings, void* data) {
 		if ( s != INVALID_SOCKET ) {
 			// Gracefully shut down to make sure any remaining stats get sent
 			shutdown ( s, SHUT_RDWR );
-			closesocket ( s );
+			closesocket_ign_signal ( s );
 		}
 		free ( data );
 	}
@@ -312,14 +312,14 @@ int remote_send_results (const struct settings *settings, const struct stats *st
 
 int signal_remote( SOCKET s, unsigned char code ) {
 	assert ( s != INVALID_SOCKET );
-	return send(s, &code, 1, 0) != 1;
+	return send_ign_signal(s, &code, 1, 0) != 1;
 }
 
 int wait_remote( SOCKET s, unsigned char code ) {
 	unsigned char code2;
 	assert ( s != INVALID_SOCKET );
 
-	if ( recv(s, &code2, 1, 0) != 1 || code2 != code )
+	if ( recv_ign_signal(s, &code2, 1, 0) != 1 || code2 != code )
 		return -1;
 
 	return 0;
@@ -360,4 +360,3 @@ int wait_go ( const struct settings *settings, void *data ) {
 
 	return wait_remote( s, SIGNAL_GO );
 }
-

@@ -426,11 +426,11 @@ void *server_thread(void *data) {
 
 #ifdef USE_EPOLL
 		
-		ret = epoll_wait(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
-		
+		ret = epoll_wait_ign_signal(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
+
 		if ( ret < 0 ) {
-			//fprintf(stderr, "%s:%d epoll_wait() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			ret = 0;
+			fprintf(stderr, "%s:%d epoll_wait() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			goto cleanup;
 		}
 
 		//fprintf(stderr, "MF: num_fds fired %d on line %d\n", num_fds, __LINE__);
@@ -440,12 +440,12 @@ void *server_thread(void *data) {
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
 				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 				//Closing a file descriptor automagically removes it from the epoll fd set.
-				closesocket( s );
+				closesocket_ign_signal( s );
 				continue;
 			}
 #else
 		struct timeval waittime = {TRANSFER_TIMEOUT / 1000, 0}; // 1 second
-		ret = select( nfds, &readFD, NULL, NULL, &waittime);
+		ret = select_ign_signal( nfds, &readFD, NULL, NULL, &waittime);
 
 		if ( ret == 0 && !bRunning )
 			fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
@@ -466,10 +466,10 @@ void *server_thread(void *data) {
 #endif
 
 #ifdef WIN32
-				len = recv(s, buf, recv_size, 0);
+				len = recv_ign_signal(s, buf, recv_size, 0);
 #else
 				msgs.msg_controllen = msg_control_len;
-				len = recvmsg(s, &msgs, 0);
+				len = recvmsg_ign_signal(s, &msgs, 0);
 #endif
 				// The socket has closed (or an error has occured)
 				if ( len <= 0 ) {
@@ -477,7 +477,7 @@ void *server_thread(void *data) {
 						int lastErr = ERRNO;
 
 						// If it is a blocking error just continue
-						if ( lastErr == EWOULDBLOCK ||  lastErr == EINTR )
+						if ( lastErr == EWOULDBLOCK )
 							continue;
 
 						else if ( lastErr != ECONNRESET ) {
@@ -490,8 +490,7 @@ void *server_thread(void *data) {
 						printf("  Server: %d Removed client (%d/%d)\n", req->cores, i + 1, clients );
 
 					// Invalidate this client
-					closesocket( s );
-					
+					closesocket_ign_signal( s );					
 
 #ifndef USE_EPOLL
 					// Move back
@@ -588,13 +587,12 @@ cleanup:
 	// Force a stop
 	stop_all(settings.threaded_model);
 
-
 	// Cleanup
 	free( buf );
 
 #ifndef WIN32
 #ifdef USE_EPOLL
-	close(readFD_epoll);
+	close_ign_signal(readFD_epoll);
 	free( events );
 #else
 	if ( msgs.msg_control )
@@ -605,14 +603,14 @@ cleanup:
 	// Shutdown server socket
 	if ( s != INVALID_SOCKET ) {
 		shutdown ( s, SHUT_RDWR );
-		closesocket( s );
+		closesocket_ign_signal( s );
 	}
 
 	// Shutdown client sockets
 	for (c = client ; c < &client [ clients ] ; c++) {
 		if ( *c != INVALID_SOCKET ) {
 			shutdown ( *c, SHUT_RDWR );
-			closesocket( *c );
+			closesocket_ign_signal( *c );
 			*c = INVALID_SOCKET;
 		}
 	}

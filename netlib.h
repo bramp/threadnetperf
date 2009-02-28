@@ -28,10 +28,15 @@
 
 	#define ERRNO errno
 	#define closesocket(s) close(s)
+	#define closesocket_ign_signal(s) close_ign_signal(s)
 
 	#define SOCKET int
 	#define INVALID_SOCKET (-1)
 	#define SOCKET_ERROR (-1)
+#endif
+
+#ifdef USE_EPOLL
+#include <sys/epoll.h>
 #endif
 
 int enable_timestamp(SOCKET s);
@@ -61,3 +66,15 @@ void setup_winsock();
 char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, size_t maxhostlen);
 int str_to_addr(const char *host, struct sockaddr *addr, socklen_t *addlen);
 
+//Set of functions that ignore signal error (EINTR)
+inline int connect_ign_signal(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+inline int accept_ign_signal(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+inline ssize_t recv_ign_signal(int s, void *buf, size_t len, int flags);
+inline ssize_t recvmsg_ign_signal(int s, struct msghdr *msg, int flags);
+inline ssize_t send_ign_signal(int s, const void *buf, size_t len, int flags);
+inline int select_ign_signal(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+inline int close_ign_signal(int fildes);
+
+#ifdef USE_EPOLL
+inline int epoll_wait_ign_signal(int epfd, struct epoll_event * events, int maxevents, int timeout) ;
+#endif

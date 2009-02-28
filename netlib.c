@@ -4,9 +4,10 @@
 #include <sys/ioctl.h>
 #endif
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
+#include <unistd.h>
 
 int set_opt(SOCKET s, int level, int optname, int one) {
 	if ( s == INVALID_SOCKET )
@@ -211,3 +212,85 @@ int str_to_addr(const char *host, struct sockaddr *addr, socklen_t *addlen) {
 
 	return 0;
 }
+
+inline int connect_ign_signal(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen) {
+	int len;
+	while ( 1 ) {
+		len = connect( sockfd, serv_addr, addrlen);
+		if ( len == SOCKET_ERROR && ERRNO == EINTR )
+			continue;
+		return len;
+	}
+}
+
+inline int accept_ign_signal(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+	int len;
+	while ( 1 ) {
+		len = accept( sockfd, addr, addrlen);
+		if ( len == SOCKET_ERROR && ERRNO == EINTR )
+			continue;
+		return len;
+	}
+}
+
+inline ssize_t recv_ign_signal(int s, void *buf, size_t len, int flags) {
+	int ret;
+	while ( 1 ) {
+		ret = recv( s, buf, len, flags);
+		if ( ret == SOCKET_ERROR && ERRNO == EINTR )
+			continue;
+		return ret;
+	}
+}
+
+inline ssize_t recvmsg_ign_signal(int s, struct msghdr *msg, int flags) {
+	int len;
+	while ( 1 ) {
+		len = recvmsg_ign_signal(s, msg, flags);
+		if ( len == SOCKET_ERROR && ERRNO == EINTR )
+			continue;
+		return len;
+	}
+}
+
+inline ssize_t send_ign_signal(int s, const void *buf, size_t len, int flags) {
+	int ret;
+	while ( 1 ) {
+		ret = send( s, buf, len, flags);
+		if ( ret == SOCKET_ERROR && ERRNO == EINTR )
+			continue;
+		return ret;
+	}
+}
+
+inline int select_ign_signal(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
+	int num_fd;
+	while ( 1 ) {
+		num_fd = select(nfds, readfds, writefds, exceptfds, timeout);
+		if ( num_fd == SOCKET_ERROR && ERRNO == EINTR )
+			continue;
+		return num_fd;
+	}
+}
+
+inline int close_ign_signal(int fildes) {
+	int err;
+	while ( 1 ) {
+		err = close(fildes);
+		if ( err == SOCKET_ERROR && ERRNO == EINTR )
+			continue;
+		return err;
+	}
+}
+
+#ifdef USE_EPOLL
+inline int epoll_wait_ign_signal(int epfd, struct epoll_event * events, int maxevents, int timeout) {
+	int num_fd;
+	while ( 1 ) {
+		num_fd = epoll_wait(epfd, events, maxevents, timeout);
+		if ( num_fd == SOCKET_ERROR && ERRNO == EINTR )
+			continue;
+		return num_fd;
+	}
+}
+#endif
