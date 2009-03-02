@@ -187,6 +187,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			pthread_mutex_lock( &ready_to_accept_mtx );
 			server_listen_unready--;
 			assert ( server_listen_unready >= 0 );
+			printf("(%d) obtained the SIGNAL_READY_TO_ACCEPT lock\n",getpid());
 			if ( server_listen_unready == 0 ) {
 				pthread_cond_broadcast( &ready_to_accept_cond );
 			}
@@ -197,6 +198,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			printf("(%d) Received SIGNAL_READY_TO_GO unready_threads %d\n",getpid(),unready_threads);
 			pthread_mutex_lock( &ready_to_go_mtx );
 			unready_threads--;
+			printf("(%d) obtained the SIGNAL_READY_TO_GO lock\n",getpid());
 			assert ( unready_threads >= 0 );
 			if ( unready_threads == 0 ) {
 				pthread_cond_broadcast( &ready_to_go_cond );
@@ -207,6 +209,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 		case SIGNAL_GO :
 			printf("(%d) Received SIGNAL_GO\n", getpid());
 			pthread_mutex_lock( &go_mutex );
+			printf("(%d) obtained the SIGNAL_GO lock\n", getpid());
 			bGo = 1;
 			pthread_cond_broadcast( &go_cond );
 			pthread_mutex_unlock( &go_mutex );
@@ -300,14 +303,13 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	
 	pthread_mutex_lock( &ready_to_go_mtx );
 	unready_threads	= server_threads + client_threads;
-
+	pthread_mutex_unlock( &ready_to_go_mtx );
+	
 	// A list of threads
 	if ( thread_alloc(unready_threads) ) {
 		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
-		pthread_mutex_unlock( &ready_to_go_mtx );
 		goto cleanup;
 	}
-	pthread_mutex_unlock( &ready_to_go_mtx );
 
 	printf("B\n");
 	// Create each server/client thread
