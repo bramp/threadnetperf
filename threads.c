@@ -138,10 +138,10 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 			//Process create_on increases the thread_count itself.
 			ret = process_create_on( &thread[thread_count].pid, start_routine, arg, cpusetsize, cpuset);
 			break;
-		default: 
+		default:
 			assert( 0 );
-	}	
-	
+	}
+
 	if ( !ret )
 		thread_count++;
 
@@ -168,7 +168,7 @@ void send_stats_from_thread(struct stats stats) {
 
 
 	ipc_socket.sun_family = AF_UNIX;
-	
+
 	//strcpy(ipc_socket.sun_path, IPC_SOCK_NAME);
 	sprintf(ipc_socket.sun_path , "%s", ipc_sock_name);
 	sock_len = strlen(ipc_socket.sun_path) + sizeof(ipc_socket.sun_family);
@@ -238,8 +238,7 @@ int thread_join_all(int threaded_model) {
 			if(WIFEXITED(status))
 				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
 		}
-	} 
-
+	}
 	assert ( thread_count == 0 );
 	return 0;
 }

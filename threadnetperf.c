@@ -199,7 +199,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			}
 			pthread_mutex_unlock( &ready_to_go_mtx );
 			break;
-		//Received by server threads (start_threads) 
+		//Received by server threads (start_threads)
 		case SIGNAL_GO :
 			pthread_mutex_lock( &go_mutex );
 			bGo = 1;
@@ -229,7 +229,7 @@ int setup_signals(int signum)	{
    act.sa_flags         = SA_SIGINFO;
    sigemptyset(&act.sa_mask);
    //siginterrupt(signum, 0);
-   return sigaction(signum, &act, NULL);	
+   return sigaction(signum, &act, NULL);
 }
 
 // Wait for a condition to be true
@@ -243,10 +243,10 @@ void wait_for( pthread_mutex_t* mutex, pthread_cond_t* cond, int* cond_variable 
 		pthread_cond_timedwait( cond, mutex, &abstime);
 	}
 	pthread_mutex_unlock( mutex );
-} 
+}
 
 // Annonce to everyone to start
-void start_threads(unsigned int threaded_model) {	
+void start_threads(unsigned int threaded_model) {
 	//What is this going to signal?
 	threads_signal_all(SIGNAL_GO, threaded_model);
 }
@@ -274,7 +274,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		fprintf(stderr, "%s:%d setup() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-	
+
 	// Setup all the data for each server and client
 	server_threads = funcs->prepare_servers(settings, data);
 	if ( server_threads < 0  ) {
@@ -356,7 +356,8 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	thread_join_all(settings->threaded_model);
 
 cleanup:
-
+	unlink(ipc_sock_name);
+	free(ipc_sock_name);
 	// Make sure we are not running anymore
 	stop_all(settings->threaded_model);
 
