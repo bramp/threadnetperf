@@ -353,15 +353,16 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 
+cleanup:
+	// Make sure we are not running anymore
+	stop_all(settings->threaded_model);
+
 	//If we don't join here, then we may leave zombie processes
 	//Zombies like brains.
 	thread_join_all(settings->threaded_model);
 
-cleanup:
 	unlink(ipc_sock_name);
 	free(ipc_sock_name);
-	// Make sure we are not running anymore
-	stop_all(settings->threaded_model);
 
 	//thread_join_all(settings->threaded_model);
 	threads_clear();
