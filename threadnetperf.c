@@ -253,7 +253,6 @@ void wait_for( pthread_mutex_t* mutex, pthread_cond_t* cond, int* cond_variable 
 
 // Annonce to everyone to start
 void start_threads(unsigned int threaded_model) {
-	//What is this going to signal?
 	threads_signal_all(SIGNAL_GO, threaded_model);
 }
 
@@ -288,6 +287,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 	
+	printf("A\n");
 	pthread_mutex_lock ( &ready_to_accept_mtx );
 	server_listen_unready = server_threads;
 	pthread_mutex_unlock ( &ready_to_accept_mtx );
@@ -309,6 +309,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	}
 	pthread_mutex_unlock( &ready_to_go_mtx );
 
+	printf("B\n");
 	// Create each server/client thread
 	if ( funcs->create_servers(settings, data) ) {
 		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
@@ -317,6 +318,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	wait_for( &ready_to_accept_mtx, &ready_to_accept_cond, &server_listen_unready);
 
+	printf("C\n");
 	if ( funcs->create_clients(settings, data) ) {
 		fprintf(stderr, "%s:%d create_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -325,6 +327,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	// Wait for our threads to be created
 	wait_for( &ready_to_go_mtx, &ready_to_go_cond, &unready_threads);
 
+	printf("D\n");
 	if ( funcs->wait_for_go(settings, data) ) {
 		fprintf(stderr, "%s:%d wait_for_go() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -337,6 +340,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	pause_for_duration( settings );
 
 	stop_all(settings->threaded_model);
+	printf("E\n");
 
 	if ( funcs->print_headers(settings, data) ) {
 		fprintf(stderr, "%s:%d print_headers() error\n", __FILE__, __LINE__ );
