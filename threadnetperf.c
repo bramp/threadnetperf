@@ -183,6 +183,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	switch(param.sival_int) {
 		//Received by controller
 		case SIGNAL_READY_TO_ACCEPT :
+			printf("(%d) Received IGNAL_READY_TO_ACCEPT server_listen_unready %d", server_listen_unready);
 			pthread_mutex_lock( &ready_to_accept_mtx );
 			server_listen_unready--;
 			assert ( server_listen_unready >= 0 );
@@ -193,6 +194,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			break;
 		//Received by controller
 		case SIGNAL_READY_TO_GO :
+			printf("(%d) Received SIGNAL_READY_TO_GO unready_threads %d", unready_threads);
 			pthread_mutex_lock( &ready_to_go_mtx );
 			unready_threads--;
 			assert ( unready_threads >= 0 );
@@ -203,6 +205,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			break;
 		//Received by server threads (start_threads)
 		case SIGNAL_GO :
+			printf("(%d) Received SIGNAL_GO");
 			pthread_mutex_lock( &go_mutex );
 			bGo = 1;
 			pthread_cond_broadcast( &go_cond );
@@ -210,6 +213,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			break;
 		//Received by server threads
 		case SIGNAL_STOP:
+			printf("(%d) Received SIGNAL_STOP");
 			bRunning = 0;
 			break;
 		default :
