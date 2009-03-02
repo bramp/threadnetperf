@@ -269,16 +269,7 @@ void* client_thread(void *data) {
 	threads_signal_parent ( SIGNAL_READY_TO_GO, settings.threaded_model );
 	
 	// Wait for the go
-	pthread_mutex_lock( &go_mutex );
-	while ( bRunning && !bGo ) {
-		struct timespec abstime;
-
-		get_timespec_now(&abstime);
-		abstime.tv_sec += 1;
-
-		pthread_cond_timedwait( &go_cond, &go_mutex, &abstime);
-	}
-	pthread_mutex_unlock( &go_mutex );
+	wait_for_nonzero( &go_mutex, &go_cond, &bGo );
 
 	next_send_time = get_microseconds();
 

@@ -28,13 +28,20 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 // Allocate space for this many threads
 int thread_alloc(size_t count);
 
+int pthread_mutex_lock_block_signal (pthread_mutex_t *mutex, int signum);
+int pthread_mutex_unlock_block_signal (pthread_mutex_t *mutex, int signum);
+
 void threads_signal_all(int type, int threaded_model);
 void threads_signal_parent(int threaded_model, __pid_t pid);
 // Clear all allocated space for the threads
 void threads_clear();
 void wait_all(int threaded_model);
 
-SOCKET create_stats_socket(); 
+void wait_for_zero( pthread_mutex_t* mutex, pthread_cond_t* cond, volatile int * cond_variable );
+void wait_for_nonzero( pthread_mutex_t* mutex, pthread_cond_t* cond, volatile int * cond_variable );
+
+SOCKET create_stats_socket(); // TODO move this somewhere else
+
 // Send the stats to an IPC
 void send_stats_from_thread(struct stats stats);
 #endif // _THREADS_H

@@ -6,6 +6,7 @@
 //Used to turn on the checking of the microseconds
 //#define CHECK_TIMES 100000
 #include "netlib.h"
+#include <signal.h>   // for SIGRTMIN
 
 // The number of cores this machine has
 extern const unsigned int max_cores; // TODO get the real number!
@@ -101,6 +102,7 @@ unsigned long long get_microseconds();
 unsigned long long get_nanoseconds();
 
 void get_timespec_now(struct timespec *ts);
+void add_timespec(struct timespec *ts, time_t tv_sec, long tv_nsec);
 
 void stop_all();
 

@@ -206,6 +206,29 @@ void get_timespec_now(struct timespec *ts) {
 #endif
 }
 
+/**
+ * Add constant value to a timespec
+ * tv_sec number of seconds to add
+ * tv_nsec number of nanoseconds to add (should be less than < 1 000 000 000)
+ */
+void add_timespec(struct timespec *ts, time_t tv_sec, long tv_nsec) {
+	long new_nsec;
+	
+	assert( ts != NULL );
+	
+	// Incrememnt secs
+	ts->tv_sec += tv_sec;
+	
+	// Calc new nanoseconds
+	new_nsec = ts->tv_nsec + tv_nsec;
+	
+	while ( new_nsec > 1000000000L ) {
+		ts->tv_sec += tv_sec;
+		new_nsec   -= 1000000000L;
+	}
+}
+
+
 
 void free_2D(void **data, size_t x) {
 	// TODO make it so we don't need a x or y

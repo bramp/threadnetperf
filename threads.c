@@ -2,6 +2,8 @@
 #include "common.h"    // for struct settings
 #include "serialise.h" // for send_results
 #include "remote.h"
+#include "global.h"    // for bRunning
+
 
 #include <assert.h>
 #include <malloc.h>
@@ -308,7 +310,7 @@ void threads_signal(pid_t pid, int type) {
 
 	memset(&v, 0, sizeof(v));
 	v.sival_int = type;
-
+// TODO change to fprint
 	if ( sigqueue(pid, SIGNUM, v) )
 		printf("(%d) Error %d %s sending signal %d\n", getpid(), ERRNO, strerror(errno), type);	
 }
@@ -334,3 +336,94 @@ void threads_signal_all(int type, int threaded_model) {
 	} else
 		assert ( 0 );
 }
+
+/**
+ * Obtains a mutex whilst blocking signal handle
+ * Return 0 on success, otherwise a error number
+ * The signal is not blocked if a error occurs
+ */
+int pthread_mutex_lock_block_signal (pthread_mutex_t *mutex, int signum) {
+	int ret;
+	sigset_t set;
+	sigemptyset(&set);
+
+	if ( sigaddset(&set, signum) ) {
+		fprintf(stderr, "%s:%d sigaddset() error\n", __FILE__, __LINE__ );
+		return -1;
+	}
+	if ( pthread_sigmask( SIG_BLOCK, &set, NULL) ) {
+		fprintf(stderr, "%s:%d pthread_sigmask() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		return -1;
+	}
+	
+	ret = pthread_mutex_lock(mutex);
+	if ( ret ) {
+		if ( pthread_sigmask( SIG_UNBLOCK, &set, NULL) ) {
+			fprintf(stderr, "%s:%d pthread_sigmask() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			return -1;
+		}
+	}
+	return ret;
+}
+
+/**
+ * Unlocks a mutex whilst unblocking a signal
+ * Return 0 on success, otherwise a error number
+ * The signal is still blocked if a error occurs
+ */
+int pthread_mutex_unlock_block_signal (pthread_mutex_t *mutex, int signum) {
+	int ret;
+	sigset_t set;
+	sigemptyset(&set);
+
+	if ( sigaddset(&set, signum) ) {
+		fprintf(stderr, "%s:%d sigaddset() error\n", __FILE__, __LINE__ );
+		return -1;
+	}
+
+	ret = pthread_mutex_unlock(mutex);
+	if ( !ret ) {
+		if ( pthread_sigmask( SIG_UNBLOCK, &set, NULL) ) {
+			fprintf(stderr, "%s:%d pthread_sigmask() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			return -1;
+		}		
+	}
+	
+	return ret;
+}
+
+// Wait for a condition to be true
+void wait_for_zero( pthread_mutex_t* mutex, pthread_cond_t* cond, volatile int* cond_variable ) {
+	pthread_mutex_lock_block_signal( mutex, SIGNUM );
+	while ( bRunning && *cond_variable > 0 ) {
+		struct timespec abstime;
+
+		get_timespec_now(&abstime);
+		add_timespec    (&abstime, 0, 10000000); // add 10ms
+
+		pthread_cond_timedwait( cond, mutex, &abstime);
+
+		pthread_mutex_unlock_block_signal( mutex, SIGNUM );
+		// HACK The signal handler is now reenabled, so any queued signals can go
+		pthread_mutex_lock_block_signal( mutex, SIGNUM );		
+	}
+	pthread_mutex_unlock_block_signal( mutex, SIGNUM );
+}
+
+void wait_for_nonzero( pthread_mutex_t* mutex, pthread_cond_t* cond, volatile int* cond_variable ) {
+	pthread_mutex_lock_block_signal( mutex, SIGNUM );
+	while ( bRunning && *cond_variable == 0 ) {
+		struct timespec abstime;
+
+		get_timespec_now(&abstime);
+		add_timespec    (&abstime, 0, 10000000); // add 10ms
+
+		pthread_cond_timedwait( cond, mutex, &abstime);
+
+		pthread_mutex_unlock_block_signal( mutex, SIGNUM );
+		// HACK The signal handler is now reenabled, so any queued signals can go
+		pthread_mutex_lock_block_signal( mutex, SIGNUM );		
+	}
+	pthread_mutex_unlock_block_signal( mutex, SIGNUM );
+}
+
