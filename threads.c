@@ -235,8 +235,8 @@ int thread_join_all(int threaded_model) {
 		} else {
 			int status;
 			waitpid(thread[thread_count].pid, &status, 0);
-			if(WIFEXITED(status))
-				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
+//			if(WIFEXITED(status))
+//				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
 		}
 	}
 	assert ( thread_count == 0 );
