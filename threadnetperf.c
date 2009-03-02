@@ -183,7 +183,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	switch(param.sival_int) {
 		//Received by controller
 		case SIGNAL_READY_TO_ACCEPT :
-			printf("(%d) Received IGNAL_READY_TO_ACCEPT server_listen_unready %d\n",getpid(), server_listen_unready);
+			printf("(%d) Received SIGNAL_READY_TO_ACCEPT server_listen_unready %d\n",getpid(), server_listen_unready);
 			pthread_mutex_lock( &ready_to_accept_mtx );
 			server_listen_unready--;
 			assert ( server_listen_unready >= 0 );
@@ -287,23 +287,17 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
+	
+	pthread_mutex_lock ( &ready_to_accept_mtx );
+	server_listen_unready = server_threads;
+	pthread_mutex_unlock ( &ready_to_accept_mtx );
 
 	client_threads = funcs->prepare_clients(settings, data);
 	if ( client_threads < 0 ) {
 		fprintf(stderr, "%s:%d prepare_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-
-	pthread_mutex_lock ( &ready_to_accept_mtx );
-	server_listen_unready = server_threads;
 	
-	if ( server_listen_unready < 0 ) {
-			fprintf(stderr, "%s:%d number of unready servers error\n", __FILE__, __LINE__ );
-			pthread_mutex_unlock ( &ready_to_accept_mtx );
-			goto cleanup;
-	}
-	pthread_mutex_unlock ( &ready_to_accept_mtx );
-
 	pthread_mutex_lock( &ready_to_go_mtx );
 	unready_threads	= server_threads + client_threads;
 
