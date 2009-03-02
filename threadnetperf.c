@@ -183,11 +183,9 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	switch(param.sival_int) {
 		//Received by controller
 		case SIGNAL_READY_TO_ACCEPT :
-			printf("(%d) Received SIGNAL_READY_TO_ACCEPT server_listen_unready %d\n",getpid(), server_listen_unready);
 			pthread_mutex_lock( &ready_to_accept_mtx );
 			server_listen_unready--;
 			assert ( server_listen_unready >= 0 );
-			printf("(%d) obtained the SIGNAL_READY_TO_ACCEPT lock\n",getpid());
 			if ( server_listen_unready == 0 ) {
 				pthread_cond_broadcast( &ready_to_accept_cond );
 			}
@@ -195,10 +193,8 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			break;
 		//Received by controller
 		case SIGNAL_READY_TO_GO :
-			printf("(%d) Received SIGNAL_READY_TO_GO unready_threads %d\n",getpid(),unready_threads);
 			pthread_mutex_lock( &ready_to_go_mtx );
 			unready_threads--;
-			printf("(%d) obtained the SIGNAL_READY_TO_GO lock\n",getpid());
 			assert ( unready_threads >= 0 );
 			if ( unready_threads == 0 ) {
 				pthread_cond_broadcast( &ready_to_go_cond );
@@ -207,16 +203,13 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			break;
 		//Received by server threads (start_threads)
 		case SIGNAL_GO :
-			printf("(%d) Received SIGNAL_GO\n", getpid());
 			pthread_mutex_lock( &go_mutex );
-			printf("(%d) obtained the SIGNAL_GO lock\n", getpid());
 			bGo = 1;
 			pthread_cond_broadcast( &go_cond );
 			pthread_mutex_unlock( &go_mutex );
 			break;
 		//Received by server threads
 		case SIGNAL_STOP:
-			printf("(%d) Received SIGNAL_STOP\n", getpid());
 			bRunning = 0;
 			break;
 		default :
@@ -278,7 +271,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 	
-	printf("A\n");
 	pthread_mutex_lock_block_signal( &ready_to_accept_mtx, SIGNUM );
 	server_listen_unready = server_threads;
 	pthread_mutex_unlock_block_signal ( &ready_to_accept_mtx, SIGNUM );
@@ -303,7 +295,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	}
 	pthread_mutex_unlock_block_signal( &ready_to_go_mtx, SIGNUM );
 
-	printf("B\n");
 	// Create each server/client thread
 	if ( funcs->create_servers(settings, data) ) {
 		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
@@ -312,7 +303,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	wait_for_zero( &ready_to_accept_mtx, &ready_to_accept_cond, &server_listen_unready);
 
-	printf("C\n");
 	if ( funcs->create_clients(settings, data) ) {
 		fprintf(stderr, "%s:%d create_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -321,7 +311,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	// Wait for our threads to be created
 	wait_for_zero( &ready_to_go_mtx, &ready_to_go_cond, &unready_threads);
 
-	printf("D\n");
 	if ( funcs->wait_for_go(settings, data) ) {
 		fprintf(stderr, "%s:%d wait_for_go() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -334,7 +323,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	pause_for_duration( settings );
 
 	stop_all(settings->threaded_model);
-	printf("E\n");
 
 	if ( funcs->print_headers(settings, data) ) {
 		fprintf(stderr, "%s:%d print_headers() error\n", __FILE__, __LINE__ );
@@ -402,7 +390,6 @@ int main (int argc, char *argv[]) {
 	double sum = 0.0;
 	double sumsquare = 0.0;
 
-	printf("threadnetperf started\n");
 #ifdef WIN32
 	setup_winsock();
 #endif
@@ -421,8 +408,6 @@ int main (int argc, char *argv[]) {
 		goto cleanup;
 	}
 	
-	printf("threadnetperf about to get going\n");
-
 	// If we are daemon mode start that
 	if (settings.deamon) {
 		run_deamon(&settings);

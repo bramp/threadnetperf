@@ -327,7 +327,6 @@ void threads_signal_parent(int type, int threaded_model) {
 void threads_signal_all(int type, int threaded_model) {	
 	if(	threaded_model == MODEL_PROCESS ) {
 		int i;
-		printf("(%d) has to signal %d threads with signal %d\n", getpid(), thread_count, type);
 		for(i=0; i<thread_count; i++) {
 			threads_signal(thread[i].pid, type);
 		}
