@@ -303,13 +303,14 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	
 	pthread_mutex_lock( &ready_to_go_mtx );
 	unready_threads	= server_threads + client_threads;
-	pthread_mutex_unlock( &ready_to_go_mtx );
+	
 	
 	// A list of threads
 	if ( thread_alloc(unready_threads) ) {
 		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
+	pthread_mutex_unlock( &ready_to_go_mtx );
 
 	printf("B\n");
 	// Create each server/client thread
