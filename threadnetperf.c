@@ -292,12 +292,17 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	pthread_mutex_lock ( &ready_to_accept_mtx );
 	server_listen_unready = server_threads;
+	
+	if ( server_listen_unready < 0 ) {
+			fprintf(stderr, "%s:%d number of unready servers error\n", __FILE__, __LINE__ );
+			pthread_mutex_unlock ( &ready_to_accept_mtx );
+			goto cleanup;
+	}
 	pthread_mutex_unlock ( &ready_to_accept_mtx );
 
 	pthread_mutex_lock( &ready_to_go_mtx );
 	unready_threads	= server_threads + client_threads;
 
-	//Note the function below also sets up the struct in to which results are piped
 	// A list of threads
 	if ( thread_alloc(unready_threads) ) {
 		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
@@ -312,14 +317,6 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 
-	pthread_mutex_lock ( &ready_to_accept_mtx );
-	if ( server_listen_unready < 0 ) {
-		fprintf(stderr, "%s:%d number of unready servers error\n", __FILE__, __LINE__ );
-		pthread_mutex_unlock ( &ready_to_accept_mtx );
-		goto cleanup;
-	}
-
-	pthread_mutex_unlock ( &ready_to_accept_mtx );
 	wait_for( &ready_to_accept_mtx, &ready_to_accept_cond, &server_listen_unready);
 
 	if ( funcs->create_clients(settings, data) ) {
