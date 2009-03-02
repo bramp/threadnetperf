@@ -205,7 +205,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			break;
 		//Received by server threads (start_threads)
 		case SIGNAL_GO :
-			printf("(%d) Received SIGNAL_GO\n");
+			printf("(%d) Received SIGNAL_GO\n", getpid());
 			pthread_mutex_lock( &go_mutex );
 			bGo = 1;
 			pthread_cond_broadcast( &go_cond );
@@ -213,7 +213,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 			break;
 		//Received by server threads
 		case SIGNAL_STOP:
-			printf("(%d) Received SIGNAL_STOP\n");
+			printf("(%d) Received SIGNAL_STOP\n", getpid());
 			bRunning = 0;
 			break;
 		default :
