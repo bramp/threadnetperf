@@ -183,7 +183,7 @@ void send_stats_from_thread(struct stats stats) {
 		fprintf(stderr, "%s:%d send_results() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
-	
+
 cleanup:
 	closesocket(s);
 }
@@ -198,12 +198,12 @@ SOCKET create_stats_socket() {
 		fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		return SOCKET_ERROR;
 	}
-	
+
 	if ( set_socket_timeout(s, IPC_TIMEOUT) ) {
 		fprintf(stderr, "%s:%d set_socket_timeout() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
-	
+
 	ipc_socket.sun_family = AF_UNIX;
 	ipc_sock_name = tempnam(NULL, "threadnetperf");
 	sprintf(ipc_socket.sun_path, "%s", ipc_sock_name);
@@ -247,7 +247,7 @@ int thread_join_all(int threaded_model) {
 int thread_collect_results(const struct settings *settings, struct stats *total_stats, int (*print_results)(const struct settings *, const struct stats *, void *), void *data) {
 	unsigned int i = 0;
 	SOCKET s;
-	
+
 	assert( settings != NULL );
 	assert( total_stats != NULL );
 
@@ -256,11 +256,9 @@ int thread_collect_results(const struct settings *settings, struct stats *total_
 
 	if ( settings->verbose )
 		printf("Collecting %u results\n",  settings->servercores);
-	
+
 	for ( ; i < settings->servercores; i++ ) {
 		struct stats stats;
-
-		assert ( remote_data != NULL );
 
 		if ( read_results(s, &stats) != 0 ) {
 			fprintf(stderr, "%s:%d read_results() error\n", __FILE__, __LINE__ );

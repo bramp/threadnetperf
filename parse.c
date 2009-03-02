@@ -90,7 +90,7 @@ int parse_test( const struct settings *settings, const char *arg, struct test * 
 
 	if ( settings->server_host != NULL )
 		strncpy(hostname, settings->server_host, sizeof(hostname));
-	
+
 	if ( sscanf( arg, "%u(%u-%u)", &test->connections, &test->clientcores, &test->servercores ) == 3 ) {
 		goto good;
 	}
@@ -295,7 +295,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 					fprintf(stdout, "Unable to set threading model when in Deamon mode\n");
 					return -1;
 				}
-				
+
 				if(strcmp(optarg, "p")==0)
 					settings->threaded_model = MODEL_PROCESS;
 				else if( strcmp(optarg, "t")==0)

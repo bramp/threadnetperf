@@ -53,7 +53,7 @@ int prepare_servers(const struct settings * settings, void *data) {
 			// TODO change this from a simple port to a full sockaddr struct
 			s->port = ntohs( ((struct sockaddr_in *)&test->addr)->sin_port );
 			s->n = 0;
-			
+
 			serverthreads++;
 		}
 
@@ -75,7 +75,7 @@ int create_servers(const struct settings *settings, void *data) {
 	for (i = 0; i < sreq_size; i++) {
 
 		cpu_set_t cpus;
-	
+
 		assert ( sreq[i].settings != NULL );
 
 		// Set which CPU this thread should be on
@@ -86,7 +86,7 @@ int create_servers(const struct settings *settings, void *data) {
 			return -1;
 		}
 	}
-	
+
 	return 0;
 }
 

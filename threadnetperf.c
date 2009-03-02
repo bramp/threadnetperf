@@ -177,7 +177,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	union sigval param = siginfo->si_value;
 
 	assert (sig == SIGNUM );
-	
+
 	switch(param.sival_int) {
 		//Received by controller
 		case SIGNAL_READY_TO_ACCEPT :
@@ -291,10 +291,10 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	pthread_mutex_lock ( &ready_to_accept_mtx );
 	server_listen_unready = server_threads;
 	pthread_mutex_unlock ( &ready_to_accept_mtx );
-	
+
 	pthread_mutex_lock( &ready_to_go_mtx );
 	unready_threads	= server_threads + client_threads;
-	
+
 	//Note the function below also sets up the struct in to which results are piped
 	// A list of threads
 	if ( thread_alloc(unready_threads) ) {
@@ -303,7 +303,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 	pthread_mutex_unlock( &ready_to_go_mtx );
-	
+
 	// Create each server/client thread
 	if ( funcs->create_servers(settings, data) ) {
 		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
@@ -312,11 +312,11 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	pthread_mutex_lock ( &ready_to_accept_mtx );
 	if ( server_listen_unready < 0 ) {
-		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
+		fprintf(stderr, "%s:%d number of unready servers error\n", __FILE__, __LINE__ );
 		pthread_mutex_unlock ( &ready_to_accept_mtx );
 		goto cleanup;
 	}
-	
+
 	pthread_mutex_unlock ( &ready_to_accept_mtx );
 	wait_for( &ready_to_accept_mtx, &ready_to_accept_cond, &server_listen_unready);
 
@@ -338,7 +338,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	// Pauses for the duration
 	pause_for_duration( settings );
-	
+
 	stop_all(settings->threaded_model);
 
 	if ( funcs->print_headers(settings, data) ) {
@@ -350,7 +350,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		fprintf(stderr, "%s:%d collect_results() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-	
+
 	//If we don't join here, then we may leave zombie processes
 	//Zombies like brains.
 	thread_join_all(settings->threaded_model);
@@ -359,13 +359,13 @@ cleanup:
 
 	// Make sure we are not running anymore
 	stop_all(settings->threaded_model);
-	
+
 	//thread_join_all(settings->threaded_model);
 	threads_clear();
 
 	cleanup_clients();
 	cleanup_servers();
-	
+
 	closesocket(((struct remote_data *)data)->stats_socket);
 
 	funcs->cleanup( settings, data );
@@ -378,17 +378,14 @@ void run_deamon(const struct settings *settings) {
 	start_daemon(settings);
 
 	// Now loop accepting incoming tests
-	while ( 1 ) {	
+	while ( 1 ) {
 		struct settings remote_settings;
 		struct stats total_stats;
 
 		if ( settings->verbose ) {
 			printf("Waiting for test...\n");
 		}
-		
 		run( &remote_server_funcs, &remote_settings, &total_stats );
-		
-
 		free( remote_settings.test );
 	}
 
@@ -425,7 +422,7 @@ int main (int argc, char *argv[]) {
 		fprintf(stderr, "%s:%d setup_signals() error %d\n", __FILE__, __LINE__ , errno);
 		goto cleanup;
 	}
-	
+
 	// If we are daemon mode start that
 	if (settings.deamon) {
 		run_deamon(&settings);
