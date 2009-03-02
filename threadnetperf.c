@@ -67,6 +67,8 @@ int null_func(const struct settings *settings, void * data) { return 0; };
 int null_func2(struct settings *settings, void ** data) { return 0; };
 int setup(struct settings *, void ** data);
 
+extern char* ipc_sock_name;
+
 // List of functions which run() uses
 struct run_functions {
 	int (*setup)(struct settings *, void ** data);
