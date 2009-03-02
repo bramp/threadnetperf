@@ -50,7 +50,7 @@ int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const
 
 void cpu_setup( cpu_set_t *cpu, unsigned int cores ) {
 	unsigned int core = 0;
-	
+
 	CPU_ZERO ( cpu );
 
 	// Set all the correct bits
@@ -62,11 +62,11 @@ void cpu_setup( cpu_set_t *cpu, unsigned int cores ) {
 	}
 }
 
-/* 
+/*
  * Create a process on a specific core
- */ 
+ */
 int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset) {
-	
+
 	*pid = fork();
 	if( *pid == 0) {
 		*pid = getpid();
@@ -144,7 +144,7 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 	
 	if ( !ret )
 		thread_count++;
-	
+
 	return ret;
 }
 
@@ -152,7 +152,7 @@ void send_stats_from_thread(struct stats stats) {
 	unsigned int sock_len;
 	struct sockaddr_un	ipc_socket;
 	int s;
-	
+
 	// Create the socket to send the details back on
 	s = socket( AF_UNIX, SOCK_DGRAM, 0);
 
@@ -160,7 +160,7 @@ void send_stats_from_thread(struct stats stats) {
 		fprintf(stderr, "%s:%d socket() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		return;
 	}
-	
+
 	if ( set_socket_timeout(s, IPC_TIMEOUT) ) {
 		fprintf(stderr, "%s:%d set_socket_timeout() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
@@ -235,8 +235,8 @@ int thread_join_all(int threaded_model) {
 		} else {
 			int status;
 			waitpid(thread[thread_count].pid, &status, 0);
-//			if(WIFEXITED(status))
-//				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
+			if(WIFEXITED(status))
+				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
 		}
 	} 
 
