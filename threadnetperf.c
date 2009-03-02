@@ -408,6 +408,7 @@ int main (int argc, char *argv[]) {
 	double sum = 0.0;
 	double sumsquare = 0.0;
 
+	printf("threadnetperf started\n");
 #ifdef WIN32
 	setup_winsock();
 #endif
@@ -425,6 +426,8 @@ int main (int argc, char *argv[]) {
 		fprintf(stderr, "%s:%d setup_signals() error %d\n", __FILE__, __LINE__ , errno);
 		goto cleanup;
 	}
+	
+	printf("threadnetperf about to get going\n");
 
 	// If we are daemon mode start that
 	if (settings.deamon) {
