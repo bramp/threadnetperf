@@ -5,7 +5,7 @@
 
 #include <pthread.h> // We assume we have a pthread library (even on windows)
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__FreeBSD__)
 	// Define some dummy structs, currently they do nothing
 	typedef struct {
 		unsigned long int __cpu_mask;
@@ -16,6 +16,8 @@
 	#define CPU_SET(cpu, cpusetp)
 	#define CPU_CLR(cpu, cpusetp)
 	#define CPU_ISSET(cpu, cpusetp)
+#else
+# include <sched.h>  // for cpu_set_t
 #endif
 
 void cpu_setup( cpu_set_t *cpu, unsigned int cores );

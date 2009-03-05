@@ -6,7 +6,7 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 
@@ -296,7 +296,7 @@ void* client_thread(void *data) {
 #else
 				struct timeval waittime = {TRANSFER_TIMEOUT / 1000, 0}; // 1 second
 
-				int ret = selectt_ign_signal(nfds, &readFD, &writeFD, NULL, &waittime);
+				int ret = select_ign_signal(nfds, &readFD, &writeFD, NULL, &waittime);
 				
 				if ( ret == 0 )
 					fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );

@@ -8,7 +8,7 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <string.h>
 
@@ -509,7 +509,7 @@ void *server_thread(void *data) {
 						}
 					}
 
-#ifndef WIN32
+#if !defined(WIN32) && !defined(__FreeBSD__)
 					if ( settings.timestamp ) {
 						const unsigned long long now = get_nanoseconds();
 

@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <string.h>
 #include <math.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 #ifndef WIN32
 #include <time.h>
