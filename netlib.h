@@ -76,5 +76,6 @@ inline int select_ign_signal(int nfds, fd_set *readfds, fd_set *writefds, fd_set
 inline int close_ign_signal(int fildes);
 
 #ifdef USE_EPOLL
-inline int epoll_wait_ign_signal(int epfd, struct epoll_event * events, int maxevents, int timeout) ;
+inline int epoll_wait_ign_signal(int epfd, struct epoll_event * events, int maxevents, int timeout);
 #endif
+
