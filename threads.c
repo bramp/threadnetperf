@@ -6,7 +6,6 @@
 
 
 #include <assert.h>
-#include <malloc.h>
 #include <string.h> // for malloc
 #include <stdio.h>  // for printf
 #include <stdlib.h> // for exit

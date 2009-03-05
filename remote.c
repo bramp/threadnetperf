@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 #ifndef WIN32
 #include <unistd.h>
