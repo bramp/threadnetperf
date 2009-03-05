@@ -122,7 +122,7 @@ cleanup:
 
 // Creates a new thread and adds it to the thread array
 int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, const cpu_set_t *cpuset, unsigned int threaded_model ) {
-	int ret;
+	int ret = -1;
 
 	assert (start_routine != NULL);
 
