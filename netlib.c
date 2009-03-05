@@ -113,11 +113,11 @@ int set_socket_timeout(SOCKET s, unsigned int milliseconds) {
 	tv.tv_sec = milliseconds / 1000;
 	tv.tv_usec = milliseconds % 1000 * 1000;
 
-    if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)))
-      return SOCKET_ERROR;
+	if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv)))
+		return SOCKET_ERROR;
 
-    if (setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv)))
-      return SOCKET_ERROR;
+	if (setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv)))
+		return SOCKET_ERROR;
 
 	return 0;
 }
