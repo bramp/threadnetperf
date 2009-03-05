@@ -301,7 +301,7 @@ void* client_thread(void *data) {
 				if ( ret == 0 )
 					fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 
-				else if ( ret == SOCKET_ERROR ) {{
+				else if ( ret == SOCKET_ERROR ) {
 					fprintf(stderr, "%s:%d select() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 					goto cleanup;
 				}
