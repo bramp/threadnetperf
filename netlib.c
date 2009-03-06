@@ -34,17 +34,30 @@ int disable_maxseq(SOCKET s) {
 }
 
 int enable_timestamp(SOCKET s) {
+#ifdef SO_TIMESTAMPNS
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 1);
+#elseif defined(SO_TIMESTAMP)
+	return set_opt(s, SOL_SOCKET, SO_TIMESTAMP, 1);
+#else
+	return -1;
+#endif
 }
 
 int disable_timestamp(SOCKET s) {
+#ifdef SO_TIMESTAMPNS
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 0);
+#elseif defined(SO_TIMESTAMP)
+	return set_opt(s, SOL_SOCKET, SO_TIMESTAMP, 0);
+#else
+	return -1;
+#endif
 }
 
 /* Returns the timestamp in nanoseconds 
 	Can be used when SO_TIMESTAMPNS does not work
 */
 unsigned long long get_packet_timestamp(SOCKET s) {
+#ifdef SIOCGSTAMPNS
 	struct timespec ts = {0,0};
 	if ( ioctl(s, SIOCGSTAMPNS, &ts) )
 		return 0;
@@ -55,6 +68,9 @@ unsigned long long get_packet_timestamp(SOCKET s) {
 	}
 
 	return ts.tv_sec * 1000000000 + ts.tv_nsec;
+#else
+	return 0;
+#endif
 }
 
 
