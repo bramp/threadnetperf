@@ -42,7 +42,9 @@ int usleep(unsigned int microseconds) {
 	pthread_delay_np ( &waittime );
 	return 0;
 }
+#endif
 
+#if defined(WIN32) || defined(__FreeBSD__)
 int pthread_attr_setaffinity_np ( pthread_attr_t *attr, size_t cpusetsize, const cpu_set_t *cpuset) {
 	// TODO Make this set affidenitys on windows
 	return 0;
@@ -72,14 +74,14 @@ int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, siz
 	if( *pid == 0) {
 		*pid = getpid();
 		sched_setaffinity(*pid, cpusetsize, cpuset);
-		//Call start_routing
+		//Call start_routine
 		(*start_routine)(arg);
 		_exit(0);
 	}
 	else if (*pid == -1 ) {
 		fprintf(stderr, "%s:%d process_create_on() error (%d) %s\n", __FILE__, __LINE__, errno, strerror(errno));
 		return -1;
-	} 
+	}
 
 	return 0;
 }
