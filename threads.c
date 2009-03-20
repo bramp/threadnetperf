@@ -73,7 +73,11 @@ int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, siz
 	*pid = fork();
 	if( *pid == 0) {
 		*pid = getpid();
-		sched_setaffinity(*pid, cpusetsize, cpuset);
+#if defined(__FreeBSD__)
+//		cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, *pid, ..//TODO finish
+#else
+		sched_setaffinity(*pid, cpusetsize, cpuset);		
+#endif
 		//Call start_routine
 		(*start_routine)(arg);
 		_exit(0);
@@ -138,7 +142,6 @@ int create_thread( void *(*start_routine)(void*), void *arg, size_t cpusetsize, 
 			ret = pthread_create_on( &thread[thread_count].tid, NULL, start_routine, arg , cpusetsize, cpuset);
 			break;
 		case MODEL_PROCESS :
-			//Process create_on increases the thread_count itself.
 			ret = process_create_on( &thread[thread_count].pid, start_routine, arg, cpusetsize, cpuset);
 			break;
 		default:
