@@ -36,7 +36,7 @@ int disable_maxseq(SOCKET s) {
 int enable_timestamp(SOCKET s) {
 #ifdef SO_TIMESTAMPNS
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 1);
-#elseif defined(SO_TIMESTAMP)
+#elif defined(SO_TIMESTAMP)
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMP, 1);
 #else
 	return -1;
@@ -46,7 +46,7 @@ int enable_timestamp(SOCKET s) {
 int disable_timestamp(SOCKET s) {
 #ifdef SO_TIMESTAMPNS
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMPNS, 0);
-#elseif defined(SO_TIMESTAMP)
+#elif defined(SO_TIMESTAMP)
 	return set_opt(s, SOL_SOCKET, SO_TIMESTAMP, 0);
 #else
 	return -1;
