@@ -195,7 +195,11 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 		return -1;
 	}
 
-	optind = 0;
+	// Reset the parsing to the beginning
+	optind = 1;
+#ifdef __FreeBSD__
+	optreset = 1;
+#endif
 
 	// Second pass which actually does the work
 	while ((c = getopt(argc, argv, optstring)) != -1) {
@@ -424,6 +428,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	while (optind < argc) {
 
 		struct test * test;
+
+		assert( !settings->deamon );
 
 		// Malloc space for this extra test
 		settings->test = realloc ( settings->test, sizeof(*settings->test) * (settings->tests + 1) );
