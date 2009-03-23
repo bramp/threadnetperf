@@ -16,6 +16,9 @@
 	TODO set sock option in receive stats to wait for a whole struct per recv
 	TODO Don't send verbose across the network
 	TODO both thread_collect_results and remote_collect_results look very similar
+	TODO server_thread.c:439 select() timeout occured (on server side) when using UDP (only in some cases?)
+	TODO client_thread.c:329 recv() error (61) Connection refused when sending from FreeBSD->Linux using UDP
+
 */
 
 #include "common.h"
