@@ -353,8 +353,6 @@ cleanup:
 	cleanup_clients();
 	cleanup_servers();
 
-	closesocket(((struct remote_data *)data)->stats_socket);
-
 	funcs->cleanup( settings, data );
 }
 

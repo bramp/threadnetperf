@@ -261,6 +261,14 @@ int remote_cleanup(const struct settings *settings, void* data) {
 			shutdown ( s, SHUT_RDWR );
 			closesocket_ign_signal ( s );
 		}
+
+		s = ((struct remote_data*)data)->stats_socket;
+		if ( s != INVALID_SOCKET ) {
+			// Gracefully shut down to make sure any remaining stats get sent
+			shutdown ( s, SHUT_RDWR );
+			closesocket_ign_signal ( s );
+		}
+
 		free ( data );
 	}
 
