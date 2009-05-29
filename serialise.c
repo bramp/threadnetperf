@@ -113,7 +113,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->tests          = net_settings.tests;
 
 	// Blank some fields
-	settings->deamon         = 0;
+	settings->daemon         = 0;
 	settings->confidence_lvl = 0.0;
 	settings->confidence_int = 0.0;
 	settings->min_iterations = 1;

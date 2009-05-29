@@ -1,6 +1,6 @@
 #include "common.h"
 
-// Control port for the deamon, make this a option
+// Control port for the daemon, make this a option
 #define CONTROL_PORT 0xABCD
 //#define CONTROL_PORT 0x1F48
 //#define CONTROL_PORT 0x593

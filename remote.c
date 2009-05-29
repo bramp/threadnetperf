@@ -60,7 +60,7 @@ int start_daemon(const struct settings * settings) {
 		// Print the host/port
 		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
 
-		printf("Deamon is listening on %s\n", addr_str);
+		printf("Daemon is listening on %s\n", addr_str);
 	}
 
 	return 0;
@@ -106,7 +106,7 @@ SOCKET connect_daemon(const struct settings *settings) {
 		// Print the host/port
 		addr_to_ipstr((struct sockaddr *)&addr, sizeof(addr), addr_str, sizeof(addr_str));
 
-		printf("Connecting to deamon %s\n", addr_str);
+		printf("Connecting to daemon %s\n", addr_str);
 	}
 
 	if ( connect_ign_signal(s, (struct sockaddr *)&addr, sizeof(addr) ) == SOCKET_ERROR ) {

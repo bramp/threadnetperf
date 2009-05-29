@@ -356,7 +356,7 @@ cleanup:
 	funcs->cleanup( settings, data );
 }
 
-void run_deamon(const struct settings *settings) {
+void run_daemon(const struct settings *settings) {
 
 	assert ( settings != NULL );
 
@@ -409,8 +409,8 @@ int main (int argc, char *argv[]) {
 	}
 	
 	// If we are daemon mode start that
-	if (settings.deamon) {
-		run_deamon(&settings);
+	if (settings.daemon) {
+		run_daemon(&settings);
 		goto cleanup;
 	}
 

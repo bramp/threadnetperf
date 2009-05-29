@@ -27,7 +27,7 @@ void print_usage() {
 	fprintf(stderr, "\n" );
 
 	fprintf(stderr, "	-c level,interval   Confidence level, must be 95 or 99\n");
-	fprintf(stderr, "	-D         Use deamon mode (wait for incoming tests)\n" );
+	fprintf(stderr, "	-D         Use daemon mode (wait for incoming tests)\n" );
 	fprintf(stderr, "	-d time    Set duration to run the test for\n" );
 	fprintf(stderr, "	-e         Eat the data (i.e. dirty it)\n");
 	fprintf(stderr, "	-H host    Set the remote host(and port) to connect to\n");
@@ -128,7 +128,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	assert ( settings != NULL );
 
 	// Default arguments
-	settings->deamon = 0;
+	settings->daemon = 0;
 	settings->message_size = 1024;
 	settings->socket_size = ~0;
 	settings->rate = ~0;
@@ -156,13 +156,13 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 		return -1;
 	}
 
-	// A first pass of getopt to work out if we are a Deamon
+	// A first pass of getopt to work out if we are a daemon
 	while ((c = getopt(argc, argv, optstring)) != -1) {
 		switch ( c ) {
 
-			// Deamon mode (wait for incoming tests)
+			// daemon mode (wait for incoming tests)
 			case 'D':
-				settings->deamon = 1;
+				settings->daemon = 1;
 				break;
 			case 'h':
 				print_usage();
@@ -190,8 +190,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 		}
 	}
 
-	if ( settings->deamon && optind < argc ) {
-		fprintf(stderr, "Tests can not be specified on the command line in Deamon mode\n" );
+	if ( settings->daemon && optind < argc ) {
+		fprintf(stderr, "Tests can not be specified on the command line in daemon mode\n" );
 		return -1;
 	}
 
@@ -208,8 +208,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			case 'c': {
 				double level = 95.0, interval = 5.0;
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set confidence interval when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set confidence interval when in daemon mode\n");
 					return -1;
 				}
 
@@ -233,8 +233,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			// Duration
 			case 'd':
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set duration when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set duration when in daemon mode\n");
 					return -1;
 				}
 
@@ -249,8 +249,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			case 'i': { // min,max interations
 				unsigned int min = 0, max = 0;
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set iterations when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set iterations when in daemon mode\n");
 					return -1;
 				}
 
@@ -269,8 +269,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 				struct sockaddr_storage addr;
 				socklen_t addr_len = sizeof(addr);
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set remote host when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set remote host when in daemon mode\n");
 					return -1;
 				}
 
@@ -286,8 +286,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			// Disable nagles algorithm (ie NO delay)
 			case 'n':
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to disable Nagles when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to disable Nagles when in daemon mode\n");
 					return -1;
 				}
 
@@ -295,8 +295,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 				break;
 
 			case 'm' :
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set threading model when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set threading model when in daemon mode\n");
 					return -1;
 				}
 
@@ -312,8 +312,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			// Parse the message size
 			case 's':
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set message size when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set message size when in daemon mode\n");
 					return -1;
 				}
 
@@ -327,8 +327,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			// Send rate
 			case 'r':
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set send rate when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set send rate when in daemon mode\n");
 					return -1;
 				}
 
@@ -342,8 +342,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			// Parse the port
 			case 'p':
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set port when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set port when in daemon mode\n");
 					return -1;
 				}
 
@@ -357,8 +357,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			// Dirty the data
 			case 'e':
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to eat the data when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to eat the data when in daemon mode\n");
 					return -1;
 				}
 
@@ -372,8 +372,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 				return -1;
 #endif
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set timestamps when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set timestamps when in daemon mode\n");
 					return -1;
 				}
 
@@ -383,8 +383,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 			// TCP/UDP
 			case 't':
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set TCP when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set TCP when in daemon mode\n");
 					return -1;
 				}
 
@@ -394,8 +394,8 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 
 			case 'u':
 
-				if ( settings->deamon ) {
-					fprintf(stdout, "Unable to set UDP when in Deamon mode\n");
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set UDP when in daemon mode\n");
 					return -1;
 				}
 
@@ -429,7 +429,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 
 		struct test * test;
 
-		assert( !settings->deamon );
+		assert( !settings->daemon );
 
 		// Malloc space for this extra test
 		settings->test = realloc ( settings->test, sizeof(*settings->test) * (settings->tests + 1) );
@@ -458,7 +458,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	}
 
 	// If there are no tests then error
-	if ( settings->tests == 0 && !settings->deamon ) {
+	if ( settings->tests == 0 && !settings->daemon ) {
 		fprintf(stderr, "No tests were specified\n");
 		return -1;
 	}

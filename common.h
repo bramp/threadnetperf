@@ -56,7 +56,7 @@ struct settings {
 	int type;
 	int protocol;
 
-	unsigned int deamon          :1;
+	unsigned int daemon          :1;
 	unsigned int verbose         :1;
 	unsigned int dirty           :1;
 	unsigned int timestamp       :1;
