@@ -8,6 +8,8 @@
 
 	#include "getopt.h"
 
+	typedef signed long ssize_t;
+
 	#define ERRNO (WSAGetLastError())
 	#define ECONNRESET WSAECONNRESET
 	#define EWOULDBLOCK WSAEWOULDBLOCK
@@ -33,6 +35,10 @@
 	#define SOCKET int
 	#define INVALID_SOCKET (-1)
 	#define SOCKET_ERROR (-1)
+#endif
+
+#ifdef _MSC_VER
+#define inline __inline
 #endif
 
 #ifdef USE_EPOLL

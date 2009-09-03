@@ -10,8 +10,10 @@
 #include <stdio.h>  // for printf
 #include <stdlib.h> // for exit
 
+#ifndef WIN32
 #include <unistd.h>   //for fork
 #include <sys/wait.h> //for waitpid
+#endif
 
  // Array to handle thread handles
 union thread_ids
