@@ -254,10 +254,16 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 					return -1;
 				}
 
-				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 || min > max || max == 0 ) {
+				if ( sscanf( optarg, "%u,%u", &min, &max ) < 2 ) {
+					if (sscanf( optarg, "%u", &max ) == 1)
+						min = max; // Let the user specify just one value
+				}
+
+				if ( min > max || max == 0 ) {
 					fprintf(stderr, "Invalid min/max iterations(%s)\n", optarg );
 					return -1;
 				}
+
 				settings->min_iterations = min;
 				settings->max_iterations = max;
 
