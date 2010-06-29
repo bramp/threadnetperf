@@ -73,15 +73,15 @@ char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, 
 int str_to_addr(const char *host, struct sockaddr *addr, socklen_t *addlen);
 
 //Set of functions that ignore signal error (EINTR)
-inline int connect_ign_signal(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
-inline int accept_ign_signal(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-inline ssize_t recv_ign_signal(int s, void *buf, size_t len, int flags);
-inline ssize_t recvmsg_ign_signal(int s, struct msghdr *msg, int flags);
-inline ssize_t send_ign_signal(int s, const void *buf, size_t len, int flags);
-inline int select_ign_signal(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
-inline int close_ign_signal(int fildes);
+int connect_ign_signal(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+int accept_ign_signal(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+ssize_t recv_ign_signal(int s, void *buf, size_t len, int flags);
+ssize_t recvmsg_ign_signal(int s, struct msghdr *msg, int flags);
+ssize_t send_ign_signal(int s, const void *buf, size_t len, int flags);
+int select_ign_signal(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+int close_ign_signal(int fildes);
 
 #ifdef USE_EPOLL
-inline int epoll_wait_ign_signal(int epfd, struct epoll_event * events, int maxevents, int timeout);
+int epoll_wait_ign_signal(int epfd, struct epoll_event * events, int maxevents, int timeout);
 #endif
 

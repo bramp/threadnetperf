@@ -53,7 +53,7 @@ int disable_timestamp(SOCKET s) {
 #endif
 }
 
-/* Returns the timestamp in nanoseconds 
+/* Returns the timestamp in nanoseconds
 	Can be used when SO_TIMESTAMPNS does not work
 */
 unsigned long long get_packet_timestamp(SOCKET s) {
@@ -95,14 +95,14 @@ int disable_blocking(SOCKET s) {
 }
 
 int set_socket_buffer( SOCKET s, int opt, int size ) {
-    int new_size;
-    socklen_t new_size_len = sizeof(new_size);
+	int new_size = SOCKET_ERROR;
+	socklen_t new_size_len = sizeof(new_size);
 
 	if ( s == INVALID_SOCKET )
 		return SOCKET_ERROR;
 
-    if (size > 0 && setsockopt(s, SOL_SOCKET, opt, (char *)&size, sizeof(size)) < 0)
-      return SOCKET_ERROR;
+	if (size > 0 && setsockopt(s, SOL_SOCKET, opt, (char *)&size, sizeof(size)) < 0)
+		return SOCKET_ERROR;
 
 	if (getsockopt(s, SOL_SOCKET, opt, (char *)&new_size, &new_size_len) < 0)
 		return SOCKET_ERROR;
@@ -221,6 +221,9 @@ int str_to_addr(const char *host, struct sockaddr *addr, socklen_t *addlen) {
 		return -1;
 	}
 
+	// TODO add check that addr is large enough
+	// TODO Does this work if the returned sockaddr is larger than sizeof(sockaddr)?
+
 	*addr = *(aiList->ai_addr);
 	*addlen = (socklen_t) aiList->ai_addrlen;
 
@@ -229,7 +232,7 @@ int str_to_addr(const char *host, struct sockaddr *addr, socklen_t *addlen) {
 	return 0;
 }
 
-inline int connect_ign_signal(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen) {
+int connect_ign_signal(int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen) {
 	int len;
 	while ( 1 ) {
 		len = connect( sockfd, serv_addr, addrlen);
@@ -239,7 +242,7 @@ inline int connect_ign_signal(int sockfd, const struct sockaddr *serv_addr, sock
 	}
 }
 
-inline int accept_ign_signal(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
+int accept_ign_signal(int sockfd, struct sockaddr *addr, socklen_t *addrlen) {
 	int len;
 	while ( 1 ) {
 		len = accept( sockfd, addr, addrlen);
@@ -249,7 +252,7 @@ inline int accept_ign_signal(int sockfd, struct sockaddr *addr, socklen_t *addrl
 	}
 }
 
-inline ssize_t recv_ign_signal(int s, void *buf, size_t len, int flags) {
+ssize_t recv_ign_signal(int s, void *buf, size_t len, int flags) {
 	int ret;
 	while ( 1 ) {
 		ret = recv( s, buf, len, flags);
@@ -259,7 +262,7 @@ inline ssize_t recv_ign_signal(int s, void *buf, size_t len, int flags) {
 	}
 }
 
-inline ssize_t recvmsg_ign_signal(int s, struct msghdr *msg, int flags) {
+ssize_t recvmsg_ign_signal(int s, struct msghdr *msg, int flags) {
 	int len;
 	while ( 1 ) {
 		len = recvmsg(s, msg, flags);
@@ -269,7 +272,7 @@ inline ssize_t recvmsg_ign_signal(int s, struct msghdr *msg, int flags) {
 	}
 }
 
-inline ssize_t send_ign_signal(int s, const void *buf, size_t len, int flags) {
+ssize_t send_ign_signal(int s, const void *buf, size_t len, int flags) {
 	int ret;
 	while ( 1 ) {
 		ret = send( s, buf, len, flags);
@@ -279,7 +282,7 @@ inline ssize_t send_ign_signal(int s, const void *buf, size_t len, int flags) {
 	}
 }
 
-inline int select_ign_signal(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
+int select_ign_signal(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
 	int num_fd;
 	while ( 1 ) {
 		num_fd = select(nfds, readfds, writefds, exceptfds, timeout);
@@ -289,7 +292,7 @@ inline int select_ign_signal(int nfds, fd_set *readfds, fd_set *writefds, fd_set
 	}
 }
 
-inline int close_ign_signal(int fildes) {
+int close_ign_signal(int fildes) {
 	int err;
 	while ( 1 ) {
 		err = close(fildes);
@@ -300,7 +303,7 @@ inline int close_ign_signal(int fildes) {
 }
 
 #ifdef USE_EPOLL
-inline int epoll_wait_ign_signal(int epfd, struct epoll_event * events, int maxevents, int timeout) {
+int epoll_wait_ign_signal(int epfd, struct epoll_event * events, int maxevents, int timeout) {
 	int num_fd;
 	while ( 1 ) {
 		num_fd = epoll_wait(epfd, events, maxevents, timeout);

@@ -278,7 +278,7 @@ void *server_thread(void *data) {
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons( req->port );
-	
+
 	// Bind
 	if ( bind( s, (struct sockaddr *) &addr, sizeof(addr)) == SOCKET_ERROR) {
 		fprintf(stderr, "%s:%d bind() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -408,12 +408,12 @@ void *server_thread(void *data) {
 
 	// Start timing
 	start_time = get_microseconds();
-	
+
 	while ( bRunning ) {
 		int ret, len;
 
 #ifdef USE_EPOLL
-		
+
 		ret = epoll_wait_ign_signal(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
 
 		if ( ret < 0 ) {
@@ -423,7 +423,7 @@ void *server_thread(void *data) {
 
 		//fprintf(stderr, "MF: num_fds fired %d on line %d\n", num_fds, __LINE__);
 		for ( i = 0; i < ret; i++ ) {
-			SOCKET s = events[i].data.fd;	
+			SOCKET s = events[i].data.fd;
 			assert ( s != INVALID_SOCKET );
 			if (events[i].events & (EPOLLHUP | EPOLLERR)) {
 				fprintf(stderr, "%s:%d epoll() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
@@ -478,7 +478,7 @@ void *server_thread(void *data) {
 						printf("  Server: %d Removed client (%d/%d)\n", req->cores, i + 1, clients );
 
 					// Invalidate this client
-					closesocket_ign_signal( s );					
+					closesocket_ign_signal( s );
 
 #ifndef USE_EPOLL
 					// Move back
@@ -569,9 +569,9 @@ end_loop:
 	req->stats.timestamps     += timestamps;
 
 	return_stats = 1;
-	
+
 cleanup:
-	
+
 	// Force a stop
 	stop_all(settings.threaded_model);
 
@@ -583,6 +583,7 @@ cleanup:
 	close_ign_signal(readFD_epoll);
 	free( events );
 #else
+	// TODO should this be freed even when using EPOLL?
 	if ( msgs.msg_control )
 		free ( msgs.msg_control );
 #endif
@@ -595,11 +596,13 @@ cleanup:
 	}
 
 	// Shutdown client sockets
-	for (c = client ; c < &client [ clients ] ; c++) {
-		if ( *c != INVALID_SOCKET ) {
-			shutdown ( *c, SHUT_RDWR );
-			closesocket_ign_signal( *c );
-			*c = INVALID_SOCKET;
+	if ( client ) {
+		for (c = client ; c < &client [ clients ] ; c++) {
+			if ( *c != INVALID_SOCKET ) {
+				shutdown ( *c, SHUT_RDWR );
+				closesocket_ign_signal( *c );
+				*c = INVALID_SOCKET;
+			}
 		}
 	}
 
@@ -607,7 +610,7 @@ cleanup:
 		free ( client );
 
 	if ( return_stats )
-		send_stats_from_thread(req->stats);	
+		send_stats_from_thread(req->stats);
 
 	return NULL;
 }
