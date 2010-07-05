@@ -174,7 +174,8 @@ void pause_for_duration(const struct settings *settings) {
 		usleep( 100000 );
 	}
 
-	printf("\n");
+	if ( settings->verbose )
+		printf("\n");
 }
 
 void signal_handler(int sig, siginfo_t *siginfo, void* context) {
