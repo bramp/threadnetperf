@@ -121,7 +121,7 @@ SOCKET highest_socket(SOCKET *s, size_t len);
 void **malloc_2D(size_t element_size, size_t x, size_t y);
 void free_2D(void **data, size_t x);
 
-#define BUFFER_FILL 0x4141414141414141
+#define BUFFER_FILL 0x41
 
 // How long do control sockets wait for connections (in milliseconds)
 #define CONTROL_TIMEOUT 30000

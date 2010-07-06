@@ -214,8 +214,7 @@ void* client_thread(void *data) {
 		goto cleanup;
 	}
 
-	memset( buffer, (int)BUFFER_FILL, settings.message_size ); // TODO fix 32bit linux compile problem
-
+	memset( buffer, BUFFER_FILL, settings.message_size );
 #ifdef USE_EPOLL
 	readFD_epoll = epoll_create(clients);
 	if(readFD_epoll == -1) {
