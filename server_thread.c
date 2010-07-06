@@ -197,7 +197,7 @@ void *server_thread(void *data) {
 	int nfds = 0;
 #endif
 
-	int page_size, num_pages;
+	int page_size;
 #ifdef MF_FLIPPAGE
 	int flippage = 1;
 #endif
@@ -321,12 +321,10 @@ void *server_thread(void *data) {
 
 	// Setup the buffer
 	page_size = getpagesize();
-	num_pages = roundup(settings.message_size, page_size);
+	recv_size = roundup(settings.message_size, page_size);
 	if( settings.verbose )
-		printf("vallocing of buffer of %d bytes\n", num_pages);
-	buf = valloc( num_pages );
-
-	recv_size = num_pages;
+		printf("vallocing buffer of %d bytes\n", recv_size);
+	buf = valloc( recv_size );
 
 	if ( buf == NULL ) {
 		fprintf(stderr, "%s:%d malloc() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
