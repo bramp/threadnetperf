@@ -147,8 +147,13 @@ unsigned long long get_microseconds() {
 #else
 	struct timeval tv;
 
-	gettimeofday(&tv, NULL);
-	microseconds = tv.tv_sec * 1000000 + tv.tv_usec;
+	if (gettimeofday(&tv, NULL) != 0) {
+		// I don't know what to do here as get_microseconds() is assumed to always work
+		fprintf(stderr, "%s:%d gettimeofday() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
+		microseconds = 0;
+	} else {
+		microseconds = tv.tv_sec * 1000000 + tv.tv_usec;
+	}
 
 #endif
 
