@@ -159,9 +159,6 @@ void pause_for_duration(const struct settings *settings) {
 	start_time = get_microseconds();
 	end_time   = start_time + duration;
 
-	if ( settings->verbose )
-		printf("Waiting for %llu us\n", duration);
-
 	while ( bRunning ) {
 		unsigned long long now = get_microseconds();
 		long long remain = end_time - now;
@@ -171,7 +168,7 @@ void pause_for_duration(const struct settings *settings) {
 			break;
 
 		assert(now >= start_time);
-		assert(now <= start_time + duration);
+		assert(now < end_time);
 
 		if ( settings->verbose ) {
 			pthread_mutex_lock( &printf_mutex );

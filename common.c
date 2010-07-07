@@ -152,7 +152,7 @@ unsigned long long get_microseconds() {
 		fprintf(stderr, "%s:%d gettimeofday() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
 		microseconds = 0;
 	} else {
-		microseconds = tv.tv_sec * 1000000 + tv.tv_usec;
+		microseconds = (unsigned long long)tv.tv_sec * 1000000 + (unsigned long long)tv.tv_usec;
 	}
 
 #endif
