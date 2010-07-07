@@ -164,10 +164,10 @@ void pause_for_duration(const struct settings *settings) {
 
 	while ( bRunning ) {
 		unsigned long long now = get_microseconds();
-		long long remain = now - end_time;
+		long long remain = end_time - now;
 
 		// Drop out when we have paused long enough
-		if ( remain >= 0 )
+		if ( remain <= 0 )
 			break;
 
 		assert(now >= start_time);
