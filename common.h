@@ -127,7 +127,7 @@ void free_2D(void **data, size_t x);
 #define CONTROL_TIMEOUT 30000
 
 // How long to wait for IPC socket calls
-#define IPC_TIMEOUT 1000
+#define IPC_TIMEOUT 5000
 
 // How long the server waits for a connection (in milliseconds)
 #define TRANSFER_TIMEOUT 1000
