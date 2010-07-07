@@ -145,23 +145,33 @@ void stop_all (unsigned int threaded_model) {
 	Wait until duration has passed
 */
 void pause_for_duration(const struct settings *settings) {
-	long long end_time; // The time we need to end
+	unsigned long long end_time; // The time we need to end
+	unsigned long long start_time;
 
 	// Make sure duration is in microseconds
-	long long duration;
+	unsigned long long duration;
 
 	assert ( settings != NULL );
 
 	// This main thread controls when the test ends
 	duration = settings->duration * 1000000;
-	end_time = get_microseconds() + duration;
+
+	start_time = get_microseconds();
+	end_time   = start_time + duration;
+
+	if ( settings->verbose )
+		printf("Waiting for %llu us\n", duration);
 
 	while ( bRunning ) {
-		long long now = get_microseconds();
+		unsigned long long now = get_microseconds();
+		long long remain = now - end_time;
 
-		if ( now >= end_time ) {
+		// Drop out when we have paused long enough
+		if ( remain >= 0 )
 			break;
-		}
+
+		assert(now >= start_time);
+		assert(now <= start_time + duration);
 
 		if ( settings->verbose ) {
 			pthread_mutex_lock( &printf_mutex );
@@ -170,8 +180,10 @@ void pause_for_duration(const struct settings *settings) {
 			pthread_mutex_unlock( &printf_mutex );
 		}
 
-		// Pause for 0.1 second
-		usleep( 100000 );
+		// Pause for a max of 0.1 second (or just the remaining time)
+		if (remain > 100000)
+			remain = 100000;
+		usleep( remain );
 	}
 
 	if ( settings->verbose )
