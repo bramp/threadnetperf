@@ -140,8 +140,7 @@ void* client_thread(void *data) {
 	const struct settings settings = *req->settings;
 
 	// The time in microseconds to wait between each send (to limit our bandwidth)
-	const unsigned long long time_between_sends = settings.rate> 0 ? 1000000
-	/ settings.rate : 0;
+	const unsigned long long time_between_sends = settings.rate> 0 ? 1000000 / settings.rate : 0;
 	unsigned long long next_send_time = 0;
 
 	// Array of client sockets

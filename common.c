@@ -178,7 +178,7 @@ unsigned long long get_nanoseconds() {
 
 	//getnstimeofday(&ts, NULL);
 	clock_gettime(CLOCK_REALTIME, &ts);
-	nanoseconds = ts.tv_sec * 1000000000 + ts.tv_nsec;
+	nanoseconds = (unsigned long long)ts.tv_sec * 1000000000 + (unsigned long long)ts.tv_nsec;
 #endif
 
 	return nanoseconds;	

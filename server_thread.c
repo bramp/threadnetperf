@@ -209,8 +209,8 @@ void *server_thread(void *data) {
 
 	struct sockaddr_in addr; // Address to listen on
 
-	long long start_time; // The time we started
-	long long end_time; // The time we ended
+	unsigned long long start_time; // The time we started
+	unsigned long long end_time; // The time we ended
 
 	int send_socket_size, recv_socket_size; // The socket buffer sizes
 
@@ -521,7 +521,7 @@ void *server_thread(void *data) {
 
 							if ( cmsg->cmsg_level == SOL_SOCKET && cmsg->cmsg_type == SCM_TIMESTAMPNS ) {
 								const struct timespec *ts = (struct timespec *) CMSG_DATA( cmsg );
-								const unsigned long long ns = ts->tv_sec * 1000000000 + ts->tv_nsec;
+								const unsigned long long ns = (unsigned long long)ts->tv_sec * 1000000000 + (unsigned long long)ts->tv_nsec;
 
 								if(ns <= now) {
 									timestamps++;

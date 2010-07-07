@@ -67,7 +67,7 @@ unsigned long long get_packet_timestamp(SOCKET s) {
 		return 0;
 	}
 
-	return ts.tv_sec * 1000000000 + ts.tv_nsec;
+	return (unsigned long long)ts.tv_sec * 1000000000 + (unsigned long long)ts.tv_nsec;
 #else
 	return 0;
 #endif
