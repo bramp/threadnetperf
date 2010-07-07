@@ -325,7 +325,7 @@ void* client_thread(void *data) {
 
 						if ( len == SOCKET_ERROR ) {
 							if ( ERRNO != ECONNRESET ) {
-								fprintf(stderr, "%s:%d recv() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+								fprintf(stderr, "%s:%d recv(%d) error (%d) %s\n", __FILE__, __LINE__, s, ERRNO, strerror(ERRNO) );
 								goto cleanup;
 							}
 						}

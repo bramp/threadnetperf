@@ -295,7 +295,7 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 		memset(&stats, 0 , sizeof(stats));
  
 		if ( read_results( s, &stats )< 0) {
-			fprintf(stderr, "%s:%d read_results() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			fprintf(stderr, "%s:%d read_results(%d) error (%d) %s\n", __FILE__, __LINE__, s, ERRNO, strerror(ERRNO) );
 			return -1;
 		}
 
@@ -331,7 +331,7 @@ int wait_remote( SOCKET s, unsigned char code ) {
 	assert ( s != INVALID_SOCKET );
 
 	if ( recv_ign_signal(s, &code2, 1, 0) == SOCKET_ERROR ) {
-		fprintf(stderr, "%s:%d recv() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		fprintf(stderr, "%s:%d recv(%d) error (%d) %s\n", __FILE__, __LINE__, s, ERRNO, strerror(ERRNO) );
 	} else if ( code2 != code ) {
 		fprintf(stderr, "%s:%d wait_remote() invalid code (expected %d got %d)\n", __FILE__, __LINE__, code, code2 );
 	} else {
