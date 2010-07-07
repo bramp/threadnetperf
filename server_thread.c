@@ -142,10 +142,15 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		clients++;
 		connected++;
 
-		if ( settings->verbose )
+		if ( settings->verbose ) {
+                        char address[NI_MAXHOST + NI_MAXSERV + 1];
+
+                        // Print the host/port
+                        addr_to_ipstr((const struct sockaddr *)&addr, addr_len, address, sizeof(address));
+
 			printf("  Server: %d incoming client %s (%d) socket size: %d/%d\n",
-				req->cores, inet_ntoa(((struct sockaddr_in *)&addr)->sin_addr), connected,
-				send_socket_size, recv_socket_size );
+				req->cores, address, connected, send_socket_size, recv_socket_size );
+		}
 
 		n--;
 	}
