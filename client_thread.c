@@ -85,7 +85,7 @@ int connect_connections(const struct settings *settings,
 				}
 
 				//if ( enable_maxseq ( s , settings->message_size ) == SOCKET_ERROR ) {
-				//	fprintf(stderr, "%s:%d enable_maxseq() error %d\n", __FILE__, __LINE__, ERRNO );
+				//	fprintf(stderr, "%s:%d enable_maxseq() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
 				//	goto cleanup;
 				//}
 			}

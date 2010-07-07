@@ -405,7 +405,7 @@ int main (int argc, char *argv[]) {
 	}
 
 	if ( setup_signals(SIGNUM)) {
-		fprintf(stderr, "%s:%d setup_signals() error %d\n", __FILE__, __LINE__ , errno);
+		fprintf(stderr, "%s:%d setup_signals() error (%d)\n", __FILE__, __LINE__ , errno);
 		goto cleanup;
 	}
 	

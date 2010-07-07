@@ -83,7 +83,7 @@ int create_servers(const struct settings *settings, void *data) {
 		cpu_setup( &cpus, sreq[i].cores );
 
 		if ( create_thread( server_thread, &sreq[i] , sizeof(cpus), &cpus, settings->threaded_model) ) {
-			fprintf(stderr, "%s:%d create_thread() error %d %s\n", __FILE__, __LINE__ , ERRNO, strerror(ERRNO));
+			fprintf(stderr, "%s:%d create_thread() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
 			return -1;
 		}
 	}

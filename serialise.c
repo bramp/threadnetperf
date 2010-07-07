@@ -225,7 +225,7 @@ int read_results( SOCKET s, struct stats * stats ) {
 		ret = recv_ign_signal(s, p, p_len, 0);
 
 		if ( ret <= 0 ) {
-			fprintf(stderr, "%s:%d recv(%d) error %d %s\n", __FILE__, __LINE__ , s, errno, strerror(errno));
+			fprintf(stderr, "%s:%d recv(%d) error (%d) %s\n", __FILE__, __LINE__, s, errno, strerror(errno));
 			return -1;
 		}
 		assert ( ret <= p_len );
