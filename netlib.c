@@ -63,7 +63,8 @@ unsigned long long get_packet_timestamp(SOCKET s) {
 		return 0;
 
 	if ( ts.tv_sec < 0 ) {
-		printf("%ld %ld\n", ts.tv_sec, ts.tv_nsec);
+		//Sometimes this returns an invalid tv_sec
+		//printf("%ld %ld\n", ts.tv_sec, ts.tv_nsec);
 		return 0;
 	}
 
