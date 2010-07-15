@@ -26,7 +26,7 @@ struct network_settings {
 
 	// Version of the setting struct, this must be the first element
 	uint32_t version;
-	#define SETTINGS_VERSION 6 // Increment this each time the setting struct changes
+	#define SETTINGS_VERSION 7 // Increment this each time the setting struct changes
 
 	uint32_t duration;
 
@@ -38,6 +38,7 @@ struct network_settings {
 	uint8_t dirty;
 	uint8_t timestamp;
 	uint8_t disable_nagles;
+	uint8_t reverse;
 
 	uint8_t threaded_model;
 
@@ -85,10 +86,10 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	memset( &net_settings, 0, sizeof(net_settings) );
 
 	ret = recv_ign_signal(s, (char *)&net_settings, sizeof(net_settings), 0);
-	if ( ret != sizeof(net_settings) || net_settings.version != ntohl(SETTINGS_VERSION) ) {
+	if ( ret != sizeof(net_settings) || net_settings.version != htonl(SETTINGS_VERSION) ) {
 		if ( ret > 0 )
-			fprintf(stderr, "Invalid setting struct received (size:%d vs %d, ver:%d vs %d\n", ret, (int)sizeof(net_settings), net_settings.version, ntohl(SETTINGS_VERSION) );
-
+			fprintf(stderr, "Invalid setting struct received (size:%d vs %d, ver:%d vs %d\n", ret, (int)sizeof(net_settings), ntohl(net_settings.version), SETTINGS_VERSION );
+		// TODO a way to send this error back to the client
 		return -1;
 	}
 
@@ -101,6 +102,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->dirty          = net_settings.dirty;
 	settings->timestamp      = net_settings.timestamp;
 	settings->disable_nagles = net_settings.disable_nagles;
+	settings->reverse        = net_settings.reverse;
 	settings->threaded_model = net_settings.threaded_model;
 
 	settings->message_size   = ntohl( net_settings.message_size );
@@ -119,7 +121,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
 	settings->server_host    = NULL;
-	
+
 
 	// Create space for all the tests
 	settings->test = calloc( settings->tests, sizeof(*settings->test) );
@@ -175,6 +177,8 @@ int send_settings( SOCKET s, const struct settings * settings ) {
 	net_settings.dirty          = settings->dirty;
 	net_settings.timestamp      = settings->timestamp;
 	net_settings.disable_nagles = settings->disable_nagles;
+	net_settings.reverse        = settings->reverse;
+
 	net_settings.threaded_model = settings->threaded_model;
 
 	net_settings.message_size   = htonl( settings->message_size );
