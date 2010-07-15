@@ -36,7 +36,7 @@ int prepare_clients(const struct settings * settings, void *data) {
 		struct client_request *c;
 		struct client_request_details *details;
 
-		// find an exisiting sreq with this core combo
+		// find an exisiting creq with this core combo
 		for ( c = creq; c < &creq[creq_size]; c++) {
 			if ( c->settings == NULL || c->cores == test->clientcores )
 				break;
@@ -47,7 +47,7 @@ int prepare_clients(const struct settings * settings, void *data) {
 		if ( c->settings == NULL ) {
 			c->settings = settings;
 			c->cores = test->clientcores;
-			
+
 			clientthreads++;
 		}
 
@@ -86,7 +86,7 @@ int create_clients(const struct settings *settings, void *data) {
 
 		cpu_setup( &cpus, creq[i].cores );
 
-		//For now let's keep the client using the threaded model 
+		//For now let's keep the client using the threaded model
 		if ( create_thread( client_thread, &creq [i] , sizeof(cpus), &cpus, settings->threaded_model) ) {
 			fprintf(stderr, "%s:%d create_thread() error\n", __FILE__, __LINE__ );
 			return -1;

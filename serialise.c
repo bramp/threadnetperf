@@ -258,7 +258,7 @@ int send_results( SOCKET s, const struct stats * stats ) {
 	assert (stats != NULL );
 
 	memset( &net_stats, 0, sizeof(net_stats) );
-	
+
 	// TODO find a 64bit htonl
 	net_stats.cores          = htonl(stats->cores);
 	net_stats.bytes_received = (stats->bytes_received);
@@ -268,10 +268,9 @@ int send_results( SOCKET s, const struct stats * stats ) {
 	net_stats.duration       = (stats->duration);
 
 	ret = send_ign_signal(s, (char *)&net_stats, sizeof(net_stats), 0);
-	
-	if ( ret != sizeof(net_stats) ) {
+
+	if ( ret != sizeof(net_stats) )
 		return -1;
-	}
 
 	return 0;
 }

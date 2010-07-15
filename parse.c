@@ -89,6 +89,7 @@ int parse_test( const struct settings *settings, const char *arg, struct test * 
 		goto good;
 	}
 
+	// If the hostname hasn't been specified in the test, then use the -H parameter (if that was set)
 	if ( settings->server_host != NULL )
 		strncpy(hostname, settings->server_host, sizeof(hostname));
 
