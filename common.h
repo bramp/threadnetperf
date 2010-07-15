@@ -38,7 +38,7 @@ struct stats {
 
 };
 
-struct test { 
+struct test {
 	unsigned int clientcores; // The cores the client may run on
 	unsigned int servercores; // The cores the servers may run on
 
@@ -61,7 +61,7 @@ struct settings {
 	unsigned int dirty           :1;
 	unsigned int timestamp       :1;
 	unsigned int disable_nagles  :1;
-	
+	unsigned int reverse         :1;
 
 	double confidence_lvl;
 	double confidence_int;

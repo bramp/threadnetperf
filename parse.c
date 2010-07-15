@@ -14,7 +14,7 @@
 #endif
 
 void print_version() {
-	fprintf(stderr, "threadnetperf r%s by bramp 2007-2008\n", THREADNETPERF_VERSION );
+	fprintf(stderr, "threadnetperf r%s by bramp 2007-2010\n", THREADNETPERF_VERSION );
 }
 
 void print_usage() {
@@ -39,10 +39,11 @@ void print_usage() {
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
 	fprintf(stderr, "	-T         Timestamp packets, and measure latency (only available on *nix)\n" );
 	fprintf(stderr, "	-t         Use TCP\n" );
+	fprintf(stderr, "	-R         Reverse mode (send from the server instead of from the client\n" );
 	fprintf(stderr, "	-r         Packets per second rate (default: ~0)\n" );
 	fprintf(stderr, "	-u         Use UDP\n" );
-	fprintf(stderr, "	-v         Verbose\n" );
 	fprintf(stderr, "	-V         Display version only\n" );
+	fprintf(stderr, "	-v         Verbose\n" );
 
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "	tests      Combination of cores and clients\n" );
@@ -123,7 +124,7 @@ good:
 
 int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	int c;
-	const char *optstring = "DhvVtTeuns:d:p:c:i:H:r:m:";
+	const char *optstring = "DhvVtTReuns:d:p:c:i:H:r:m:";
 
 	assert ( settings != NULL );
 
@@ -144,6 +145,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	settings->min_iterations = 1;
 	settings->max_iterations = 1;
 	settings->threaded_model = MODEL_THREADED;
+	settings->reverse = 0;
 
 	settings->type = SOCK_STREAM;
 	settings->protocol = IPPROTO_TCP;
@@ -369,6 +371,17 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 				}
 
 				settings->dirty = 1;
+				break;
+
+			// Reverse mode
+			case 'R':
+
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set reverse mode when in daemon mode\n");
+					return -1;
+				}
+
+				settings->reverse = 1;
 				break;
 
 			case 'T':

@@ -304,6 +304,10 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		goto cleanup;
 	}
 
+	// This is a hack to change the remaining functions if we have entered reverse mode
+	if ( funcs == &remote_server_funcs && settings->reverse )
+		funcs = &remote_server_reverse_funcs;
+
 	// Setup all the data for each server and client
 	server_threads = funcs->prepare_servers(settings, data);
 	if ( server_threads < 0  ) {
@@ -455,7 +459,10 @@ int main (int argc, char *argv[]) {
 	// Decide what kind of test this is
 	// TODO do a better test for localhost
 	if ( settings.server_host != NULL ) {
-		funcs = &remote_client_funcs;
+		if (!settings.reverse)
+			funcs = &remote_client_funcs;
+		else
+			funcs = &remote_client_reverse_funcs;
 	} else {
 		funcs = &local_funcs;
 	}
