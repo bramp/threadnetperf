@@ -262,10 +262,10 @@ void* client_thread(void *data) {
 		assert ( FD_ISSET(s, &writeFD ) );
 #endif
 	}
-	
+
 	 // Signal we are ready
 	threads_signal_parent ( SIGNAL_READY_TO_GO, settings.threaded_model );
-	
+
 	// Wait for the go
 	wait_for_nonzero( &go_mutex, &go_cond, &bGo );
 
@@ -278,7 +278,7 @@ void* client_thread(void *data) {
 		int i;
 		//This has been changed to re-try the epoll if we fail.
 		int ready =  epoll_wait_ign_signal(readFD_epoll, events, clients, TRANSFER_TIMEOUT);
-		
+
 		for ( i = 0; i < ready; i++ ) {
 			SOCKET s = events[i].data.fd;
 
@@ -295,7 +295,7 @@ void* client_thread(void *data) {
 				struct timeval waittime = {TRANSFER_TIMEOUT / 1000, 0}; // 1 second
 
 				int ret = select_ign_signal(nfds, &readFD, &writeFD, NULL, &waittime);
-				
+
 				if ( ret == 0 )
 					fprintf(stderr, "%s:%d select() timeout occured\n", __FILE__, __LINE__ );
 

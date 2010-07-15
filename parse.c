@@ -220,7 +220,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 					fprintf(stdout, "%lf%% Confidence interval defaulted to %lf percent\n", level, interval);
 				}
 
-				if (level != 75.0 && level != 90.0 && level != 95.0 && level != 97.5 && 
+				if (level != 75.0 && level != 90.0 && level != 95.0 && level != 97.5 &&
 					level != 99.0 && level != 99.5 && level != 99.95) {
 					fprintf(stderr, "Confidence Level must be {75, 90, 95, 97.5, 99, 99.5, 99.95}. Given (%s)\n", optarg);
 					return -1;

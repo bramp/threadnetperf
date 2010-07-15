@@ -474,7 +474,7 @@ void *server_thread(void *data) {
 						else if ( lastErr != ECONNRESET ) {
 							fprintf(stderr, "%s:%d recv(%d) error (%d) %s\n", __FILE__, __LINE__, s, lastErr, strerror(lastErr) );
 							goto cleanup;
-						} 
+						}
 					}
 
 					if ( settings.verbose )

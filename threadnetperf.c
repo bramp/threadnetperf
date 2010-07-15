@@ -258,7 +258,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
 	}
 }
 
-/* 
+/*
  * Setup our signal handler to point to signal_handler
  * - Make sure we use the right signal handler
  * @param - signum is the signal number we want to listen for

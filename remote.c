@@ -199,12 +199,12 @@ int remote_setup_data(void** data, SOCKET s) {
 
 	remote_data->control_socket = s;
 	remote_data->stats_socket = create_stats_socket();
-	
+
 	if( remote_data->stats_socket == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d create_stats_socket() error\n", __FILE__, __LINE__ );
 		return -1;
 	}
-	
+
 	return 0;
 }
 
@@ -286,14 +286,14 @@ int remote_collect_results(const struct settings *settings, struct stats *total_
 
 	// Currently the duration might get screwed up if not zero
 	assert ( total_stats->duration == 0 );
-	
+
 	s = ((struct remote_data*)data)->control_socket;
 	assert ( s != INVALID_SOCKET );
 
 	for ( ; core < settings->servercores; core++ ) {
 		struct stats stats;
 		memset(&stats, 0 , sizeof(stats));
- 
+
 		if ( read_results( s, &stats )< 0) {
 			fprintf(stderr, "%s:%d read_results(%d) error (%d) %s\n", __FILE__, __LINE__, s, ERRNO, strerror(ERRNO) );
 			return -1;
@@ -337,7 +337,7 @@ int wait_remote( SOCKET s, unsigned char code ) {
 	} else {
 		return 0;
 	}
-	
+
 	return -1;
 }
 

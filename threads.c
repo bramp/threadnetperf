@@ -78,7 +78,7 @@ int process_create_on(pid_t *pid,  void *(*start_routine)(void*), void *arg, siz
 #if defined(__FreeBSD__)
 //		cpuset_setaffinity(CPU_LEVEL_WHICH, CPU_WHICH_PID, *pid, ..//TODO finish
 #else
-		sched_setaffinity(*pid, cpusetsize, cpuset);		
+		sched_setaffinity(*pid, cpusetsize, cpuset);
 #endif
 		//Call start_routine
 		(*start_routine)(arg);
@@ -244,7 +244,7 @@ int thread_join_all(int threaded_model) {
 			int status;
 			waitpid(thread[thread_count].pid, &status, 0);
 //			if(WIFEXITED(status))
-//				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );		
+//				fprintf(stderr, "%s:%d waitpid() client (%d) exited with stats (%d) \n", __FILE__, __LINE__, thread[thread_count].pid, status );
 		}
 	}
 	assert ( thread_count == 0 );
@@ -318,10 +318,10 @@ void threads_signal(pid_t pid, int type) {
 	v.sival_int = type;
 // TODO change to fprint
 	if ( sigqueue(pid, SIGNUM, v) )
-		printf("(%d) Error %d %s sending signal %d\n", getpid(), ERRNO, strerror(errno), type);	
+		printf("(%d) Error %d %s sending signal %d\n", getpid(), ERRNO, strerror(errno), type);
 }
 
-void threads_signal_parent(int type, int threaded_model) {	
+void threads_signal_parent(int type, int threaded_model) {
 	if ( threaded_model == MODEL_PROCESS )
 		threads_signal(getppid(), type);
 	else if ( threaded_model == MODEL_THREADED )
@@ -330,7 +330,7 @@ void threads_signal_parent(int type, int threaded_model) {
 		assert ( 0 );
 }
 
-void threads_signal_all(int type, int threaded_model) {	
+void threads_signal_all(int type, int threaded_model) {
 	if(	threaded_model == MODEL_PROCESS ) {
 		int i;
 		for(i=0; i<thread_count; i++) {
@@ -360,7 +360,7 @@ int pthread_mutex_lock_block_signal (pthread_mutex_t *mutex, int signum) {
 		fprintf(stderr, "%s:%d pthread_sigmask() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		return -1;
 	}
-	
+
 	ret = pthread_mutex_lock(mutex);
 	if ( ret ) {
 		if ( pthread_sigmask( SIG_UNBLOCK, &set, NULL) ) {
@@ -391,9 +391,9 @@ int pthread_mutex_unlock_block_signal (pthread_mutex_t *mutex, int signum) {
 		if ( pthread_sigmask( SIG_UNBLOCK, &set, NULL) ) {
 			fprintf(stderr, "%s:%d pthread_sigmask() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 			return -1;
-		}		
+		}
 	}
-	
+
 	return ret;
 }
 
@@ -410,7 +410,7 @@ void wait_for_zero( pthread_mutex_t* mutex, pthread_cond_t* cond, volatile int* 
 
 		pthread_mutex_unlock_block_signal( mutex, SIGNUM );
 		// HACK The signal handler is now reenabled, so any queued signals can go
-		pthread_mutex_lock_block_signal( mutex, SIGNUM );		
+		pthread_mutex_lock_block_signal( mutex, SIGNUM );
 	}
 	pthread_mutex_unlock_block_signal( mutex, SIGNUM );
 }
@@ -427,7 +427,7 @@ void wait_for_nonzero( pthread_mutex_t* mutex, pthread_cond_t* cond, volatile in
 
 		pthread_mutex_unlock_block_signal( mutex, SIGNUM );
 		// HACK The signal handler is now reenabled, so any queued signals can go
-		pthread_mutex_lock_block_signal( mutex, SIGNUM );		
+		pthread_mutex_lock_block_signal( mutex, SIGNUM );
 	}
 	pthread_mutex_unlock_block_signal( mutex, SIGNUM );
 }
