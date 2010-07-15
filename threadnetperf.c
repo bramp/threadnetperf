@@ -134,6 +134,34 @@ struct run_functions remote_client_funcs = {
 	remote_cleanup             //cleanup
 };
 
+// The run sequence for a remote server (reverse)
+struct run_functions remote_client_reverse_funcs = {
+	remote_connect,         //setup
+	prepare_servers,        //prepare_servers
+	null_func,              //prepare_clients
+	create_servers,         //create_servers
+	signal_ready,           //create_clients
+	signal_go,              //wait_for_go
+	print_headers,          //print_headers
+	remote_collect_results, //collect_results
+	print_results,          //print_results
+	remote_cleanup          //cleanup
+};
+
+// The run sequence for a client (connecting to a remote server) (reverse)
+struct run_functions remote_server_reverse_funcs = {
+	remote_accept,          //setup
+	null_func,              //prepare_servers
+	prepare_clients,        //prepare_clients
+	wait_ready,             //create_servers
+	create_clients,         //create_clients
+	wait_go,                //wait_for_go
+	null_func,              //print_headers
+	thread_collect_results, //collect_results
+	remote_send_results,    //print_results
+	remote_cleanup          //cleanup
+};
+
 // Signals all threads to stop
 void stop_all (unsigned int threaded_model) {
 	//Change bRunning here?
@@ -235,7 +263,7 @@ void signal_handler(int sig, siginfo_t *siginfo, void* context) {
  * - Make sure we use the right signal handler
  * @param - signum is the signal number we want to listen for
  */
-int setup_signals(int signum)	{	
+int setup_signals(int signum)	{
 	struct sigaction act;
 	memset(&act, 0, sizeof(act));
 
@@ -282,7 +310,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-	
+
 	pthread_mutex_lock_block_signal( &ready_to_accept_mtx, SIGNUM );
 	server_listen_unready = server_threads;
 	pthread_mutex_unlock_block_signal ( &ready_to_accept_mtx, SIGNUM );
@@ -292,13 +320,13 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 		fprintf(stderr, "%s:%d prepare_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
-	
+
 	pthread_mutex_lock_block_signal( &ready_to_go_mtx, SIGNUM );
 	unready_threads	= server_threads + client_threads;
-	
-	//What if i get the signal SIGNAL_READY_TO_GO now? 
-	//The signal handler also needs to lock the ready_to_go_mtx ! 
-	
+
+	//What if i get the signal SIGNAL_READY_TO_GO now?
+	//The signal handler also needs to lock the ready_to_go_mtx !
+
 	// A list of threads
 	if ( thread_alloc(unready_threads) ) {
 		fprintf(stderr, "%s:%d thread_alloc() error\n", __FILE__, __LINE__ );
@@ -417,7 +445,7 @@ int main (int argc, char *argv[]) {
 		fprintf(stderr, "%s:%d setup_signals() error (%d)\n", __FILE__, __LINE__ , errno);
 		goto cleanup;
 	}
-	
+
 	// If we are daemon mode start that
 	if (settings.daemon) {
 		run_daemon(&settings);
@@ -464,7 +492,7 @@ int main (int argc, char *argv[]) {
 					break;
 				}
 			}
-		} 
+		}
 	}
 
 cleanup:
