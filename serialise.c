@@ -136,6 +136,9 @@ int read_settings( SOCKET s, struct settings * settings ) {
 			return -1;
 		}
 
+		// Set the port to zero (so it turns into just a hostname without port)
+		((struct sockaddr_in *)&addr)->sin_port = 0;
+
 		// This is a bit hackish, but we now turn this sockaddr into a string (and later in parse_test back to a sockaddr)
 		// TODO Change the settings struct to contain a sockaddr, instead of a char * for hostname. Doing so would simplify the logic
 		if ( !addr_to_ipstr((struct sockaddr *)&addr, addr_len, reverse_host, sizeof(reverse_host)) ) {

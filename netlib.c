@@ -201,9 +201,11 @@ char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, 
 		return NULL;
 	}
 
-	// Add the port #
-	strncat(host, ":", maxhostlen);
-	strncat(host, port, maxhostlen);
+	// Add the port # (only if it isn't zero)
+	if (port[0] != '0' && port[1] != '\0') {
+		strncat(host, ":", maxhostlen);
+		strncat(host, port, maxhostlen);
+	}
 
 	return host;
 }
