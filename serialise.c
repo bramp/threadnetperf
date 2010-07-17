@@ -21,6 +21,10 @@
 #include <stdint.h>
 #endif
 
+// Nasty hack global. This is needed to store the reverse hostname (in reverse mode). This can be avoided by changing
+// the settings struct to have a sockaddr instead of char * for server_host
+char reverse_host[NI_MAXHOST];
+
 // A version of the settings struct which can be sent over the network
 struct network_settings {
 
@@ -108,7 +112,7 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->message_size   = ntohl( net_settings.message_size );
 	settings->socket_size    = ntohl( net_settings.socket_size );
 
-	settings->rate			 = ntohl( net_settings.rate );
+	settings->rate           = ntohl( net_settings.rate );
 
 	settings->port           = ntohs( net_settings.port );
 
@@ -122,6 +126,25 @@ int read_settings( SOCKET s, struct settings * settings ) {
 	settings->max_iterations = 1;
 	settings->server_host    = NULL;
 
+	// If this is in reverse mode, setup the host field to point back
+	if (settings->reverse) {
+	        struct sockaddr_storage addr;
+        	socklen_t addr_len = sizeof(addr);
+
+		if ( getpeername(s, (struct sockaddr *)&addr, &addr_len) ) {
+			fprintf(stderr, "%s:%d read_settings() getpeername error (%d) %s\n", __FILE__, __LINE__, errno, strerror(errno) );
+			return -1;
+		}
+
+		// This is a bit hackish, but we now turn this sockaddr into a string (and later in parse_test back to a sockaddr)
+		// TODO Change the settings struct to contain a sockaddr, instead of a char * for hostname. Doing so would simplify the logic
+		if ( !addr_to_ipstr((struct sockaddr *)&addr, addr_len, reverse_host, sizeof(reverse_host)) ) {
+			fprintf(stderr, "%s:%d read_settings() addr_to_ipstr error\n", __FILE__, __LINE__);
+			return -1;
+		}
+
+		settings->server_host = reverse_host;
+	}
 
 	// Create space for all the tests
 	settings->test = calloc( settings->tests, sizeof(*settings->test) );

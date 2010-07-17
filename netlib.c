@@ -190,7 +190,7 @@ char * addr_to_ipstr(const struct sockaddr *addr, socklen_t addlen, char *host, 
 	char port [ NI_MAXSERV ];
 
 	// Validate parameters
-    assert (addr != NULL);
+	assert (addr != NULL);
 	assert (addlen > 0 );
 
 	assert (host != NULL);
