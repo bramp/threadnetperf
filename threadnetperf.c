@@ -1,6 +1,6 @@
 /***
 	A multi-threaded network benchmark tool
-	by Andrew Brampton (2007-2009)
+	by Andrew Brampton (2007-2010)
 
 	Note, this app is very rough, and needs cleaning up, but it works!
 	TODO Add flag to output bandwidth at set intervals during the experiment
@@ -18,7 +18,7 @@
 	TODO both thread_collect_results and remote_collect_results look very similar
 	TODO server_thread.c:439 select() timeout occured (on server side) when using UDP (only in some cases?)
 	TODO client_thread.c:329 recv() error (61) Connection refused when sending from FreeBSD->Linux using UDP
-
+	TODO Better error handling when the client connections can't connect (e.g when iptables is dropping packets)
 */
 
 #include "common.h"
