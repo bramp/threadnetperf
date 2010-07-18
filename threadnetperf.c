@@ -19,6 +19,15 @@
 	TODO server_thread.c:439 select() timeout occured (on server side) when using UDP (only in some cases?)
 	TODO client_thread.c:329 recv() error (61) Connection refused when sending from FreeBSD->Linux using UDP
 	TODO Better error handling when the client connections can't connect (e.g when iptables is dropping packets)
+
+
+	Design:
+	Client connects to Server and sends tests
+	Server opens ports and replys to Client to say its ready
+	Client then sends traffic to Server for the duration of the test.
+	The Server records some statistics and sends them back to the Client
+	Client then outputs the stats
+
 */
 
 #include "common.h"
@@ -143,7 +152,7 @@ struct run_functions remote_client_reverse_funcs = {
 	signal_ready,           //create_clients
 	signal_go,              //wait_for_go
 	print_headers,          //print_headers
-	remote_collect_results, //collect_results
+	thread_collect_results, //collect_results
 	print_results,          //print_results
 	remote_cleanup          //cleanup
 };
@@ -157,8 +166,8 @@ struct run_functions remote_server_reverse_funcs = {
 	create_clients,         //create_clients
 	wait_go,                //wait_for_go
 	null_func,              //print_headers
-	thread_collect_results, //collect_results
-	remote_send_results,    //print_results
+	null_func,              //collect_results
+	null_func,              //print_results
 	remote_cleanup          //cleanup
 };
 
