@@ -60,7 +60,7 @@ static pthread_cond_t ready_to_go_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t ready_to_go_mtx = PTHREAD_MUTEX_INITIALIZER;
 
 // Condition Variable to signal when we should go
-pthread_cond_t go_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t  go_cond  = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t go_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Flag to indidcate if we are still running
@@ -74,8 +74,6 @@ int unready_threads = 0;
 
 int server_listen_unready = 0;
 
-int null_func(const struct settings *settings, void * data) { return 0; };
-int null_func2(struct settings *settings, void ** data) { return 0; };
 int setup(struct settings *, void ** data);
 
 extern char* ipc_sock_name;
@@ -108,22 +106,22 @@ struct run_functions local_funcs = {
 	prepare_clients,       //prepare_clients
 	create_servers,        //create_servers
 	create_clients,        //create_clients
-	null_func,             //wait_for_go
+	NULL,                  //wait_for_go
 	print_headers,         //print_headers
 	thread_collect_results,//collect_results
 	print_results,         //print_results
-	null_func,             //cleanup
+	NULL,                  //cleanup
 };
 
 // The run sequence for a remote server
 struct run_functions remote_server_funcs = {
 	remote_accept,         //setup
 	prepare_servers,       //prepare_servers
-	null_func,             //prepare_clients
+	NULL,                  //prepare_clients
 	create_servers,        //create_servers
 	signal_ready,          //create_clients
 	signal_go,             //wait_for_go
-	null_func,             //print_headers
+	NULL,                  //print_headers
 	thread_collect_results,//collect_results
 	remote_send_results,   //print_results
 	remote_cleanup         //cleanup
@@ -132,12 +130,12 @@ struct run_functions remote_server_funcs = {
 // The run sequence for a client (connecting to a remote server)
 struct run_functions remote_client_funcs = {
 	remote_connect,            //setup
-	null_func,                 //prepare_servers
+	NULL,                      //prepare_servers
 	prepare_clients,           //prepare_clients
 	wait_ready,                //create_servers
 	create_clients,            //create_clients
 	wait_go,                   //wait_for_go
-	print_headers,         //print_headers
+	print_headers,             //print_headers
 	remote_collect_results,    //collect_results
 	print_results,             //print_results
 	remote_cleanup             //cleanup
@@ -147,7 +145,7 @@ struct run_functions remote_client_funcs = {
 struct run_functions remote_client_reverse_funcs = {
 	remote_connect,         //setup
 	prepare_servers,        //prepare_servers
-	null_func,              //prepare_clients
+	NULL,                   //prepare_clients
 	create_servers,         //create_servers
 	signal_ready,           //create_clients
 	signal_go,              //wait_for_go
@@ -160,14 +158,14 @@ struct run_functions remote_client_reverse_funcs = {
 // The run sequence for a client (connecting to a remote server) (reverse)
 struct run_functions remote_server_reverse_funcs = {
 	remote_accept,          //setup
-	null_func,              //prepare_servers
+	NULL,                   //prepare_servers
 	prepare_clients,        //prepare_clients
 	wait_ready,             //create_servers
 	create_clients,         //create_clients
 	wait_go,                //wait_for_go
-	null_func,              //print_headers
-	null_func,              //collect_results
-	null_func,              //print_results
+	NULL,                   //print_headers
+	NULL,                   //collect_results
+	NULL,                   //print_results
 	remote_cleanup          //cleanup
 };
 
@@ -308,7 +306,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	threads_clear();
 
-	if ( funcs->setup ( settings, &data ) ) {
+	if ( funcs->setup && funcs->setup ( settings, &data ) ) {
 		fprintf(stderr, "%s:%d setup() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
@@ -319,7 +317,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	}
 
 	// Setup all the data for each server and client
-	server_threads = funcs->prepare_servers(settings, data);
+	server_threads = funcs->prepare_servers ? funcs->prepare_servers(settings, data) : 0;
 	if ( server_threads < 0  ) {
 		fprintf(stderr, "%s:%d prepare_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -329,7 +327,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	server_listen_unready = server_threads;
 	pthread_mutex_unlock_block_signal ( &ready_to_accept_mtx, SIGNUM );
 
-	client_threads = funcs->prepare_clients(settings, data);
+	client_threads = funcs->prepare_clients ? funcs->prepare_clients(settings, data) : 0;
 	if ( client_threads < 0 ) {
 		fprintf(stderr, "%s:%d prepare_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
@@ -350,14 +348,14 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	pthread_mutex_unlock_block_signal( &ready_to_go_mtx, SIGNUM );
 
 	// Create each server/client thread
-	if ( funcs->create_servers(settings, data) ) {
+	if ( funcs->create_servers && funcs->create_servers(settings, data) ) {
 		fprintf(stderr, "%s:%d create_servers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
 	wait_for_zero( &ready_to_accept_mtx, &ready_to_accept_cond, &server_listen_unready);
 
-	if ( funcs->create_clients(settings, data) ) {
+	if ( funcs->create_clients && funcs->create_clients(settings, data) ) {
 		fprintf(stderr, "%s:%d create_clients() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
@@ -365,7 +363,7 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 	// Wait for our threads to be created
 	wait_for_zero( &ready_to_go_mtx, &ready_to_go_cond, &unready_threads);
 
-	if ( funcs->wait_for_go(settings, data) ) {
+	if ( funcs->wait_for_go && funcs->wait_for_go(settings, data) ) {
 		fprintf(stderr, "%s:%d wait_for_go() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
@@ -378,12 +376,12 @@ void run( const struct run_functions * funcs, struct settings *settings, struct 
 
 	stop_all(settings->threaded_model);
 
-	if ( funcs->print_headers(settings, data) ) {
+	if ( funcs->print_headers && funcs->print_headers(settings, data) ) {
 		fprintf(stderr, "%s:%d print_headers() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
 
-	if ( funcs->collect_results ( settings, total_stats, funcs->print_results, data) ) {
+	if ( funcs->collect_results && funcs->collect_results( settings, total_stats, funcs->print_results, data) ) {
 		fprintf(stderr, "%s:%d collect_results() error\n", __FILE__, __LINE__ );
 		goto cleanup;
 	}
@@ -405,7 +403,8 @@ cleanup:
 	cleanup_clients();
 	cleanup_servers();
 
-	funcs->cleanup( settings, data );
+	if ( funcs->cleanup )
+		funcs->cleanup( settings, data );
 }
 
 void run_daemon(const struct settings *settings) {
