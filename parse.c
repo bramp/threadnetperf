@@ -25,6 +25,7 @@ void print_usage() {
 	fprintf(stderr, "Runs a threaded network test\n" );
 
 	fprintf(stderr, "\n" );
+	// TODO we now have a lot of options. Perhaps reorder and group them.
 
 	fprintf(stderr, "	-c level,interval   Confidence level, must be 95 or 99\n");
 	fprintf(stderr, "	-D         Use daemon mode (wait for incoming tests)\n" );
@@ -36,6 +37,7 @@ void print_usage() {
 	fprintf(stderr, "	-m [t,p]   What programming model to use, [thread or process]\n" );
 	fprintf(stderr, "	-n         Disable Nagle's algorithm (e.g no delay)\n" );
 	fprintf(stderr, "	-p port    Set the port number for the first server thread to use\n" );
+	fprintf(stderr, "	-q         Quiet mode. Don't send any data, just receive, useful when used with pktgen.\n" );
 	fprintf(stderr, "	-s size    Set the send/recv size\n" );
 	fprintf(stderr, "	-T         Timestamp packets, and measure latency (only available on *nix)\n" );
 	fprintf(stderr, "	-t         Use TCP\n" );
@@ -51,7 +53,6 @@ void print_usage() {
 	fprintf(stderr, "		N{c-s}   N connections\n" );
 	fprintf(stderr, "		         c client cores mask\n" );
 	fprintf(stderr, "		         s server cores mask\n" );
-
 
 	fprintf(stderr, "\n" );
 	fprintf(stderr, "Examples:\n" );
@@ -125,7 +126,7 @@ good:
 
 int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	int c;
-	const char *optstring = "DhvVtTReuns:d:p:c:i:H:r:m:";
+	const char *optstring = "DhvVtTReunqs:d:p:c:i:H:r:m:";
 
 	assert ( settings != NULL );
 
@@ -147,6 +148,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 	settings->max_iterations = 1;
 	settings->threaded_model = MODEL_THREADED;
 	settings->reverse = 0;
+	settings->quiet   = 0;
 
 	settings->type = SOCK_STREAM;
 	settings->protocol = IPPROTO_TCP;
@@ -318,6 +320,15 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 					return -1;
 				}
 				break;
+
+			case 'q':
+				if ( settings->daemon ) {
+					fprintf(stdout, "Unable to set quiet when in daemon mode\n");
+					return -1;
+				}
+				settings->quiet = 1;
+				break;
+
 			// Parse the message size
 			case 's':
 
@@ -437,6 +448,7 @@ int parse_settings( int argc, char *argv[], struct settings *settings ) {
 		fprintf(stderr, "Must use TCP when disabling Nagles\n" );
 		return -1;
 	}
+
 
 //	if( settings->timestamp && settings->message_size < sizeof(unsigned long long) ) {
 //		fprintf(stderr, "Message size must be greater than %u when using timestamps\n",  (unsigned int) sizeof(unsigned long long) );

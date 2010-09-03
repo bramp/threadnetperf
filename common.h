@@ -62,6 +62,7 @@ struct settings {
 	unsigned int timestamp       :1;
 	unsigned int disable_nagles  :1;
 	unsigned int reverse         :1;
+	unsigned int quiet           :1;
 
 	double confidence_lvl;
 	double confidence_int;

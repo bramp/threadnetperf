@@ -84,6 +84,13 @@ int create_clients(const struct settings *settings, void *data) {
 
 		assert ( creq[i].settings != NULL );
 
+		// If we are in quiet mode, we don't send anything, so lets not even create client thread
+		if (creq[i].settings->quiet) {
+			// But we must still say we are ready
+			threads_signal_parent ( SIGNAL_READY_TO_GO, settings->threaded_model );
+			continue;
+		}
+
 		cpu_setup( &cpus, creq[i].cores );
 
 		//For now let's keep the client using the threaded model
