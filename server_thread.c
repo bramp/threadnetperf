@@ -25,24 +25,98 @@
 const unsigned int max_cores; // The number of CPU cores this machine has
 
 /**
-	Wait for and accept N connections
-**/
-int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *clients) {
+ * Sets the socket options on a newly connected socket
+ * @param s
+ * @return
+ */
+int set_socket_options(SOCKET s, const struct settings *settings, int *send_socket_size, int *recv_socket_size) {
 
-	const struct settings *settings = req->settings;
-
-	unsigned int n = req->n;
-	int connected = 0;
-
-	fd_set readFD;
+	int socket_size;
 
 #ifdef MF_FLIPPAGE
+	// A couple of options that require custom kernel hacks. Used in M. Faulkner's research
 	int flippage = 1;
 #endif
 
 #ifdef MF_NOCOPY
 	int nocopy = 1;
 #endif
+
+	socket_size = set_socket_send_buffer( s, settings->socket_size );
+	if ( socket_size < 0 ) {
+		fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		return 1;
+	}
+
+	if (send_socket_size)
+		*send_socket_size = socket_size;
+
+	socket_size = set_socket_recv_buffer( s, settings->socket_size );
+	if ( socket_size < 0 ) {
+		fprintf(stderr, "%s:%d set_socket_recv_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		return 1;
+	}
+
+	if (recv_socket_size)
+		*recv_socket_size = socket_size;
+
+	if ( settings->disable_nagles ) {
+		if ( disable_nagle( s ) == SOCKET_ERROR ) {
+			fprintf(stderr, "%s:%d disable_nagle() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			return 1;
+		}
+	//	if ( enable_maxseq ( s , settings->message_size) == SOCKET_ERROR ) {
+	//		fprintf(stderr, "%s:%d enable_maxseq() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+	//		return 1;
+	//	}
+	}
+
+#ifndef WIN32
+	if ( settings->timestamp ) {
+		if ( enable_timestamp(s) == SOCKET_ERROR ) {
+			fprintf(stderr, "%s:%d enable_timestamp() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+			return 1;
+		}
+	}
+#endif
+
+	// Always disable blocking (to work around linux bug)
+	if ( disable_blocking(s) == SOCKET_ERROR ) {
+		fprintf(stderr, "%s:%d disable_blocking() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		return 1;
+	}
+
+#ifdef MF_FLIPPAGE
+	// Turn on the flippage socket option
+	// TODO: MF: Fix the "99" - it should be SOCK_FLIPPAGE
+	if ( setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage)) == SOCKET_ERROR) {
+		fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		return 1;
+	}
+#endif
+
+#ifdef MF_NOCOPY
+	if ( setsockopt(s, SOL_SOCKET, 98, &nocopy, sizeof(nocopy)) == SOCKET_ERROR) {
+		fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		return 1;
+	}
+#endif
+
+	return 0;
+}
+
+/**
+	Wait for and accept N connections
+**/
+int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *clients) {
+
+	const struct settings *settings = req->settings;
+	int send_socket_size, recv_socket_size;
+
+	unsigned int n = req->n;
+	int connected = 0;
+
+	fd_set readFD;
 
 	assert ( listen != INVALID_SOCKET );
 	assert ( clients != NULL );
@@ -57,7 +131,6 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		struct sockaddr_storage addr;
 		socklen_t addr_len = sizeof(addr);
 		SOCKET s;
-		int send_socket_size, recv_socket_size;
 
 		FD_SET( listen, &readFD);
 
@@ -83,59 +156,8 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 			return 1;
 		}
 
-		send_socket_size = set_socket_send_buffer( s, settings->socket_size );
-		if ( send_socket_size < 0 ) {
-			fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		if ( set_socket_options(s, settings, &send_socket_size, &recv_socket_size) )
 			return 1;
-		}
-
-		recv_socket_size = set_socket_recv_buffer( s, settings->socket_size );
-		if ( send_socket_size < 0 ) {
-			fprintf(stderr, "%s:%d set_socket_recv_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			return 1;
-		}
-
-		if ( settings->disable_nagles ) {
-			if ( disable_nagle( s ) == SOCKET_ERROR ) {
-				fprintf(stderr, "%s:%d disable_nagle() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-				return 1;
-			}
-		//	if ( enable_maxseq ( s , settings->message_size) == SOCKET_ERROR ) {
-		//		fprintf(stderr, "%s:%d enable_maxseq() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-		//		return 1;
-		//	}
-		}
-
-#ifndef WIN32
-		if ( settings->timestamp ) {
-			if ( enable_timestamp(s) == SOCKET_ERROR ) {
-				fprintf(stderr, "%s:%d enable_timestamp() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-				return 1;
-			}
-		}
-#endif
-
-		// Always disable blocking (to work around linux bug)
-		if ( disable_blocking(s) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d disable_blocking() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			return 1;
-		}
-
-#ifdef MF_FLIPPAGE
-		// Turn on the flippage socket option
-		// TODO: MF: Fix the "99" - it should be SOCK_FLIPPAGE
-		if ( setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage)) == SOCKET_ERROR) {
-			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			return 1;
-		}
-#endif
-
-#ifdef MF_NOCOPY
-		if ( setsockopt(s, SOL_SOCKET, 98, &nocopy, sizeof(nocopy)) == SOCKET_ERROR) {
-			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			return 1;
-		}
-#endif
 
 		assert ( *clients == INVALID_SOCKET );
 		*clients = s;
@@ -143,10 +165,10 @@ int accept_connections(const struct server_request *req, SOCKET listen, SOCKET *
 		connected++;
 
 		if ( settings->verbose ) {
-                        char address[NI_MAXHOST + NI_MAXSERV + 1];
+			char address[NI_MAXHOST + NI_MAXSERV + 1];
 
-                        // Print the host/port
-                        addr_to_ipstr((const struct sockaddr *)&addr, addr_len, address, sizeof(address));
+			// Print the host/port
+			addr_to_ipstr((const struct sockaddr *)&addr, addr_len, address, sizeof(address));
 
 			printf("  Server: %d incoming client %s (%d) socket size: %d/%d\n",
 				req->cores, address, connected, send_socket_size, recv_socket_size );
@@ -203,16 +225,11 @@ void *server_thread(void *data) {
 #endif
 
 	int page_size;
-#ifdef MF_FLIPPAGE
-	int flippage = 1;
-#endif
 
 	struct sockaddr_in addr; // Address to listen on
 
 	unsigned long long start_time; // The time we started
 	unsigned long long end_time; // The time we ended
-
-	int send_socket_size, recv_socket_size; // The socket buffer sizes
 
 	unsigned int i = 0;
 	const int one = 1;
@@ -241,39 +258,11 @@ void *server_thread(void *data) {
 		goto cleanup;
 	}
 
-	send_socket_size = set_socket_send_buffer( s, settings.socket_size );
-	if ( send_socket_size < 0 ) {
-		fprintf(stderr, "%s:%d set_socket_send_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+	if ( set_socket_options(s, &settings, NULL, NULL) ) {
 		goto cleanup;
 	}
 
-	recv_socket_size = set_socket_recv_buffer( s, settings.socket_size );
-	if ( recv_socket_size < 0 ) {
-		fprintf(stderr, "%s:%d set_socket_recv_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-		goto cleanup;
-	}
-
-	if ( settings.disable_nagles ) {
-		if ( disable_nagle( s ) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d disable_nagle() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			goto cleanup;
-		}
-//		if ( enable_maxseq ( s , settings.message_size) == SOCKET_ERROR ) {
-//			fprintf(stderr, "%s:%d enable_maxseq() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-//			goto cleanup;
-//		}
-	}
-
-#ifndef WIN32
-	if ( settings.timestamp  ) {
-		if ( enable_timestamp(s) == SOCKET_ERROR ) {
-			fprintf(stderr, "%s:%d enable_timestamp() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			goto cleanup;
-		}
-	}
-#endif
-
-	// SO_REUSEADDR
+	// SO_REUSEADDR - This option isn't set in set_socket_options()
 	if ( setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)) == SOCKET_ERROR ) {
 		fprintf(stderr, "%s:%d setsockopt(SOL_SOCKET, SO_REUSEADDR) error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
@@ -297,6 +286,7 @@ void *server_thread(void *data) {
 			goto cleanup;
 		}
 	}
+
 	// We are now listening and waiting
 	threads_signal_parent ( SIGNAL_READY_TO_ACCEPT, settings.threaded_model );
 
@@ -309,30 +299,21 @@ void *server_thread(void *data) {
 
 	// If this is a DGRAM, then we don't have a connection per client, but instead one server socket
 	} else if ( settings.type == SOCK_DGRAM ) {
-#ifdef MF_FLIPPAGE
-		// Turn on the flippage socket option
-		// TODO: MF: Fix the "99" - it should be SOCK_FLIPPAGE
-		if ( setsockopt(s, SOL_SOCKET, 99, &flippage, sizeof(flippage)) == SOCKET_ERROR) {
-			fprintf(stderr, "%s:%d set_socktopt() error (%d) %s\n",__FILE__, __LINE__, ERRNO, strerror(ERRNO) );
-			goto cleanup;
-		 }
-#endif
-
 		*client = s;
 		clients = 1;
 	}
 
 	// By this point all the clients have connected, but the test hasn't started yet
 
-	// Setup the buffer
+	// Setup the buffer - We valloc up to the next page size to aid in some performance tests
 	page_size = getpagesize();
 	recv_size = roundup(settings.message_size, page_size);
 	if( settings.verbose )
 		printf("vallocing buffer of %d bytes\n", recv_size);
-	buf = valloc( recv_size );
 
+	buf = valloc( recv_size );
 	if ( buf == NULL ) {
-		fprintf(stderr, "%s:%d malloc() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
+		fprintf(stderr, "%s:%d valloc() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO) );
 		goto cleanup;
 	}
 

@@ -67,7 +67,7 @@ int connect_connections(const struct settings *settings,
 			}
 
 			recv_socket_size = set_socket_recv_buffer(s, settings->socket_size);
-			if (send_socket_size < 0) {
+			if (recv_socket_size < 0) {
 				fprintf(stderr, "%s:%d set_socket_recv_buffer() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
 				goto cleanup;
 			}
@@ -84,10 +84,13 @@ int connect_connections(const struct settings *settings,
 					goto cleanup;
 				}
 
-				//if ( enable_maxseq ( s , settings->message_size ) == SOCKET_ERROR ) {
-				//	fprintf(stderr, "%s:%d enable_maxseq() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
-				//	goto cleanup;
-				//}
+				// This works around a big where disabling Nagle's does not actually stop packets being grouped
+				// I don't think its a bug, more that stack notices there are multiple packets queued that
+				// haven't been sent yet, so optimistically groups them.
+				if ( enable_maxseq ( s , settings->message_size ) == SOCKET_ERROR ) {
+					fprintf(stderr, "%s:%d enable_maxseq() error (%d) %s\n", __FILE__, __LINE__, ERRNO, strerror(ERRNO));
+					goto cleanup;
+				}
 			}
 
 			if (set_socket_timeout(s, CONTROL_TIMEOUT) ) {
